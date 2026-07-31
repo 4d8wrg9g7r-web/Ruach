@@ -1,0 +1,462 @@
+// Ruach — milestone 1 schema.
+// Every organization-owned model carries organizationId (brief §6). Billing/Subscription/
+// UsageRecord tables are intentionally excluded until organization/website/widget/resource
+// architecture is stable (brief instruction #25).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships OrganizationMember[]
+  auditLogs   AuditLog[]
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  CONTENT_MANAGER
+  ANALYTICS_VIEWER
+}
+
+model Organization {
+  id                String                @id @default(cuid())
+  name              String
+  slug              String                @unique
+  categorizationMode CategorizationMode   @default(ASSISTED)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  members              OrganizationMember[]
+  websites             Website[]
+  widgets              WidgetConfiguration[]
+  resources            Resource[]
+  resourceSourceDocuments ResourceSourceDocument[]
+  generatedEvidence    GeneratedMetadataEvidence[]
+  collections          Collection[]
+  resourceCollections  ResourceCollection[]
+  actionLinks          ActionLink[]
+  importJobs           ImportJob[]
+  importJobItems       ImportJobItem[]
+  conversations        Conversation[]
+  conversationMessages ConversationMessage[]
+  auditLogs            AuditLog[]
+}
+
+enum CategorizationMode {
+  MANUAL
+  ASSISTED
+  AUTOMATIC
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Websites & Widgets
+// ---------------------------------------------------------------------------
+
+enum WebsiteStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Website {
+  id              String        @id @default(cuid())
+  organizationId  String
+  name            String
+  primaryDomain   String
+  allowedDomains  String[]      @default([])
+  stagingDomains  String[]      @default([])
+  status          WebsiteStatus @default(ACTIVE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  widgets      WidgetConfiguration[]
+
+  @@index([organizationId])
+}
+
+enum WidgetStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LauncherPosition {
+  BOTTOM_RIGHT
+  BOTTOM_LEFT
+}
+
+model WidgetConfiguration {
+  id                    String           @id @default(cuid())
+  organizationId        String
+  websiteId             String
+  name                  String
+  publicWidgetId        String           @unique @default(cuid())
+  status                WidgetStatus     @default(ACTIVE)
+  assistantName         String           @default("Resource Assistant")
+  welcomeMessage        String           @default("Hi! What are you looking for today?")
+  inputPlaceholder      String           @default("Ask a question...")
+  launcherLabel         String           @default("Ask a question")
+  launcherPosition      LauncherPosition @default(BOTTOM_RIGHT)
+  primaryColor          String           @default("#2563EB")
+  suggestedPrompts      String[]         @default([])
+  privacyNotice         String           @default("Conversations are anonymous and not linked to your identity.")
+  noResultMessage       String           @default("I couldn't find a resource that directly addresses that yet.")
+  maxRecommendations    Int              @default(3)
+  allowInlinePlayback   Boolean          @default(true)
+  showPlatformBranding  Boolean          @default(true)
+  conversationRetentionDays Int          @default(30)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  website       Website         @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@index([organizationId])
+  @@index([websiteId])
+}
+
+// ---------------------------------------------------------------------------
+// Resources
+// ---------------------------------------------------------------------------
+
+enum ResourceType {
+  VIDEO
+  SERMON
+  PODCAST
+  ARTICLE
+  COURSE
+  DOCUMENT
+  DEVOTIONAL
+  AUDIO
+  OTHER
+}
+
+enum ResourceStatus {
+  DRAFT
+  PROCESSING
+  REVIEW_REQUIRED
+  APPROVED
+  ACTIVE
+  INACTIVE
+  FAILED
+  ARCHIVED
+}
+
+enum ResourceProviderType {
+  YOUTUBE
+  VIMEO
+  SUBSPLASH
+  GENERIC_URL
+  MANUAL
+}
+
+enum TranscriptSource {
+  PROVIDER_CAPTIONS
+  UPLOADED_CAPTIONS
+  MANUAL_TRANSCRIPT
+  LINKED_NOTES
+  AUTOMATIC_TRANSCRIPTION
+  METADATA_ONLY
+}
+
+model Resource {
+  id               String               @id @default(cuid())
+  organizationId   String
+  resourceType     ResourceType
+  status           ResourceStatus       @default(DRAFT)
+
+  title            String
+  subtitle         String?
+  description      String?
+  summary          String?
+
+  creatorName      String?
+  speakerName      String?
+  seriesTitle      String?
+  publishedAt      DateTime?
+  durationSeconds  Int?
+  thumbnailUrl     String?
+  publicUrl        String
+  embedUrl         String?
+
+  sourceProvider   ResourceProviderType
+  externalId       String
+
+  transcript       String?
+  cleanTranscript  String?
+  transcriptSource TranscriptSource?
+
+  topics             String[] @default([])
+  primaryTopic       String?
+  secondaryTopics    String[] @default([])
+  scriptures         String[] @default([])
+  questionsAnswered  String[] @default([])
+  audiences          String[] @default([])
+  lifeSituations     String[] @default([])
+  keyTakeaways       String[] @default([])
+
+  searchDocument   String?
+  contentHash      String?
+  lastIndexedAt    DateTime?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceDocuments    ResourceSourceDocument[]
+  evidence           GeneratedMetadataEvidence[]
+  collections        ResourceCollection[]
+  importJobItems     ImportJobItem[]
+
+  @@unique([organizationId, sourceProvider, externalId])
+  @@index([organizationId, status])
+}
+
+enum SourceDocumentType {
+  VIDEO_DESCRIPTION
+  PROVIDER_METADATA
+  TRANSCRIPT
+  CAPTION_FILE
+  SERMON_NOTES
+  PDF
+  WEB_PAGE
+  MANUAL_NOTES
+  OTHER
+}
+
+model ResourceSourceDocument {
+  id                     String             @id @default(cuid())
+  organizationId         String
+  resourceId             String
+  sourceType             SourceDocumentType
+  sourceUrl              String?
+  fileName               String?
+  originalText           String?
+  cleanText              String?
+  includedInAnalysis     Boolean            @default(true)
+  approvedByUser         Boolean            @default(false)
+  discoveredAutomatically Boolean           @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  evidence     GeneratedMetadataEvidence[]
+
+  @@index([organizationId])
+  @@index([resourceId])
+}
+
+model GeneratedMetadataEvidence {
+  id               String   @id @default(cuid())
+  organizationId   String
+  resourceId       String
+  fieldName        String
+  generatedValue   String
+  sourceDocumentId String?
+  sourceExcerpt    String?
+  confidenceScore  Float
+  createdAt        DateTime @default(now())
+
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource       Resource                 @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  sourceDocument ResourceSourceDocument?  @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([resourceId])
+}
+
+model Collection {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resources    ResourceCollection[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+model ResourceCollection {
+  organizationId String
+  resourceId     String
+  collectionId   String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  collection   Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([resourceId, collectionId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Imports
+// ---------------------------------------------------------------------------
+
+enum ImportType {
+  SINGLE
+  PLAYLIST
+  CHANNEL
+  MANUAL
+}
+
+enum ImportJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+model ImportJob {
+  id             String               @id @default(cuid())
+  organizationId String
+  provider       ResourceProviderType
+  importType     ImportType
+  status         ImportJobStatus      @default(PENDING)
+  totalItems     Int                  @default(0)
+  successCount   Int                  @default(0)
+  failureCount   Int                  @default(0)
+  errorLog       String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  items        ImportJobItem[]
+
+  @@index([organizationId])
+}
+
+model ImportJobItem {
+  id             String   @id @default(cuid())
+  organizationId String
+  importJobId    String
+  resourceId     String?
+  sourceUrl      String
+  success        Boolean  @default(false)
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  importJob    ImportJob    @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  resource     Resource?    @relation(fields: [resourceId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([importJobId])
+}
+
+// ---------------------------------------------------------------------------
+// Conversations
+// ---------------------------------------------------------------------------
+
+model Conversation {
+  id             String   @id @default(cuid())
+  organizationId String
+  widgetId       String
+  sessionId      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  widget       WidgetConfiguration   @relation(fields: [widgetId], references: [id], onDelete: Cascade)
+  messages     ConversationMessage[]
+
+  @@index([organizationId])
+  @@index([widgetId, sessionId])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model ConversationMessage {
+  id                    String      @id @default(cuid())
+  organizationId        String
+  conversationId        String
+  role                  MessageRole
+  content                String
+  responseType          String?
+  recommendedResourceIds String[]   @default([])
+  createdAt             DateTime    @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([conversationId])
+}
+
+// ---------------------------------------------------------------------------
+// Actions, Audit
+// ---------------------------------------------------------------------------
+
+model ActionLink {
+  id             String   @id @default(cuid())
+  organizationId String
+  label          String
+  type           String
+  url            String
+  icon           String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  actorUserId    String?
+  action         String
+  targetType     String
+  targetId       String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+}

@@ -1,0 +1,38 @@
+{
+  "name": "@ruach/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "echo 'lint: not configured for milestone 1'",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'apps/dashboard has no unit tests of its own -- see test:e2e (Playwright)'",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ruach/ai": "workspace:*",
+    "@ruach/database": "workspace:*",
+    "@ruach/providers": "workspace:*",
+    "@ruach/retrieval": "workspace:*",
+    "@ruach/shared-types": "workspace:*",
+    "bcryptjs": "2.4.3",
+    "next": "15.5.22",
+    "next-auth": "5.0.0-beta.32",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "^20.16.10",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.6.3"
+  }
+}
