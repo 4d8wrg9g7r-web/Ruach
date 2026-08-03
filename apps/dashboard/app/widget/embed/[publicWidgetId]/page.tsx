@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { websiteService, widgetService } from "@ruach/database";
+import { organizationService, websiteService, widgetService } from "@ruach/database";
 import { ChatWidget } from "./ChatWidget";
 
 export default async function WidgetEmbedPage({
@@ -17,15 +17,18 @@ export default async function WidgetEmbedPage({
 
   if (host && !websiteService.isDomainAllowed(widget.website, host)) {
     return (
-      <main className="p-4 text-sm text-slate-500">
+      <main className="flex h-screen items-center justify-center bg-surface-muted p-4 text-center text-sm text-ink-secondary">
         This assistant is not enabled for this domain.
       </main>
     );
   }
 
+  const organization = await organizationService.getOrganization(widget.organizationId);
+
   return (
     <ChatWidget
       publicWidgetId={widget.publicWidgetId}
+      organizationName={organization?.name ?? widget.assistantName}
       assistantName={widget.assistantName}
       welcomeMessage={widget.welcomeMessage}
       inputPlaceholder={widget.inputPlaceholder}

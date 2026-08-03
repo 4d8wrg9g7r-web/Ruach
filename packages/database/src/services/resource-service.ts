@@ -43,6 +43,16 @@ export async function listResources(organizationId: string, filter?: { status?: 
   });
 }
 
+/** Dashboard review queue: pending resources with their evidence, for confidence badges. */
+export async function listReviewQueue(organizationId: string, limit = 10) {
+  return tenantDb.resource.findMany({
+    where: { organizationId, status: "REVIEW_REQUIRED" },
+    include: { evidence: true },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
 export async function getResource(organizationId: string, resourceId: string) {
   return tenantDb.resource.findFirst({
     where: { id: resourceId, organizationId },
@@ -104,6 +114,15 @@ export async function approveResource(organizationId: string, resourceId: string
   const result = await tenantDb.resource.updateMany({
     where: { id: resourceId, organizationId },
     data: { status: "ACTIVE" },
+  });
+  if (result.count === 0) return null;
+  return getResource(organizationId, resourceId);
+}
+
+export async function archiveResource(organizationId: string, resourceId: string) {
+  const result = await tenantDb.resource.updateMany({
+    where: { id: resourceId, organizationId },
+    data: { status: "ARCHIVED" },
   });
   if (result.count === 0) return null;
   return getResource(organizationId, resourceId);

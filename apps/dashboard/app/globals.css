@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --background: #f7f6f3;
+  --surface: #ffffff;
+  --surface-muted: #f1efeb;
+  --surface-warm: #eee8df;
+  --sidebar: #090d11;
+  --sidebar-secondary: #11171c;
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --text-primary: #161616;
+  --text-secondary: #696661;
+  --text-muted: #98938c;
+  --border: #e6e2dc;
+  --border-strong: #d7d1c8;
+  --accent: #b87b38;
+  --accent-light: #e5bd83;
+  --accent-dark: #815122;
+  --success: #618167;
+  --success-background: #e8f0e8;
+  --warning: #a56d2d;
+  --warning-background: #f5ead7;
+  --danger: #a2574c;
+  --danger-background: #f5e4e1;
+}
+
 body {
-  @apply bg-slate-50 text-slate-900;
+  background: var(--background);
+  color: var(--text-primary);
+}
+
+.shadow-panel {
+  box-shadow:
+    0 1px 2px rgba(20, 17, 13, 0.03),
+    0 8px 30px rgba(20, 17, 13, 0.04);
 }

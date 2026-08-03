@@ -69,21 +69,22 @@
     var panel = document.createElement("div");
     setStyles(panel, {
       position: "fixed",
-      bottom: "calc(" + margin + " + 60px)",
+      bottom: "calc(" + margin + " + 64px)",
       width: panelWidth,
       height: panelHeight,
       maxHeight: "80vh",
       maxWidth: "90vw",
-      borderRadius: "12px",
+      borderRadius: "22px",
       overflow: "hidden",
-      boxShadow: "0 8px 30px rgba(0,0,0,0.25)",
+      border: "1px solid rgba(20, 17, 13, 0.08)",
+      boxShadow: "0 1px 2px rgba(20,17,13,0.03), 0 20px 50px rgba(20,17,13,0.18)",
       zIndex: "2147483000",
       display: "none",
     });
     panel.style[side] = margin;
 
-    launcher.addEventListener("click", function () {
-      isOpen = !isOpen;
+    function setOpen(next) {
+      isOpen = next;
       panel.style.display = isOpen ? "block" : "none";
       if (isOpen && !iframeCreated) {
         var iframe = document.createElement("iframe");
@@ -93,6 +94,19 @@
         setStyles(iframe, { width: "100%", height: "100%", border: "none" });
         panel.appendChild(iframe);
         iframeCreated = true;
+      }
+    }
+
+    launcher.addEventListener("click", function () {
+      setOpen(!isOpen);
+    });
+
+    // The embed page's header close button posts this so the launcher (which owns
+    // the panel's open/closed state) can hide it -- the iframe can't reach across
+    // origins to toggle its own wrapper's display style directly.
+    window.addEventListener("message", function (event) {
+      if (event.data && event.data.type === "ruach:close") {
+        setOpen(false);
       }
     });
 

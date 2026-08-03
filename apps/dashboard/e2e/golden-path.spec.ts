@@ -44,7 +44,7 @@ test("golden path: org through database-backed recommendation", async ({ page, c
 
   await page.goto("/resources");
   await page.getByLabel("URL").fill("https://www.youtube.com/watch?v=mock-yt-e2e-01");
-  await page.getByRole("button", { name: "Import" }).click();
+  await page.getByRole("button", { name: "Analyze Resource" }).click();
   await page.waitForURL(/\/resources\/.+/);
 
   // MockYouTubeProvider auto-fetches a transcript on import, so the review screen
@@ -52,10 +52,10 @@ test("golden path: org through database-backed recommendation", async ({ page, c
   await expect(page.getByText(/Mock transcript for YouTube video/)).toBeVisible();
 
   await page.getByRole("button", { name: "Generate" }).click();
-  await expect(page.getByText("Primary topic:")).toBeVisible();
+  await expect(page.getByText("Primary topic")).toBeVisible();
 
-  await page.getByRole("button", { name: "Approve and index" }).click();
-  await expect(page.getByText("Approved and indexed.")).toBeVisible();
+  await page.getByRole("button", { name: "Approve Resource" }).click();
+  await expect(page.getByText("Approved and indexed")).toBeVisible();
 
   const previewPage = await context.newPage();
   await previewPage.goto(`/widget/embed/${publicWidgetId}`);

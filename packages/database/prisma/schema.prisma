@@ -127,7 +127,7 @@ model WidgetConfiguration {
   inputPlaceholder      String           @default("Ask a question...")
   launcherLabel         String           @default("Ask a question")
   launcherPosition      LauncherPosition @default(BOTTOM_RIGHT)
-  primaryColor          String           @default("#2563EB")
+  primaryColor          String           @default("#161616")
   suggestedPrompts      String[]         @default([])
   privacyNotice         String           @default("Conversations are anonymous and not linked to your identity.")
   noResultMessage       String           @default("I couldn't find a resource that directly addresses that yet.")

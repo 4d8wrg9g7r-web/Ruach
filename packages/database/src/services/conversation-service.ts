@@ -45,3 +45,10 @@ export async function getRecentMessages(organizationId: string, conversationId: 
     take: limit,
   });
 }
+
+/** Dashboard "Questions Answered" metric: assistant replies that returned a recommendation. */
+export async function countRecommendationResponses(organizationId: string) {
+  return tenantDb.conversationMessage.count({
+    where: { organizationId, role: "ASSISTANT", responseType: "RESOURCE_RECOMMENDATION" },
+  });
+}

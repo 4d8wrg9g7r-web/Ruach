@@ -1,48 +1,239 @@
 import Link from "next/link";
-import { resourceService, websiteService, widgetService } from "@ruach/database";
-import { getCurrentOrganization } from "../../../lib/session";
+import {
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  Code2,
+  Database,
+  Globe as WebsiteIcon,
+  HelpCircle,
+  Layers,
+  MessageCircle,
+  PlusCircle,
+  Sparkles,
+} from "lucide-react";
+import { auditService, conversationService, resourceService, websiteService, widgetService } from "@ruach/database";
+import { MetricCard } from "../../../components/ui/MetricCard";
+import { Badge } from "../../../components/ui/Badge";
+import { buttonClasses } from "../../../components/ui/Button";
+import { WidgetPreviewFrame } from "../../../components/WidgetPreviewFrame";
+import {
+  auditActionLabel,
+  averageConfidence,
+  confidenceLevel,
+  greetingForHour,
+  resourceStatusLabel,
+  resourceStatusTone,
+  timeAgo,
+} from "../../../lib/format";
+import { getCurrentOrganization, getCurrentUser } from "../../../lib/session";
+
+const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
+  "organization.created": <Sparkles size={14} />,
+  "website.created": <WebsiteIcon size={14} />,
+  "widget.created": <Layers size={14} />,
+  "resource.approved": <CheckCircle2 size={14} />,
+  "resource.categorized": <Sparkles size={14} />,
+};
+
+const CONFIDENCE_BADGE: Record<string, "success" | "warning" | "danger"> = {
+  High: "success",
+  Medium: "warning",
+  Low: "danger",
+};
 
 export default async function OverviewPage() {
   const organization = await getCurrentOrganization();
+  const user = await getCurrentUser();
   if (!organization) return null;
 
-  const [resources, websites, widgets] = await Promise.all([
+  const [resources, websites, widgets, questionsAnswered, activity, reviewQueue] = await Promise.all([
     resourceService.listResources(organization.id),
     websiteService.listWebsites(organization.id),
     widgetService.listWidgets(organization.id),
+    conversationService.countRecommendationResponses(organization.id),
+    auditService.listAuditEvents(organization.id, 6),
+    resourceService.listReviewQueue(organization.id, 5),
   ]);
 
-  const active = resources.filter((r) => r.status === "ACTIVE").length;
-  const needsReview = resources.filter((r) => r.status === "REVIEW_REQUIRED").length;
-  const draft = resources.filter((r) => r.status === "DRAFT" || r.status === "PROCESSING").length;
-
-  const stats = [
-    { label: "Active resources", value: active },
-    { label: "Awaiting review", value: needsReview },
-    { label: "Draft / processing", value: draft },
-    { label: "Websites", value: websites.length },
-    { label: "Widgets", value: widgets.length },
-  ];
+  const activeCount = resources.filter((r) => r.status === "ACTIVE").length;
+  const pendingReviewCount = resources.filter((r) => r.status === "REVIEW_REQUIRED").length;
+  const activeWidgets = widgets.filter((w) => w.status === "ACTIVE");
+  const activeWebsiteCount = new Set(activeWidgets.map((w) => w.websiteId)).size;
+  const firstName = (user?.name || user?.email || "there").split(" ")[0]?.split("@")[0];
+  const previewWidget = activeWidgets[0] ?? widgets[0] ?? null;
+  const recentResources = resources.slice(0, 5);
 
   return (
-    <div>
-      <h1 className="mb-6 text-xl font-semibold">Overview</h1>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded border border-slate-200 bg-white p-4">
-            <div className="text-2xl font-semibold">{stat.value}</div>
-            <div className="text-sm text-slate-500">{stat.label}</div>
+    <div className="flex gap-6">
+      <div className="min-w-0 flex-1">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              {greetingForHour(new Date().getHours())}, {firstName}
+            </h1>
+            <p className="mt-1 text-sm text-ink-secondary">Here&rsquo;s what&rsquo;s happening with {organization.name}.</p>
           </div>
-        ))}
+          <Link href="/resources" className={buttonClasses("primary", "md")}>
+            <PlusCircle size={16} /> Import Resource <ChevronDown size={14} className="opacity-70" />
+          </Link>
+        </div>
+
+        <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricCard label="Resources" value={activeCount} helperText={`${resources.length} total`} icon={<Database size={16} />} />
+          <MetricCard
+            label="Pending Review"
+            value={pendingReviewCount}
+            helperText={pendingReviewCount > 0 ? "Needs your attention" : "All caught up"}
+            icon={<Clock size={16} />}
+          />
+          <MetricCard
+            label="Questions Answered"
+            value={questionsAnswered}
+            helperText="Across all widgets"
+            icon={<MessageCircle size={16} />}
+          />
+          <MetricCard
+            label="Active Widgets"
+            value={activeWidgets.length}
+            helperText={`Across ${activeWebsiteCount} website${activeWebsiteCount === 1 ? "" : "s"}`}
+            icon={<Code2 size={16} />}
+          />
+        </div>
+
+        <div className="mb-6 grid gap-6 lg:grid-cols-2">
+          <div className="shadow-panel rounded-lg border border-border bg-surface p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-ink">Recent Activity</h2>
+            </div>
+            {activity.length === 0 ? (
+              <p className="py-6 text-center text-sm text-ink-muted">No activity yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-4">
+                {activity.map((event) => (
+                  <li key={event.id} className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
+                      {ACTIVITY_ICONS[event.action] ?? <HelpCircle size={14} />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-ink">{auditActionLabel(event.action)}</p>
+                    </div>
+                    <span className="shrink-0 text-xs text-ink-muted">{timeAgo(event.createdAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="shadow-panel rounded-lg border border-border bg-surface p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-ink">Review Queue</h2>
+              <Link href="/resources?status=REVIEW_REQUIRED" className="text-xs font-medium text-accent hover:text-accent-dark">
+                View all ({pendingReviewCount})
+              </Link>
+            </div>
+            {reviewQueue.length === 0 ? (
+              <p className="py-6 text-center text-sm text-ink-muted">Nothing waiting for review.</p>
+            ) : (
+              <ul className="flex flex-col gap-4">
+                {reviewQueue.map((resource) => {
+                  const avg = averageConfidence(resource.evidence.map((e) => e.confidenceScore));
+                  const level = avg !== null ? confidenceLevel(avg) : null;
+                  return (
+                    <li key={resource.id}>
+                      <Link
+                        href={`/resources/${resource.id}`}
+                        className="flex items-center gap-3 rounded-md p-1.5 transition-colors duration-180 hover:bg-surface-muted"
+                      >
+                        <span className="h-10 w-14 shrink-0 overflow-hidden rounded bg-surface-muted">
+                          {resource.thumbnailUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={resource.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink">{resource.title}</p>
+                          <p className="truncate text-xs text-ink-muted">
+                            {[resource.speakerName, resource.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
+                        {level && (
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <Badge variant={CONFIDENCE_BADGE[level]}>{level}</Badge>
+                            <span className="text-[11px] text-ink-muted">{Math.round((avg ?? 0) * 100)}%</span>
+                          </div>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="shadow-panel rounded-lg border border-border bg-surface">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <h2 className="text-sm font-semibold text-ink">Resources</h2>
+            <Link href="/resources" className="text-xs font-medium text-accent hover:text-accent-dark">
+              View all ({resources.length})
+            </Link>
+          </div>
+          {recentResources.length === 0 ? (
+            <p className="p-6 text-center text-sm text-ink-muted">No resources yet.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {recentResources.map((resource) => (
+                <li key={resource.id}>
+                  <Link href={`/resources/${resource.id}`} className="flex items-center gap-3 px-5 py-3 transition-colors duration-180 hover:bg-surface-muted">
+                    <span className="h-9 w-12 shrink-0 overflow-hidden rounded bg-surface-muted">
+                      {resource.thumbnailUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={resource.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-ink">{resource.title}</p>
+                      <p className="truncate text-xs text-ink-muted">{[resource.speakerName, resource.resourceType].filter(Boolean).join(" · ")}</p>
+                    </div>
+                    <Badge variant={resourceStatusTone(resource.status)}>{resourceStatusLabel(resource.status)}</Badge>
+                    <span className="w-16 shrink-0 text-right text-xs text-ink-muted">{timeAgo(resource.createdAt)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {websites.length === 0 && (
+          <p className="mt-8 text-sm text-ink-secondary">
+            Get started by <Link href="/websites" className="text-accent underline">adding a website</Link>, then{" "}
+            <Link href="/widgets" className="text-accent underline">creating a widget</Link> and{" "}
+            <Link href="/resources" className="text-accent underline">importing a resource</Link>.
+          </p>
+        )}
       </div>
 
-      {websites.length === 0 && (
-        <p className="mt-8 text-sm text-slate-600">
-          Get started by <Link href="/websites" className="text-blue-600 underline">adding a website</Link>, then{" "}
-          <Link href="/widgets" className="text-blue-600 underline">creating a widget</Link> and{" "}
-          <Link href="/resources" className="text-blue-600 underline">importing a resource</Link>.
-        </p>
-      )}
+      <aside className="hidden w-[400px] shrink-0 xl:block">
+        <div className="sticky top-8">
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold text-ink">Widget Preview</h2>
+            <p className="text-xs text-ink-muted">This is how your widget looks to visitors.</p>
+          </div>
+          {previewWidget ? (
+            <WidgetPreviewFrame publicWidgetId={previewWidget.publicWidgetId} />
+          ) : (
+            <div className="shadow-panel flex flex-col items-center gap-2 rounded-lg border border-border bg-surface px-6 py-16 text-center">
+              <p className="text-sm text-ink-muted">Create a widget to see a live preview here.</p>
+              <Link href="/widgets" className="text-xs font-medium text-accent hover:text-accent-dark">
+                Create a widget →
+              </Link>
+            </div>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }
