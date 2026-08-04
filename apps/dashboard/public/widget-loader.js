@@ -46,25 +46,60 @@
     var margin = "20px";
     var side = config.launcherPosition === "BOTTOM_LEFT" ? "left" : "right";
 
+    // A search/sparkle glyph rather than a chat-bubble icon -- this is meant to read
+    // as "find a resource," not "open a support chat." Hand-written SVG (no icon
+    // library reachable from a dependency-free vanilla script).
+    var SPARKLE_PATH =
+      "M9.94 15.5a2 2 0 0 0-1.44-1.44l-6.13-1.58a.5.5 0 0 1 0-.96l6.13-1.58a2 2 0 0 0 1.44-1.44l1.58-6.13a.5.5 0 0 1 .96 0l1.58 6.13a2 2 0 0 0 1.44 1.44l6.13 1.58a.5.5 0 0 1 0 .96l-6.13 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.13a.5.5 0 0 1-.96 0z";
+
     var launcher = document.createElement("button");
     launcher.type = "button";
-    launcher.textContent = config.launcherLabel || "Ask a question";
-    launcher.setAttribute("aria-label", config.launcherLabel || "Open resource assistant");
+    launcher.setAttribute("aria-label", config.launcherLabel || "Find a resource");
     setStyles(launcher, {
       position: "fixed",
       bottom: margin,
       zIndex: "2147483000",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "8px",
       padding: "12px 18px",
-      borderRadius: "999px",
+      borderRadius: "16px",
       border: "none",
       color: "#ffffff",
-      backgroundColor: config.primaryColor || "#2563EB",
+      backgroundColor: config.primaryColor || "#161616",
       fontFamily: "system-ui, sans-serif",
       fontSize: "14px",
+      fontWeight: "500",
       cursor: "pointer",
       boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
+      transition: "filter 150ms ease",
     });
     launcher.style[side] = margin;
+
+    // Brightness filter rather than computing a darker/lighter shade of
+    // config.primaryColor -- works for any org's brand color with no color-math.
+    launcher.addEventListener("mouseenter", function () {
+      launcher.style.filter = "brightness(1.08)";
+    });
+    launcher.addEventListener("mouseleave", function () {
+      launcher.style.filter = "none";
+    });
+
+    var svgNs = "http://www.w3.org/2000/svg";
+    var icon = document.createElementNS(svgNs, "svg");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("width", "16");
+    icon.setAttribute("height", "16");
+    icon.setAttribute("fill", "currentColor");
+    icon.setAttribute("aria-hidden", "true");
+    var iconPath = document.createElementNS(svgNs, "path");
+    iconPath.setAttribute("d", SPARKLE_PATH);
+    icon.appendChild(iconPath);
+    launcher.appendChild(icon);
+
+    var label = document.createElement("span");
+    label.textContent = config.launcherLabel || "Find a resource";
+    launcher.appendChild(label);
 
     var panel = document.createElement("div");
     setStyles(panel, {

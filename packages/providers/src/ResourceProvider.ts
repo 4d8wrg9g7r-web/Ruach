@@ -10,6 +10,10 @@ export interface ProviderConfiguration {
   organizationId: string;
   /** Present once a subscriber has connected an account (brief §14/§15 OAuth flows). Unused by mocks. */
   connectionId?: string;
+  /** A pasted channel URL, for providers that support bulk channel import (currently: YouTube). */
+  channelUrl?: string;
+  /** A pasted RSS/Atom feed URL, for RSSProvider's bulk import. */
+  feedUrl?: string;
 }
 
 /**

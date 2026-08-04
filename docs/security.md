@@ -41,9 +41,24 @@ NextAuth v5, Credentials provider, JWT session strategy (see `apps/dashboard/aut
 for why no Prisma adapter is used). Auth routes and middleware run on the Node
 runtime, not edge, since `bcryptjs` and the Prisma client don't run on edge.
 
+## Rate limiting
+
+`apps/dashboard/lib/rate-limit.ts` implements an in-memory sliding-window limiter,
+applied to the public chat endpoint (`app/api/widget/[publicWidgetId]/chat/route.ts`)
+before any AI provider call, so an over-limit request never generates OpenAI cost.
+Two independent limits, both scoped per-widget: 20 messages / 10 minutes per
+`sessionId` (catches one runaway client), 60 / 10 minutes per client IP (catches
+someone cycling `sessionId` -- a client-generated, unauthenticated value -- to dodge
+the per-session limit). Rejected requests get `429` with a `Retry-After` header.
+
+This is single-process, in-memory state -- it does not share limits across multiple
+server instances or serverless invocations. Fine for the current single-instance
+deployment model; would need a shared store (Redis or similar) to hold once the app
+runs on more than one instance.
+
 ## Not yet built
 
-Rate limiting, CSRF protection beyond NextAuth's built-in handling, Content Security
-Policy headers, dependency scanning, signed internal job requests (no background job
-system exists yet), and file-upload validation (no file upload UI exists yet --
-transcripts are pasted as text).
+CSRF protection beyond NextAuth's built-in handling, Content Security Policy headers,
+dependency scanning, signed internal job requests (no background job system exists
+yet), and file-upload validation (no file upload UI exists yet -- transcripts are
+pasted as text).

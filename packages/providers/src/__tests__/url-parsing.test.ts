@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseVimeoUrl, parseYouTubeUrl } from "../url-parsing";
+import { parseVimeoUrl, parseYouTubeChannelUrl, parseYouTubeUrl } from "../url-parsing";
 
 describe("parseYouTubeUrl", () => {
   it("parses watch URLs", () => {
@@ -33,6 +33,41 @@ describe("parseYouTubeUrl", () => {
 
   it("returns null for malformed input", () => {
     expect(parseYouTubeUrl("not a url")).toBeNull();
+  });
+});
+
+describe("parseYouTubeChannelUrl", () => {
+  it("parses /channel/ID URLs", () => {
+    expect(parseYouTubeChannelUrl("https://www.youtube.com/channel/UCabc123")).toEqual({
+      type: "id",
+      value: "UCabc123",
+    });
+  });
+
+  it("parses /@handle URLs", () => {
+    expect(parseYouTubeChannelUrl("https://www.youtube.com/@somechannel")).toEqual({
+      type: "handle",
+      value: "@somechannel",
+    });
+  });
+
+  it("parses legacy /c/ and /user/ URLs as username lookups", () => {
+    expect(parseYouTubeChannelUrl("https://www.youtube.com/c/SomeChannel")).toEqual({
+      type: "username",
+      value: "SomeChannel",
+    });
+    expect(parseYouTubeChannelUrl("https://www.youtube.com/user/LegacyName")).toEqual({
+      type: "username",
+      value: "LegacyName",
+    });
+  });
+
+  it("returns null for a single-video URL", () => {
+    expect(parseYouTubeChannelUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBeNull();
+  });
+
+  it("returns null for non-YouTube URLs", () => {
+    expect(parseYouTubeChannelUrl("https://vimeo.com/123")).toBeNull();
   });
 });
 

@@ -4,7 +4,10 @@ import { ManualResourceProvider } from "./ManualResourceProvider";
 import { MockVimeoProvider } from "./MockVimeoProvider";
 import { MockYouTubeProvider } from "./MockYouTubeProvider";
 import type { ResourceProvider } from "./ResourceProvider";
+import { RSSProvider } from "./RSSProvider";
 import { parseVimeoUrl, parseYouTubeUrl } from "./url-parsing";
+import { VimeoProvider } from "./VimeoProvider";
+import { YouTubeProvider } from "./YouTubeProvider";
 
 /**
  * Detects the provider and external ID for a pasted URL, trying the specific
@@ -26,21 +29,27 @@ export function detectProviderFromUrl(url: string): { provider: ResourceProvider
 }
 
 /**
- * Provider factory. All providers are mocks in milestone 1 (brief §57: the repository
- * must run without production credentials). Live adapters (real YouTube Data API,
- * real Vimeo API) get added here later, gated behind their respective env vars, without
- * changing any caller — that's the point of the ResourceProvider interface.
+ * Provider factory. Real adapters activate only when their env var is set
+ * (YOUTUBE_API_KEY / VIMEO_ACCESS_TOKEN) -- otherwise the mock is used, so the
+ * repository still runs without production credentials (brief §57). Callers never
+ * know or care which one they got, since both implement ResourceProvider identically.
  */
 export function getResourceProvider(provider: ResourceProviderTypeValue): ResourceProvider {
   switch (provider) {
-    case "YOUTUBE":
-      return new MockYouTubeProvider();
-    case "VIMEO":
-      return new MockVimeoProvider();
+    case "YOUTUBE": {
+      const apiKey = process.env.YOUTUBE_API_KEY;
+      return apiKey ? new YouTubeProvider(apiKey) : new MockYouTubeProvider();
+    }
+    case "VIMEO": {
+      const accessToken = process.env.VIMEO_ACCESS_TOKEN;
+      return accessToken ? new VimeoProvider(accessToken) : new MockVimeoProvider();
+    }
     case "GENERIC_URL":
       return new GenericUrlProvider();
     case "MANUAL":
       return new ManualResourceProvider();
+    case "RSS":
+      return new RSSProvider();
     case "SUBSPLASH":
       throw new Error(
         "Subsplash has no public documented API (brief §16) -- scaffold only. Use manual import instead.",

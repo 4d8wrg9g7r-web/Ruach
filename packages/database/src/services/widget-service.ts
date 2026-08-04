@@ -39,6 +39,7 @@ export async function updateWidget(
     launcherLabel: string;
     launcherPosition: LauncherPosition;
     primaryColor: string;
+    logoUrl: string | null;
     suggestedPrompts: string[];
     privacyNotice: string;
     noResultMessage: string;

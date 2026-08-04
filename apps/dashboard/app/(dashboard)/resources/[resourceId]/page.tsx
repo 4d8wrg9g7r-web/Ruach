@@ -1,12 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { ArrowLeft, Calendar, CheckCircle2, Clock, ExternalLink, RefreshCw, User, XCircle } from "lucide-react";
+import { ArrowLeft, Calendar, CheckCircle2, Clock, ExternalLink, RefreshCw, User, X, XCircle } from "lucide-react";
 import { auditService, resourceService } from "@ruach/database";
 import { CategorizationService, getAIProvider } from "@ruach/ai";
+import { extractReadableText, safeFetch, UnsafeUrlError } from "@ruach/providers";
 import { LocalRetrievalProvider } from "@ruach/retrieval";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
+import { Card } from "../../../../components/ui/Card";
+import { EmptyState } from "../../../../components/ui/EmptyState";
+import { Textarea } from "../../../../components/ui/Input";
 import { confidenceLevel, resourceStatusLabel, resourceStatusTone } from "../../../../lib/format";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../../lib/session";
 
@@ -28,6 +32,61 @@ async function setTranscriptAction(resourceId: string, formData: FormData) {
     cleanText: transcript,
     approvedByUser: true,
   });
+  revalidatePath(`/resources/${resourceId}`);
+}
+
+/**
+ * Fetches and includes a link discovered in the resource's description (brief
+ * §22-23). Failures (dead link, blocked by safeFetch's SSRF guardrails, not an HTML
+ * page) redirect back with a query-param error rather than throwing -- a broken
+ * external link is an expected, recoverable outcome here, not a validation bug, so
+ * it gets the same "redirect with ?error=" treatment as the prayer-wall forms rather
+ * than crashing to the error boundary.
+ */
+async function approveLinkedDocumentAction(resourceId: string, sourceDocumentId: string) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  const documents = await resourceService.listSourceDocuments(organization.id, resourceId);
+  const doc = documents.find((d) => d.id === sourceDocumentId);
+  if (!doc?.sourceUrl) throw new Error("Link not found");
+
+  let errorMessage: string | null = null;
+  try {
+    const result = await safeFetch(doc.sourceUrl);
+    if (!result.contentType?.includes("text/html")) {
+      errorMessage = "That link isn't a readable web page.";
+    } else {
+      const text = extractReadableText(result.body);
+      if (!text) {
+        errorMessage = "Couldn't find any readable text at that link.";
+      } else {
+        await resourceService.approveSourceDocument(organization.id, resourceId, sourceDocumentId, {
+          originalText: text,
+          cleanText: text,
+        });
+      }
+    }
+  } catch (err) {
+    errorMessage =
+      err instanceof UnsafeUrlError ? err.message : "Couldn't fetch that link -- it may be down or blocking automated requests.";
+  }
+
+  if (errorMessage) {
+    redirect(`/resources/${resourceId}?linkError=${encodeURIComponent(errorMessage)}`);
+  }
+  revalidatePath(`/resources/${resourceId}`);
+}
+
+async function dismissLinkedDocumentAction(resourceId: string, sourceDocumentId: string) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  await resourceService.rejectSourceDocument(organization.id, resourceId, sourceDocumentId);
   revalidatePath(`/resources/${resourceId}`);
 }
 
@@ -97,8 +156,15 @@ async function rejectAction(resourceId: string) {
 
 const CONFIDENCE_TONE = { High: "success", Medium: "warning", Low: "danger" } as const;
 
-export default async function ResourceDetailPage({ params }: { params: Promise<{ resourceId: string }> }) {
+export default async function ResourceDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ resourceId: string }>;
+  searchParams: Promise<{ linkError?: string }>;
+}) {
   const { resourceId } = await params;
+  const sp = await searchParams;
   const organization = await getCurrentOrganization();
   if (!organization) return null;
 
@@ -110,11 +176,23 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
   const boundApprove = approveAction.bind(null, resourceId);
   const boundReject = rejectAction.bind(null, resourceId);
 
+  const pendingLinks = resource.sourceDocuments.filter(
+    (doc) => doc.sourceType === "WEB_PAGE" && doc.discoveredAutomatically && !doc.approvedByUser,
+  );
+  const otherDocuments = resource.sourceDocuments.filter((doc) => !pendingLinks.includes(doc));
+
   return (
     <div>
-      <Link href="/resources" className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink">
+      <Link
+        href="/resources"
+        className="mb-4 inline-flex items-center gap-1.5 rounded-sm text-sm text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+      >
         <ArrowLeft size={14} /> Resources
       </Link>
+
+      {sp.linkError && (
+        <p className="mb-4 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">{sp.linkError}</p>
+      )}
 
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
@@ -129,7 +207,7 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left: metadata + transcript */}
         <div className="flex flex-col gap-6">
-          <div className="shadow-panel overflow-hidden rounded-lg border border-border bg-surface">
+          <Card padding="none">
             {resource.thumbnailUrl && (
               <div className="aspect-video w-full bg-surface-muted">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -169,14 +247,19 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
               )}
               <dt className="text-ink-muted">Source</dt>
               <dd>
-                <a href={resource.publicUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent hover:text-accent-dark">
+                <a
+                  href={resource.publicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-sm text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                >
                   Open source <ExternalLink size={12} />
                 </a>
               </dd>
             </dl>
-          </div>
+          </Card>
 
-          <div className="shadow-panel rounded-lg border border-border bg-surface p-4">
+          <Card padding="none" className="p-4">
             <h2 className="mb-3 text-sm font-semibold text-ink">Transcript</h2>
             {resource.cleanTranscript ? (
               <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-md bg-surface-muted p-3 text-sm text-ink-secondary">
@@ -184,39 +267,81 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
               </div>
             ) : (
               <form action={boundSetTranscript} className="flex flex-col gap-2">
-                <textarea
-                  name="transcript"
-                  rows={5}
-                  placeholder="Paste a transcript..."
-                  className="rounded border border-border-strong bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-                />
+                <Textarea name="transcript" rows={5} placeholder="Paste a transcript..." />
                 <button type="submit" className={`${buttonClasses("secondary", "sm")} self-start`}>
                   Save transcript
                 </button>
               </form>
             )}
-          </div>
+          </Card>
 
-          <div className="shadow-panel rounded-lg border border-border bg-surface p-4">
+          <Card padding="none" className="p-4">
             <h2 className="mb-3 text-sm font-semibold text-ink">Supporting documents</h2>
-            {resource.sourceDocuments.length === 0 ? (
-              <p className="text-sm text-ink-muted">None yet.</p>
+            {otherDocuments.length === 0 && pendingLinks.length === 0 ? (
+              <EmptyState description="None yet." />
             ) : (
-              <ul className="flex flex-col gap-2 text-sm">
-                {resource.sourceDocuments.map((doc) => (
-                  <li key={doc.id} className="flex items-center gap-2 rounded-md bg-surface-muted px-3 py-2 text-ink-secondary">
-                    <span className="font-medium text-ink">{doc.sourceType}</span>
-                    {doc.discoveredAutomatically && <Badge variant="neutral">auto-discovered</Badge>}
-                  </li>
-                ))}
-              </ul>
+              <>
+                {otherDocuments.length > 0 && (
+                  <ul className="flex flex-col gap-2 text-sm">
+                    {otherDocuments.map((doc) => (
+                      <li key={doc.id} className="flex items-center gap-2 rounded-md bg-surface-muted px-3 py-2 text-ink-secondary">
+                        <span className="font-medium text-ink">{doc.sourceType}</span>
+                        {doc.discoveredAutomatically && <Badge variant="neutral">auto-discovered</Badge>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {pendingLinks.length > 0 && (
+                  <div className={otherDocuments.length > 0 ? "mt-4 border-t border-border pt-4" : ""}>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-muted">
+                      Links found in description ({pendingLinks.length})
+                    </p>
+                    <p className="mb-3 text-xs text-ink-muted">
+                      Not fetched or used yet -- include the ones worth pulling in as sermon notes or study guides.
+                    </p>
+                    <ul className="flex flex-col gap-2">
+                      {pendingLinks.map((doc) => (
+                        <li
+                          key={doc.id}
+                          className="flex items-center justify-between gap-3 rounded-md border border-border-strong px-3 py-2"
+                        >
+                          <a
+                            href={doc.sourceUrl ?? "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="min-w-0 flex-1 truncate text-sm text-accent hover:underline"
+                          >
+                            {doc.sourceUrl}
+                          </a>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <form action={approveLinkedDocumentAction.bind(null, resourceId, doc.id)}>
+                              <button type="submit" className={buttonClasses("secondary", "sm")}>
+                                Include
+                              </button>
+                            </form>
+                            <form action={dismissLinkedDocumentAction.bind(null, resourceId, doc.id)}>
+                              <button
+                                type="submit"
+                                aria-label="Dismiss this link"
+                                className="rounded-sm p-2 text-ink-muted transition-colors duration-180 hover:bg-danger-bg hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                              >
+                                <X size={14} />
+                              </button>
+                            </form>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* Right: AI categorization + evidence */}
         <div className="flex flex-col gap-6">
-          <div className="shadow-panel rounded-lg border border-border bg-surface p-4">
+          <Card padding="none" className="p-4">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">AI Suggestions</h2>
               <form action={boundCategorize}>
@@ -300,7 +425,7 @@ export default async function ResourceDetailPage({ params }: { params: Promise<{
                 </ul>
               </details>
             )}
-          </div>
+          </Card>
         </div>
       </div>
 

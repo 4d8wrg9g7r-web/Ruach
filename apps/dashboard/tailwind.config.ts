@@ -1,6 +1,23 @@
 import type { Config } from "tailwindcss";
 
-const config: Config = {
+/**
+ * Lets `bg-accent/70`-style opacity modifiers work on a theme color backed by a CSS
+ * variable. Plain `DEFAULT: "var(--accent)"` can't be opacity-modified -- Tailwind
+ * needs the color decomposed into RGB channels (`--accent-rgb: 184 123 56`, set in
+ * globals.css) to build `rgb(var(...) / <alpha-value>)`. Falls back to the plain hex
+ * variable when no opacity modifier is present, so unmodified usages (the vast
+ * majority) are unaffected.
+ */
+function withOpacity(rgbVariable: string, hexVariable: string) {
+  return ({ opacityValue }: { opacityValue?: string }) =>
+    opacityValue === undefined ? `var(${hexVariable})` : `rgb(var(${rgbVariable}) / ${opacityValue})`;
+}
+
+// Not annotated as `Config` directly -- Tailwind's own Config["theme"]["extend"]["colors"]
+// type is narrower than what it actually accepts at runtime (function-valued colors,
+// per Tailwind's documented opacity-modifier API, aren't in the declared type). Cast on
+// export instead so the object literal above isn't force-narrowed while being written.
+const config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
     extend: {
@@ -21,20 +38,20 @@ const config: Config = {
         border: "var(--border)",
         "border-strong": "var(--border-strong)",
         accent: {
-          DEFAULT: "var(--accent)",
+          DEFAULT: withOpacity("--accent-rgb", "--accent"),
           light: "var(--accent-light)",
           dark: "var(--accent-dark)",
         },
         success: {
-          DEFAULT: "var(--success)",
+          DEFAULT: withOpacity("--success-rgb", "--success"),
           bg: "var(--success-background)",
         },
         warning: {
-          DEFAULT: "var(--warning)",
+          DEFAULT: withOpacity("--warning-rgb", "--warning"),
           bg: "var(--warning-background)",
         },
         danger: {
-          DEFAULT: "var(--danger)",
+          DEFAULT: withOpacity("--danger-rgb", "--danger"),
           bg: "var(--danger-background)",
         },
       },
@@ -57,4 +74,4 @@ const config: Config = {
   plugins: [],
 };
 
-export default config;
+export default config as unknown as Config;

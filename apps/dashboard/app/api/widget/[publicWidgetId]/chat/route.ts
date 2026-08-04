@@ -4,8 +4,16 @@ import { conversationService, websiteService, widgetService } from "@ruach/datab
 import { ChatPipeline, getAIProvider } from "@ruach/ai";
 import { LocalRetrievalProvider } from "@ruach/retrieval";
 import { ChatRequestSchema } from "@ruach/shared-types";
+import { checkRateLimit, getClientIp } from "../../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
+
+// Deliberately generous -- this exists to stop runaway/bot/abuse traffic from
+// generating unbounded OpenAI cost, not to throttle a real visitor mid-conversation.
+// Per-session catches one runaway client; per-IP catches someone cycling sessionIds
+// (a client-generated, unauthenticated value) to dodge the per-session limit.
+const SESSION_LIMIT = { max: 20, windowMs: 10 * 60 * 1000 };
+const IP_LIMIT = { max: 60, windowMs: 10 * 60 * 1000 };
 
 /**
  * Public, unauthenticated endpoint -- see config/route.ts's doc comment for the same
@@ -32,6 +40,26 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
   const { sessionId, message } = parsed.data;
+
+  // Rejected here, before any conversation/AI work, so an over-limit request never
+  // reaches the OpenAI call that actually costs money.
+  const sessionCheck = checkRateLimit(`session:${widget.id}:${sessionId}`, SESSION_LIMIT.max, SESSION_LIMIT.windowMs);
+  if (!sessionCheck.allowed) {
+    return NextResponse.json(
+      { error: "You've sent a lot of messages recently. Please wait a bit before trying again." },
+      { status: 429, headers: { "Retry-After": String(sessionCheck.retryAfterSeconds) } },
+    );
+  }
+  const clientIp = getClientIp(req.headers);
+  if (clientIp) {
+    const ipCheck = checkRateLimit(`ip:${widget.id}:${clientIp}`, IP_LIMIT.max, IP_LIMIT.windowMs);
+    if (!ipCheck.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests from this network. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(ipCheck.retryAfterSeconds) } },
+      );
+    }
+  }
 
   const conversation = await conversationService.getOrCreateConversation({
     organizationId: widget.organizationId,

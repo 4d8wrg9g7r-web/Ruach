@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Lock, Send, X } from "lucide-react";
 import type { ChatResponse } from "@ruach/shared-types";
+import { hexToRgba } from "../../../../lib/color";
+
+interface ActionLinkDisplay {
+  id: string;
+  label: string;
+  url: string;
+}
 
 interface ChatWidgetProps {
   publicWidgetId: string;
@@ -12,8 +19,10 @@ interface ChatWidgetProps {
   inputPlaceholder: string;
   suggestedPrompts: string[];
   primaryColor: string;
+  logoUrl: string | null;
   privacyNotice: string;
   showPlatformBranding: boolean;
+  actionLinks: ActionLinkDisplay[];
   host: string | null;
 }
 
@@ -23,6 +32,8 @@ interface DisplayMessage {
   text: string;
   response?: ChatResponse;
   sentAt: Date;
+  /** Distinguishes "the assistant found nothing" (a real, if unhelpful, answer) from "something broke" -- both currently render as a normal-looking assistant bubble otherwise. */
+  isError?: boolean;
 }
 
 function sessionStorageKey(publicWidgetId: string) {
@@ -31,6 +42,39 @@ function sessionStorageKey(publicWidgetId: string) {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+/** Header/message avatar -- shows the org's logo image when set, otherwise the initials circle. */
+function Avatar({
+  logoUrl,
+  organizationName,
+  primaryColor,
+  size,
+}: {
+  logoUrl: string | null;
+  organizationName: string;
+  primaryColor: string;
+  size: "md" | "sm";
+}) {
+  const dimensionClass = size === "md" ? "h-9 w-9 text-xs" : "h-6 w-6 text-[10px]";
+  if (logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={logoUrl}
+        alt={organizationName}
+        className={`shrink-0 rounded-full object-cover ${dimensionClass}`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center rounded-full font-semibold text-white ${dimensionClass}`}
+      style={{ backgroundColor: primaryColor }}
+    >
+      {initials(organizationName)}
+    </span>
+  );
 }
 
 function initials(name: string) {
@@ -42,12 +86,17 @@ function initials(name: string) {
     .join("");
 }
 
+const VISIBLE_LINK_COUNT = 4;
+
 export function ChatWidget(props: ChatWidgetProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [input, setInput] = useState("");
+  const [linksExpanded, setLinksExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const latestMessageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const key = sessionStorageKey(props.publicWidgetId);
@@ -61,9 +110,14 @@ export function ChatWidget(props: ChatWidgetProps) {
     }
   }, [props.publicWidgetId]);
 
+  // Scroll so the TOP of the newest message is visible, not the bottom of the whole
+  // conversation -- a long answer (acknowledgment + explanation + resource cards)
+  // would otherwise jump straight past the text and land on the last card, and the
+  // visitor would miss the actual response. They can still scroll down themselves
+  // to see everything below it.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, isLoading]);
+    latestMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [messages]);
 
   async function sendMessage(text: string) {
     if (!text.trim() || !sessionId || isLoading) return;
@@ -81,22 +135,36 @@ export function ChatWidget(props: ChatWidgetProps) {
       });
 
       if (!res.ok) {
+        const fallbackText =
+          res.status === 429
+            ? "You've sent quite a few messages in a short time -- please wait a moment before asking again."
+            : "I'm having trouble searching this resource library right now. Please try again shortly.";
         setMessages((prev) => [
           ...prev,
-          {
-            id: crypto.randomUUID(),
-            role: "ASSISTANT",
-            text: "I'm having trouble searching this resource library right now. Please try again shortly.",
-            sentAt: new Date(),
-          },
+          { id: crypto.randomUUID(), role: "ASSISTANT", text: fallbackText, sentAt: new Date(), isError: true },
         ]);
         return;
       }
 
       const data = (await res.json()) as ChatResponse;
+      const displayText = data.acknowledgment ? `${data.acknowledgment} ${data.answer}` : data.answer;
       setMessages((prev) => [
         ...prev,
-        { id: data.messageId, role: "ASSISTANT", text: data.answer, response: data, sentAt: new Date() },
+        { id: data.messageId, role: "ASSISTANT", text: displayText, response: data, sentAt: new Date() },
+      ]);
+    } catch {
+      // A raw network failure (offline, DNS, CORS) throws before the res.ok check
+      // above ever runs -- without this, the typing dots would just vanish with no
+      // message shown at all.
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "ASSISTANT",
+          text: "Something went wrong sending that -- please check your connection and try again.",
+          sentAt: new Date(),
+          isError: true,
+        },
       ]);
     } finally {
       setIsLoading(false);
@@ -107,15 +175,20 @@ export function ChatWidget(props: ChatWidgetProps) {
     window.parent.postMessage({ type: "ruach:close" }, "*");
   }
 
+  // props.host is only ever set when this page is loaded inside the loader's iframe
+  // (widget-loader.js always appends ?host=); a direct visit (the dashboard's "Open
+  // full-page preview" link, or a visitor typing the embed URL) has none, so this is
+  // a reliable standalone-vs-embedded signal without a new prop. Without the cap, a
+  // standalone tab renders the exact same iframe-cramped layout stretched full-bleed.
+  const isStandalone = !props.host;
+
   return (
-    <div className="flex h-screen flex-col bg-surface">
-      <header className="flex items-center gap-3 border-b border-border px-5 py-4">
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-          style={{ backgroundColor: props.primaryColor }}
-        >
-          {initials(props.organizationName)}
-        </span>
+    <div className={`flex h-screen flex-col bg-surface ${isStandalone ? "mx-auto w-full max-w-[480px] border-x border-border" : ""}`}>
+      <header
+        className="flex items-center gap-3 border-b border-border px-5 py-4"
+        style={{ backgroundColor: hexToRgba(props.primaryColor, 0.05) }}
+      >
+        <Avatar logoUrl={props.logoUrl} organizationName={props.organizationName} primaryColor={props.primaryColor} size="md" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-semibold text-ink">{props.organizationName}</h1>
           <p className="truncate text-xs text-ink-muted">We&rsquo;re here to help you find what you need.</p>
@@ -125,6 +198,36 @@ export function ChatWidget(props: ChatWidgetProps) {
         </button>
       </header>
 
+      {props.actionLinks.length > 0 && (
+        <div className="flex shrink-0 flex-col gap-2 border-b border-border px-5 py-4">
+          {(linksExpanded ? props.actionLinks : props.actionLinks.slice(0, VISIBLE_LINK_COUNT)).map((link, index) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-xl px-4 py-3 text-center text-sm font-semibold transition-opacity duration-180 hover:opacity-90"
+              style={
+                index === 0
+                  ? { backgroundColor: props.primaryColor, color: "#ffffff" }
+                  : { backgroundColor: hexToRgba(props.primaryColor, 0.12), color: props.primaryColor }
+              }
+            >
+              {link.label}
+            </a>
+          ))}
+          {!linksExpanded && props.actionLinks.length > VISIBLE_LINK_COUNT && (
+            <button
+              type="button"
+              onClick={() => setLinksExpanded(true)}
+              className="rounded-xl px-4 py-2.5 text-center text-sm font-medium text-ink-muted transition-colors duration-180 hover:text-ink"
+            >
+              or, see more next steps
+            </button>
+          )}
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
         {messages.length === 0 && (
           <div className="mb-4 rounded-xl bg-surface-muted px-4 py-3 text-sm text-ink-secondary">
@@ -133,15 +236,16 @@ export function ChatWidget(props: ChatWidgetProps) {
         )}
 
         <div className="flex flex-col gap-5">
-          {messages.map((message) => (
-            <div key={message.id} className={message.role === "USER" ? "flex justify-end" : "flex items-start gap-2.5"}>
+          {messages.map((message, index) => (
+            <div
+              key={message.id}
+              ref={index === messages.length - 1 ? latestMessageRef : undefined}
+              className={message.role === "USER" ? "flex justify-end" : "flex items-start gap-2.5"}
+            >
               {message.role === "ASSISTANT" && (
-                <span
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                  style={{ backgroundColor: props.primaryColor }}
-                >
-                  {initials(props.organizationName)}
-                </span>
+                <div className="mt-0.5">
+                  <Avatar logoUrl={props.logoUrl} organizationName={props.organizationName} primaryColor={props.primaryColor} size="sm" />
+                </div>
               )}
               <div className={message.role === "USER" ? "max-w-[85%]" : "max-w-[85%] flex-1"}>
                 {message.role === "ASSISTANT" && (
@@ -151,7 +255,9 @@ export function ChatWidget(props: ChatWidgetProps) {
                   className={
                     message.role === "USER"
                       ? "inline-block rounded-2xl rounded-tr-sm px-3.5 py-2.5 text-sm text-white"
-                      : "inline-block rounded-2xl rounded-tl-sm bg-surface-muted px-3.5 py-2.5 text-sm text-ink"
+                      : `inline-block rounded-2xl rounded-tl-sm px-3.5 py-2.5 text-sm ${
+                          message.isError ? "border border-danger/30 bg-danger-bg text-danger" : "bg-surface-muted text-ink"
+                        }`
                   }
                   style={message.role === "USER" ? { backgroundColor: props.primaryColor } : undefined}
                 >
@@ -183,7 +289,7 @@ export function ChatWidget(props: ChatWidgetProps) {
                             <div className="mt-2.5 rounded-md bg-surface-muted px-2.5 py-2 text-xs text-ink-secondary">
                               <p className="mb-1 font-medium text-ink">Why this matches your question</p>
                               <p className="flex items-start gap-1.5">
-                                <Check size={13} className="mt-0.5 shrink-0 text-success" />
+                                <Check size={13} className="mt-0.5 shrink-0" style={{ color: props.primaryColor }} />
                                 <span>{resource.relevanceExplanation}</span>
                               </p>
                             </div>
@@ -208,7 +314,8 @@ export function ChatWidget(props: ChatWidgetProps) {
                     <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-muted">Follow up</p>
                     <button
                       onClick={() => sendMessage(message.response!.followUpQuestion!)}
-                      className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-accent hover:text-accent"
+                      style={{ "--brand-color": props.primaryColor } as React.CSSProperties}
+                      className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-[color:var(--brand-color)] hover:text-[color:var(--brand-color)]"
                     >
                       {message.response.followUpQuestion}
                     </button>
@@ -219,12 +326,7 @@ export function ChatWidget(props: ChatWidgetProps) {
           ))}
           {isLoading && (
             <div className="flex items-center gap-2.5">
-              <span
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                style={{ backgroundColor: props.primaryColor }}
-              >
-                {initials(props.organizationName)}
-              </span>
+              <Avatar logoUrl={props.logoUrl} organizationName={props.organizationName} primaryColor={props.primaryColor} size="sm" />
               <div className="flex gap-1 rounded-2xl rounded-tl-sm bg-surface-muted px-3.5 py-3">
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.3s]" />
                 <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-muted [animation-delay:-0.15s]" />
@@ -240,7 +342,8 @@ export function ChatWidget(props: ChatWidgetProps) {
               <button
                 key={prompt}
                 onClick={() => sendMessage(prompt)}
-                className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-accent hover:text-accent"
+                style={{ "--brand-color": props.primaryColor } as React.CSSProperties}
+                className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-[color:var(--brand-color)] hover:text-[color:var(--brand-color)]"
               >
                 {prompt}
               </button>
@@ -260,8 +363,11 @@ export function ChatWidget(props: ChatWidgetProps) {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
             placeholder={props.inputPlaceholder}
-            className="flex-1 rounded-full border border-border-strong bg-surface px-4 py-2.5 text-sm text-ink outline-none transition-colors duration-180 focus:border-accent"
+            style={isInputFocused ? { borderColor: props.primaryColor } : undefined}
+            className="flex-1 rounded-full border border-border-strong bg-surface px-4 py-2.5 text-sm text-ink outline-none transition-colors duration-180"
           />
           <button
             type="submit"
@@ -277,7 +383,9 @@ export function ChatWidget(props: ChatWidgetProps) {
           <span className="flex items-center gap-1" title={props.privacyNotice}>
             <Lock size={10} /> Answers come from {props.organizationName}&rsquo;s approved resources.
           </span>
-          <span className="shrink-0 font-medium text-accent">Privacy</span>
+          <span className="shrink-0 font-medium" style={{ color: props.primaryColor }}>
+            Privacy
+          </span>
         </div>
         {props.showPlatformBranding && <p className="mt-1 text-[11px] text-ink-muted/70">Powered by Ruach</p>}
       </form>

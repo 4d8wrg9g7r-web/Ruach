@@ -1,3 +1,4 @@
+import "./test-env";
 import bcrypt from "bcryptjs";
 import { expect, test } from "@playwright/test";
 import { userService } from "@ruach/database";
@@ -43,7 +44,7 @@ test("golden path: org through database-backed recommendation", async ({ page, c
   expect(publicWidgetId).toBeTruthy();
 
   await page.goto("/resources");
-  await page.getByLabel("URL").fill("https://www.youtube.com/watch?v=mock-yt-e2e-01");
+  await page.getByLabel("URL", { exact: true }).fill("https://www.youtube.com/watch?v=mock-yt-e2e-01");
   await page.getByRole("button", { name: "Analyze Resource" }).click();
   await page.waitForURL(/\/resources\/.+/);
 
@@ -64,5 +65,10 @@ test("golden path: org through database-backed recommendation", async ({ page, c
 
   // The card's title comes straight from the database row, not from the model --
   // this is the acceptance-criteria check that the AI never fabricates resource data.
-  await expect(previewPage.getByText("YouTube video mock-yt-e2e-01")).toBeVisible({ timeout: 10_000 });
+  // exact: true disambiguates from the conversational reply, which now (by design --
+  // warmer, more specific responses) also mentions the resource title in a full
+  // sentence; the resource card's title element is the only exact match.
+  await expect(previewPage.getByText("[MOCK] YouTube video mock-yt-e2e-01", { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
 });

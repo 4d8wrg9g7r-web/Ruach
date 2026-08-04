@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@ruach/database": "workspace:*",
-    "@ruach/shared-types": "workspace:*"
+    "@ruach/shared-types": "workspace:*",
+    "rss-parser": "3.13.0"
   },
   "devDependencies": {
     "@types/node": "^20.16.10",

@@ -119,7 +119,7 @@ export class MockAIProvider implements AIProvider {
   }
 
   async generateConversationalResponse(input: ConversationalResponseInput): Promise<ConversationalResponseOutput> {
-    if (input.candidateTitles.length === 0) {
+    if (input.candidates.length === 0) {
       return {
         acknowledgment: "I looked through what's available here.",
         answer: "I couldn't find a resource that directly addresses that yet.",
@@ -128,10 +128,12 @@ export class MockAIProvider implements AIProvider {
     }
 
     const topicPhrase = input.intent.primaryTopic ? ` about ${input.intent.primaryTopic}` : "";
+    const top = input.candidates[0]!;
+    const reason = top.primaryTopic ? ` -- it speaks directly to ${top.primaryTopic.toLowerCase()}` : "";
     return {
       acknowledgment: `It sounds like you're looking for something${topicPhrase}.`,
-      answer: "These resources may be a good place to start.",
-      followUpQuestion: input.candidateTitles.length > 1 ? "Would you like something shorter, or a full teaching?" : null,
+      answer: `"${top.title}" might be a good place to start${reason}.`,
+      followUpQuestion: input.candidates.length > 1 ? "Would you like something shorter, or a full teaching?" : null,
     };
   }
 }

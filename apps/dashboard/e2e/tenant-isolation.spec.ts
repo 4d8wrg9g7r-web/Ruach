@@ -1,3 +1,4 @@
+import "./test-env";
 import bcrypt from "bcryptjs";
 import { expect, test } from "@playwright/test";
 import { organizationService, resourceService, userService, websiteService, widgetService } from "@ruach/database";

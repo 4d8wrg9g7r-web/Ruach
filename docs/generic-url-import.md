@@ -19,9 +19,6 @@ identifier).
 
 ## Not yet built
 
-PDF text extraction, Google Docs/Word document parsing, and the "discovered
-supporting document" review UI described in brief §22 (description-link discovery) --
-`ResourceSourceDocument.discoveredAutomatically` exists in the schema and is written
-by the description-link-discovery-adjacent code paths that do exist (provider
-metadata, transcripts), but nothing yet crawls a video description for candidate
-links.
+PDF text extraction and Google Docs/Word document parsing. The "discovered
+supporting document" review UI described in brief §22 (description-link discovery)
+is built -- see `docs/linked-document-processing.md`.

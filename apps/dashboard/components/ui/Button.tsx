@@ -4,11 +4,11 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 type ButtonSize = "sm" | "md";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded font-medium transition-all duration-180 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-all duration-180 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary:
-    "text-white bg-[linear-gradient(135deg,#b77935_0%,#d2a266_55%,#9b612b_100%)] hover:brightness-105 shadow-panel",
+    "text-white bg-[linear-gradient(135deg,var(--accent)_0%,var(--accent-light)_55%,var(--accent-dark)_100%)] hover:brightness-105 shadow-panel",
   secondary: "border border-border-strong bg-surface text-ink hover:bg-surface-muted",
   ghost: "text-ink-secondary hover:bg-surface-muted hover:text-ink",
   danger: "border border-danger/30 bg-danger-bg text-danger hover:bg-danger/10",

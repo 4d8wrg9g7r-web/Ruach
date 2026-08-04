@@ -24,8 +24,24 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships OrganizationMember[]
-  auditLogs   AuditLog[]
+  memberships         OrganizationMember[]
+  auditLogs           AuditLog[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+/**
+ * Single-use, short-lived (see forgot-password.ts's TTL constant) -- a fresh request invalidates any prior unused token for the same user rather than allowing several to be valid at once.
+ */
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum OrganizationRole {
@@ -36,27 +52,37 @@ enum OrganizationRole {
 }
 
 model Organization {
-  id                String                @id @default(cuid())
-  name              String
-  slug              String                @unique
-  categorizationMode CategorizationMode   @default(ASSISTED)
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id                           String             @id @default(cuid())
+  name                         String
+  slug                         String             @unique
+  categorizationMode           CategorizationMode @default(ASSISTED)
+  prayerWallEnabled            Boolean            @default(false)
+  publicPrayerWallId           String             @unique @default(cuid())
+  prayerRequestForwardingEmail String?
+  prayerWallBrandColor         String?
+  prayerWallLogoUrl            String?
+  createdAt                    DateTime           @default(now())
+  updatedAt                    DateTime           @updatedAt
 
-  members              OrganizationMember[]
-  websites             Website[]
-  widgets              WidgetConfiguration[]
-  resources            Resource[]
+  members                 OrganizationMember[]
+  websites                Website[]
+  widgets                 WidgetConfiguration[]
+  resources               Resource[]
   resourceSourceDocuments ResourceSourceDocument[]
-  generatedEvidence    GeneratedMetadataEvidence[]
-  collections          Collection[]
-  resourceCollections  ResourceCollection[]
-  actionLinks          ActionLink[]
-  importJobs           ImportJob[]
-  importJobItems       ImportJobItem[]
-  conversations        Conversation[]
-  conversationMessages ConversationMessage[]
-  auditLogs            AuditLog[]
+  generatedEvidence       GeneratedMetadataEvidence[]
+  collections             Collection[]
+  resourceCollections     ResourceCollection[]
+  actionLinks             ActionLink[]
+  importJobs              ImportJob[]
+  importJobItems          ImportJobItem[]
+  bulkJobs                BulkJob[]
+  conversations           Conversation[]
+  conversationMessages    ConversationMessage[]
+  auditLogs               AuditLog[]
+  contentSources          ContentSource[]
+  prayerWallAccounts      PrayerWallAccount[]
+  prayerRequests          PrayerRequest[]
+  prayerWallResetTokens   PrayerWallPasswordResetToken[]
 }
 
 enum CategorizationMode {
@@ -65,17 +91,22 @@ enum CategorizationMode {
   AUTOMATIC
 }
 
+/**
+ * userId is @unique, not just part of a compound key -- product decision: one
+ * organization per user account, no multi-org membership/switching (see
+ * lib/session.ts's getCurrentOrganization). A row's own id is still the primary
+ * key so this stays a normal join table shape rather than making userId the PK.
+ */
 model OrganizationMember {
   id             String           @id @default(cuid())
   organizationId String
-  userId         String
+  userId         String           @unique
   role           OrganizationRole
   createdAt      DateTime         @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([organizationId, userId])
   @@index([organizationId])
 }
 
@@ -89,15 +120,15 @@ enum WebsiteStatus {
 }
 
 model Website {
-  id              String        @id @default(cuid())
-  organizationId  String
-  name            String
-  primaryDomain   String
-  allowedDomains  String[]      @default([])
-  stagingDomains  String[]      @default([])
-  status          WebsiteStatus @default(ACTIVE)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  primaryDomain  String
+  allowedDomains String[]      @default([])
+  stagingDomains String[]      @default([])
+  status         WebsiteStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   widgets      WidgetConfiguration[]
@@ -116,30 +147,31 @@ enum LauncherPosition {
 }
 
 model WidgetConfiguration {
-  id                    String           @id @default(cuid())
-  organizationId        String
-  websiteId             String
-  name                  String
-  publicWidgetId        String           @unique @default(cuid())
-  status                WidgetStatus     @default(ACTIVE)
-  assistantName         String           @default("Resource Assistant")
-  welcomeMessage        String           @default("Hi! What are you looking for today?")
-  inputPlaceholder      String           @default("Ask a question...")
-  launcherLabel         String           @default("Ask a question")
-  launcherPosition      LauncherPosition @default(BOTTOM_RIGHT)
-  primaryColor          String           @default("#161616")
-  suggestedPrompts      String[]         @default([])
-  privacyNotice         String           @default("Conversations are anonymous and not linked to your identity.")
-  noResultMessage       String           @default("I couldn't find a resource that directly addresses that yet.")
-  maxRecommendations    Int              @default(3)
-  allowInlinePlayback   Boolean          @default(true)
-  showPlatformBranding  Boolean          @default(true)
-  conversationRetentionDays Int          @default(30)
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  id                        String           @id @default(cuid())
+  organizationId            String
+  websiteId                 String
+  name                      String
+  publicWidgetId            String           @unique @default(cuid())
+  status                    WidgetStatus     @default(ACTIVE)
+  assistantName             String           @default("Resource Assistant")
+  welcomeMessage            String           @default("Hi! What are you looking for today?")
+  inputPlaceholder          String           @default("Ask a question...")
+  launcherLabel             String           @default("Ask a question")
+  launcherPosition          LauncherPosition @default(BOTTOM_RIGHT)
+  primaryColor              String           @default("#161616")
+  logoUrl                   String?
+  suggestedPrompts          String[]         @default([])
+  privacyNotice             String           @default("Conversations are anonymous and not linked to your identity.")
+  noResultMessage           String           @default("I couldn't find a resource that directly addresses that yet.")
+  maxRecommendations        Int              @default(3)
+  allowInlinePlayback       Boolean          @default(true)
+  showPlatformBranding      Boolean          @default(true)
+  conversationRetentionDays Int              @default(30)
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
 
-  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  website       Website         @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  website       Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
   conversations Conversation[]
 
   @@index([organizationId])
@@ -179,6 +211,7 @@ enum ResourceProviderType {
   SUBSPLASH
   GENERIC_URL
   MANUAL
+  RSS
 }
 
 enum TranscriptSource {
@@ -191,53 +224,53 @@ enum TranscriptSource {
 }
 
 model Resource {
-  id               String               @id @default(cuid())
-  organizationId   String
-  resourceType     ResourceType
-  status           ResourceStatus       @default(DRAFT)
+  id             String         @id @default(cuid())
+  organizationId String
+  resourceType   ResourceType
+  status         ResourceStatus @default(DRAFT)
 
-  title            String
-  subtitle         String?
-  description      String?
-  summary          String?
+  title       String
+  subtitle    String?
+  description String?
+  summary     String?
 
-  creatorName      String?
-  speakerName      String?
-  seriesTitle      String?
-  publishedAt      DateTime?
-  durationSeconds  Int?
-  thumbnailUrl     String?
-  publicUrl        String
-  embedUrl         String?
+  creatorName     String?
+  speakerName     String?
+  seriesTitle     String?
+  publishedAt     DateTime?
+  durationSeconds Int?
+  thumbnailUrl    String?
+  publicUrl       String
+  embedUrl        String?
 
-  sourceProvider   ResourceProviderType
-  externalId       String
+  sourceProvider ResourceProviderType
+  externalId     String
 
   transcript       String?
   cleanTranscript  String?
   transcriptSource TranscriptSource?
 
-  topics             String[] @default([])
-  primaryTopic       String?
-  secondaryTopics    String[] @default([])
-  scriptures         String[] @default([])
-  questionsAnswered  String[] @default([])
-  audiences          String[] @default([])
-  lifeSituations     String[] @default([])
-  keyTakeaways       String[] @default([])
+  topics            String[] @default([])
+  primaryTopic      String?
+  secondaryTopics   String[] @default([])
+  scriptures        String[] @default([])
+  questionsAnswered String[] @default([])
+  audiences         String[] @default([])
+  lifeSituations    String[] @default([])
+  keyTakeaways      String[] @default([])
 
-  searchDocument   String?
-  contentHash      String?
-  lastIndexedAt    DateTime?
+  searchDocument String?
+  contentHash    String?
+  lastIndexedAt  DateTime?
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  sourceDocuments    ResourceSourceDocument[]
-  evidence           GeneratedMetadataEvidence[]
-  collections        ResourceCollection[]
-  importJobItems     ImportJobItem[]
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceDocuments ResourceSourceDocument[]
+  evidence        GeneratedMetadataEvidence[]
+  collections     ResourceCollection[]
+  importJobItems  ImportJobItem[]
 
   @@unique([organizationId, sourceProvider, externalId])
   @@index([organizationId, status])
@@ -256,22 +289,22 @@ enum SourceDocumentType {
 }
 
 model ResourceSourceDocument {
-  id                     String             @id @default(cuid())
-  organizationId         String
-  resourceId             String
-  sourceType             SourceDocumentType
-  sourceUrl              String?
-  fileName               String?
-  originalText           String?
-  cleanText              String?
-  includedInAnalysis     Boolean            @default(true)
-  approvedByUser         Boolean            @default(false)
-  discoveredAutomatically Boolean           @default(false)
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
+  id                      String             @id @default(cuid())
+  organizationId          String
+  resourceId              String
+  sourceType              SourceDocumentType
+  sourceUrl               String?
+  fileName                String?
+  originalText            String?
+  cleanText               String?
+  includedInAnalysis      Boolean            @default(true)
+  approvedByUser          Boolean            @default(false)
+  discoveredAutomatically Boolean            @default(false)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  resource     Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  organization Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource     Resource                    @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   evidence     GeneratedMetadataEvidence[]
 
   @@index([organizationId])
@@ -289,9 +322,9 @@ model GeneratedMetadataEvidence {
   confidenceScore  Float
   createdAt        DateTime @default(now())
 
-  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  resource       Resource                 @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  sourceDocument ResourceSourceDocument?  @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resource       Resource                @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  sourceDocument ResourceSourceDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([resourceId])
@@ -336,6 +369,7 @@ enum ImportType {
   PLAYLIST
   CHANNEL
   MANUAL
+  FEED
 }
 
 enum ImportJobStatus {
@@ -383,6 +417,81 @@ model ImportJobItem {
   @@index([importJobId])
 }
 
+enum BulkJobType {
+  ANALYZE
+  APPROVE
+  REJECT
+  DELETE
+  FIND_LINKS
+  INCLUDE_LINKS
+}
+
+enum BulkJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+/**
+ * Tracks a Resources-page bulk-toolbar action (one row per click, not per resource)
+ * so the Server Action that enqueues it can return immediately -- the actual work
+ * runs after the response via next/server's after(), and the client polls this row's
+ * progress instead of the request blocking until every resource is processed. No
+ * child item table: the existing per-action AuditLog entry already records
+ * resourceIds, and the UI only needs an aggregate progress bar + one summary line.
+ */
+model BulkJob {
+  id              String        @id @default(cuid())
+  organizationId  String
+  type            BulkJobType
+  status          BulkJobStatus @default(PENDING)
+  resourceIds     String[]
+  totalCount      Int
+  processedCount  Int           @default(0)
+  successCount    Int           @default(0)
+  failureCount    Int           @default(0)
+  resultSummary   String?
+  errorMessage    String?
+  createdByUserId String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+/**
+ * A tracked YouTube channel or RSS feed that should be periodically re-checked for
+ * new content. provider is restricted at the service layer to YOUTUBE | RSS (the two
+ * providers with listResources()/bulk import support) even though it reuses the
+ * broader ResourceProviderType enum. Sync itself reruns the same
+ * importYouTubeChannel/importRSSFeed bulk-import path used for the one-off import
+ * forms, so re-imported items are deduped the same way (organizationId +
+ * sourceProvider + externalId).
+ */
+model ContentSource {
+  id              String               @id @default(cuid())
+  organizationId  String
+  provider        ResourceProviderType
+  sourceUrl       String
+  label           String?
+  autoSyncEnabled Boolean              @default(true)
+  autoApprove     Boolean              @default(false)
+  lastSyncedAt    DateTime?
+  lastSyncStatus  ImportJobStatus?
+  lastSyncError   String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider, sourceUrl])
+  @@index([organizationId])
+}
+
 // ---------------------------------------------------------------------------
 // Conversations
 // ---------------------------------------------------------------------------
@@ -409,14 +518,14 @@ enum MessageRole {
 }
 
 model ConversationMessage {
-  id                    String      @id @default(cuid())
-  organizationId        String
-  conversationId        String
-  role                  MessageRole
+  id                     String      @id @default(cuid())
+  organizationId         String
+  conversationId         String
+  role                   MessageRole
   content                String
-  responseType          String?
-  recommendedResourceIds String[]   @default([])
-  createdAt             DateTime    @default(now())
+  responseType           String?
+  recommendedResourceIds String[]    @default([])
+  createdAt              DateTime    @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -436,6 +545,7 @@ model ActionLink {
   type           String
   url            String
   icon           String?
+  order          Int      @default(0)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -459,4 +569,95 @@ model AuditLog {
   actor        User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Prayer wall
+// ---------------------------------------------------------------------------
+
+/**
+ * A public-site visitor's account, scoped to one organization -- the same email can have separate accounts at different churches.
+ */
+model PrayerWallAccount {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  passwordHash   String
+  displayName    String?
+  createdAt      DateTime @default(now())
+
+  organization   Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sessions       PrayerWallSession[]
+  prayerRequests PrayerRequest[]
+  resetTokens    PrayerWallPasswordResetToken[]
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+}
+
+/**
+ * Opaque bearer-token session for a PrayerWallAccount. Deliberately NOT tenant-scoped
+ * (no organizationId column) -- the token itself is the lookup key used to resolve
+ * identity before any organizationId is known, the same boundary as User/
+ * getWidgetByPublicId. Accessed only via rawDb in prayer-service.ts.
+ */
+model PrayerWallSession {
+  id        String   @id @default(cuid())
+  accountId String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  account PrayerWallAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+/**
+ * Unlike PrayerWallSession, this IS tenant-scoped (organizationId present, queried via
+ * tenantDb) -- the reset flow always starts from /prayer/[publicPrayerWallId]/..., so
+ * the organization is already known before a token is ever issued or looked up, none
+ * of the "resolve identity before organizationId is known" bootstrapping problem
+ * PrayerWallSession has. Single-use and short-lived, same as PasswordResetToken.
+ */
+model PrayerWallPasswordResetToken {
+  id             String   @id @default(cuid())
+  organizationId String
+  accountId      String
+  token          String   @unique
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account      PrayerWallAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([accountId])
+}
+
+enum PrayerRequestStatus {
+  SUBMITTED
+  ANSWERED
+}
+
+model PrayerRequest {
+  id             String              @id @default(cuid())
+  organizationId String
+  accountId      String
+  message        String
+  isPublic       Boolean             @default(false)
+  isAnonymous    Boolean             @default(false)
+  publicizedAt   DateTime?
+  status         PrayerRequestStatus @default(SUBMITTED)
+  prayerCount    Int                 @default(0)
+  answeredAt     DateTime?
+  forwardedAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account      PrayerWallAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([accountId])
 }

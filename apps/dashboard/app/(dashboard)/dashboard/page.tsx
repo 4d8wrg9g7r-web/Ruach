@@ -10,12 +10,16 @@ import {
   Layers,
   MessageCircle,
   PlusCircle,
+  Rss,
   Sparkles,
+  Video,
 } from "lucide-react";
 import { auditService, conversationService, resourceService, websiteService, widgetService } from "@ruach/database";
 import { MetricCard } from "../../../components/ui/MetricCard";
 import { Badge } from "../../../components/ui/Badge";
 import { buttonClasses } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
+import { EmptyState } from "../../../components/ui/EmptyState";
 import { WidgetPreviewFrame } from "../../../components/WidgetPreviewFrame";
 import {
   auditActionLabel,
@@ -34,6 +38,13 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   "widget.created": <Layers size={14} />,
   "resource.approved": <CheckCircle2 size={14} />,
   "resource.categorized": <Sparkles size={14} />,
+  "channel.imported": <Video size={14} />,
+  "feed.imported": <Rss size={14} />,
+  "resource.bulk_categorized": <Sparkles size={14} />,
+  "resource.bulk_approved": <CheckCircle2 size={14} />,
+  "resource.bulk_rejected": <CheckCircle2 size={14} />,
+  "resource.bulk_deleted": <CheckCircle2 size={14} />,
+  "source.synced": <Sparkles size={14} />,
 };
 
 const CONFIDENCE_BADGE: Record<string, "success" | "warning" | "danger"> = {
@@ -102,12 +113,12 @@ export default async function OverviewPage() {
         </div>
 
         <div className="mb-6 grid gap-6 lg:grid-cols-2">
-          <div className="shadow-panel rounded-lg border border-border bg-surface p-5">
+          <Card>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">Recent Activity</h2>
             </div>
             {activity.length === 0 ? (
-              <p className="py-6 text-center text-sm text-ink-muted">No activity yet.</p>
+              <EmptyState description="No activity yet." />
             ) : (
               <ul className="flex flex-col gap-4">
                 {activity.map((event) => (
@@ -123,17 +134,20 @@ export default async function OverviewPage() {
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
 
-          <div className="shadow-panel rounded-lg border border-border bg-surface p-5">
+          <Card>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">Review Queue</h2>
-              <Link href="/resources?status=REVIEW_REQUIRED" className="text-xs font-medium text-accent hover:text-accent-dark">
+              <Link
+                href="/resources?status=REVIEW_REQUIRED"
+                className="rounded-sm text-xs font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              >
                 View all ({pendingReviewCount})
               </Link>
             </div>
             {reviewQueue.length === 0 ? (
-              <p className="py-6 text-center text-sm text-ink-muted">Nothing waiting for review.</p>
+              <EmptyState description="Nothing waiting for review." />
             ) : (
               <ul className="flex flex-col gap-4">
                 {reviewQueue.map((resource) => {
@@ -143,7 +157,7 @@ export default async function OverviewPage() {
                     <li key={resource.id}>
                       <Link
                         href={`/resources/${resource.id}`}
-                        className="flex items-center gap-3 rounded-md p-1.5 transition-colors duration-180 hover:bg-surface-muted"
+                        className="flex items-center gap-3 rounded-md p-1.5 transition-colors duration-180 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                       >
                         <span className="h-10 w-14 shrink-0 overflow-hidden rounded bg-surface-muted">
                           {resource.thumbnailUrl && (
@@ -171,23 +185,29 @@ export default async function OverviewPage() {
                 })}
               </ul>
             )}
-          </div>
+          </Card>
         </div>
 
-        <div className="shadow-panel rounded-lg border border-border bg-surface">
+        <Card padding="none">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-sm font-semibold text-ink">Resources</h2>
-            <Link href="/resources" className="text-xs font-medium text-accent hover:text-accent-dark">
+            <Link
+              href="/resources"
+              className="rounded-sm text-xs font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            >
               View all ({resources.length})
             </Link>
           </div>
           {recentResources.length === 0 ? (
-            <p className="p-6 text-center text-sm text-ink-muted">No resources yet.</p>
+            <EmptyState description="No resources yet." />
           ) : (
             <ul className="divide-y divide-border">
               {recentResources.map((resource) => (
                 <li key={resource.id}>
-                  <Link href={`/resources/${resource.id}`} className="flex items-center gap-3 px-5 py-3 transition-colors duration-180 hover:bg-surface-muted">
+                  <Link
+                    href={`/resources/${resource.id}`}
+                    className="flex items-center gap-3 px-5 py-3 transition-colors duration-180 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  >
                     <span className="h-9 w-12 shrink-0 overflow-hidden rounded bg-surface-muted">
                       {resource.thumbnailUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -205,13 +225,23 @@ export default async function OverviewPage() {
               ))}
             </ul>
           )}
-        </div>
+        </Card>
 
         {websites.length === 0 && (
           <p className="mt-8 text-sm text-ink-secondary">
-            Get started by <Link href="/websites" className="text-accent underline">adding a website</Link>, then{" "}
-            <Link href="/widgets" className="text-accent underline">creating a widget</Link> and{" "}
-            <Link href="/resources" className="text-accent underline">importing a resource</Link>.
+            Get started by{" "}
+            <Link href="/websites" className="rounded-sm text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+              adding a website
+            </Link>
+            , then{" "}
+            <Link href="/widgets" className="rounded-sm text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+              creating a widget
+            </Link>{" "}
+            and{" "}
+            <Link href="/resources" className="rounded-sm text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+              importing a resource
+            </Link>
+            .
           </p>
         )}
       </div>
@@ -225,12 +255,18 @@ export default async function OverviewPage() {
           {previewWidget ? (
             <WidgetPreviewFrame publicWidgetId={previewWidget.publicWidgetId} />
           ) : (
-            <div className="shadow-panel flex flex-col items-center gap-2 rounded-lg border border-border bg-surface px-6 py-16 text-center">
-              <p className="text-sm text-ink-muted">Create a widget to see a live preview here.</p>
-              <Link href="/widgets" className="text-xs font-medium text-accent hover:text-accent-dark">
-                Create a widget →
-              </Link>
-            </div>
+            <EmptyState
+              bare={false}
+              description="Create a widget to see a live preview here."
+              action={
+                <Link
+                  href="/widgets"
+                  className="rounded-sm text-xs font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                >
+                  Create a widget →
+                </Link>
+              }
+            />
           )}
         </div>
       </aside>

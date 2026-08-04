@@ -37,19 +37,22 @@ capability rather than being required for the app to function:
 | `AUTH_SECRET` | Yes (any value works locally) | NextAuth session signing |
 | `NEXTAUTH_URL` | Yes | Used to build the widget install snippet's script URL |
 | `OPENAI_API_KEY` | No | `MockAIProvider` is used instead of `OpenAIProvider` |
-| `YOUTUBE_API_KEY` | No | Not read yet -- YouTube is mock-only in milestone 1 |
-| `VIMEO_ACCESS_TOKEN` | No | Not read yet -- Vimeo is mock-only in milestone 1 |
+| `YOUTUBE_API_KEY` | No | `MockYouTubeProvider` is used instead of the real `YouTubeProvider` (see docs/youtube-integration.md) |
+| `VIMEO_ACCESS_TOKEN` | No | `MockVimeoProvider` is used instead of the real `VimeoProvider` (see docs/vimeo-integration.md) |
 
 ## Mock providers
 
 Every external integration is mocked by default so the repository runs with zero
-production credentials (brief §57):
+production credentials (brief §57). Setting the corresponding env var switches to the
+real provider without any other code changes -- see `getResourceProvider()` in
+`packages/providers/src/registry.ts`.
 
 - **`MockYouTubeProvider`** / **`MockVimeoProvider`** (`packages/providers`) --
   deterministic, no network calls. Paste any `youtube.com/watch?v=...` or
   `vimeo.com/...`-shaped URL into the dashboard's resource import form; a small set of
   known mock video IDs (matching the seed data) return richer fixed content, and any
-  other ID still resolves to a plausible synthetic result.
+  other ID still resolves to a plausible synthetic result. Active whenever
+  `YOUTUBE_API_KEY` / `VIMEO_ACCESS_TOKEN` are unset.
 - **`GenericUrlProvider`** -- this one is *not* mocked; it does real, SSRF-guarded
   HTTPS fetches for Open Graph metadata, since that requires no credentials and is
   genuinely useful to exercise locally. See `packages/providers/src/ssrf-guard.ts`.

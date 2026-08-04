@@ -245,7 +245,7 @@ async function main() {
       organizationId: organization.id,
       label: "Submit a prayer request",
       type: "PRAYER_REQUEST",
-      url: "https://example.org/prayer",
+      url: `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/prayer/${organization.publicPrayerWallId}/submit`,
     });
     console.log("Created default action links");
   }

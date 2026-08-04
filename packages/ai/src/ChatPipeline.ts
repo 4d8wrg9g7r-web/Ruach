@@ -37,6 +37,17 @@ function buttonLabelFor(resourceType: string): ResourceRecommendation["buttonLab
   return "Open";
 }
 
+/**
+ * These represent someone potentially in danger right now, or a specific threat to a
+ * person -- the response must stay 100% focused on getting them to real help, with
+ * nothing else competing for attention. Every other non-ORDINARY category still runs
+ * the full pipeline and blends the safety disclaimer with matching resources, if any
+ * -- e.g. a message classified MENTAL_HEALTH_CRISIS about grief can still surface a
+ * grief-related sermon alongside the disclaimer, since dismissing the visitor's
+ * actual question entirely isn't the only way to take a safety concern seriously.
+ */
+const ACUTE_SAFETY_CATEGORIES = new Set(["SELF_HARM", "IMMEDIATE_DANGER", "CHILD_SAFETY", "MEDICAL_EMERGENCY", "THREATS"]);
+
 const SAFETY_MESSAGES: Record<string, string> = {
   SELF_HARM:
     "It sounds like you might be going through something really heavy right now. I'm not able to provide crisis support, but please reach out to a crisis line or someone you trust right away.",
@@ -84,18 +95,20 @@ export class ChatPipeline {
 
     // Step 2: safety classification.
     const safety = await this.aiProvider.classifySafety(message);
-    if (safety.category !== "ORDINARY") {
+    const safetyMessage = SAFETY_MESSAGES[safety.category] ?? SAFETY_MESSAGES.OTHER_HIGH_RISK;
+    if (safety.category !== "ORDINARY" && ACUTE_SAFETY_CATEGORIES.has(safety.category)) {
       return ChatResponseSchema.parse({
         ...base,
         responseType: "SAFETY_RESPONSE",
         acknowledgment: null,
-        answer: SAFETY_MESSAGES[safety.category] ?? SAFETY_MESSAGES.OTHER_HIGH_RISK,
+        answer: safetyMessage,
         resources: [],
         followUpQuestion: null,
         suggestedActions: [],
         safetyCategory: safety.category,
       });
     }
+    const isNonAcuteSafetyConcern = safety.category !== "ORDINARY";
 
     // Step 3: intent extraction.
     const intent = await this.aiProvider.extractIntent(message, input.recentMessages);
@@ -133,21 +146,12 @@ export class ChatPipeline {
     const conversational = await this.aiProvider.generateConversationalResponse({
       message,
       intent,
-      candidateTitles: ranked.map((r) => r.resource.title),
+      candidates: ranked.map((r) => ({
+        title: r.resource.title,
+        primaryTopic: r.resource.primaryTopic,
+        summary: r.resource.summary,
+      })),
     });
-
-    if (ranked.length === 0) {
-      return ChatResponseSchema.parse({
-        ...base,
-        responseType: "NO_RESULTS",
-        acknowledgment: null,
-        answer: input.noResultMessage,
-        resources: [],
-        followUpQuestion: conversational.followUpQuestion,
-        suggestedActions: [],
-        safetyCategory: null,
-      });
-    }
 
     // Step 9: structured response. Every trusted field is read directly off the
     // validated database row (brief §35) -- relevanceExplanation is the only
@@ -169,6 +173,37 @@ export class ChatPipeline {
       buttonLabel: buttonLabelFor(resource.resourceType),
       relevanceExplanation: score.matchedExcerpt ?? `Matches what you're looking for.`,
     }));
+
+    if (isNonAcuteSafetyConcern) {
+      // Blended response: the safety disclaimer leads (as acknowledgment, shown
+      // first), but -- unlike the acute categories above -- we still surface
+      // matching resources if the visitor's underlying question found any. Taking a
+      // safety concern seriously doesn't have to mean withholding the content they
+      // actually asked for.
+      return ChatResponseSchema.parse({
+        ...base,
+        responseType: "SAFETY_RESPONSE",
+        acknowledgment: safetyMessage,
+        answer: resources.length > 0 ? conversational.answer : input.noResultMessage,
+        resources,
+        followUpQuestion: conversational.followUpQuestion,
+        suggestedActions: [],
+        safetyCategory: safety.category,
+      });
+    }
+
+    if (ranked.length === 0) {
+      return ChatResponseSchema.parse({
+        ...base,
+        responseType: "NO_RESULTS",
+        acknowledgment: null,
+        answer: input.noResultMessage,
+        resources: [],
+        followUpQuestion: conversational.followUpQuestion,
+        suggestedActions: [],
+        safetyCategory: null,
+      });
+    }
 
     return ChatResponseSchema.parse({
       ...base,

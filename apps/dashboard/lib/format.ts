@@ -35,6 +35,19 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   "widget.created": "Widget created",
   "resource.approved": "Resource approved",
   "resource.categorized": "Resource categorized by AI",
+  "channel.imported": "YouTube channel imported",
+  "feed.imported": "RSS feed imported",
+  "resource.bulk_categorized": "Resources analyzed",
+  "resource.bulk_approved": "Resources approved",
+  "resource.bulk_rejected": "Resources rejected",
+  "resource.bulk_deleted": "Resources deleted",
+  "resource.bulk_links_discovered": "Links found in descriptions",
+  "resource.bulk_links_included": "Links included",
+  "source.synced": "Auto-sync ran",
+  "prayer_wall.settings_updated": "Prayer wall settings updated",
+  "team.member_invited": "Teammate invited",
+  "team.member_role_updated": "Teammate role changed",
+  "team.member_removed": "Teammate removed",
 };
 
 export function auditActionLabel(action: string): string {

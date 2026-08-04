@@ -1,21 +1,23 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FileText, Filter, Mic, MoreHorizontal, Newspaper, Search, Sparkles, Video } from "lucide-react";
-import { ResourceStatus, resourceService } from "@ruach/database";
-import { importResourceFromUrl } from "@ruach/providers";
+import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { Filter, Search, Sparkles } from "lucide-react";
+import { ResourceStatus, auditService, bulkJobService, contentSourceService, resourceService } from "@ruach/database";
+import { importResourceFromUrl, importYouTubeChannel, importRSSFeed } from "@ruach/providers";
 import { AutoSubmitSelect } from "../../../components/AutoSubmitSelect";
-import { ImportResourceForm } from "../../../components/ImportResourceForm";
-import { Badge } from "../../../components/ui/Badge";
-import {
-  RESOURCE_TYPE_FILTERS,
-  resourceStatusLabel,
-  resourceStatusTone,
-  resourceTypeGroup,
-  timeAgo,
-} from "../../../lib/format";
-import { getCurrentOrganization, requireOrgRole } from "../../../lib/session";
+import type { BulkImportSummary } from "../../../components/BulkImportForm";
+import { ContentSourceList } from "../../../components/ContentSourceList";
+import { ImportTabs } from "../../../components/ImportTabs";
+import { ResourcesTable } from "../../../components/ResourcesTable";
+import { Card } from "../../../components/ui/Card";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { RESOURCE_TYPE_FILTERS, resourceTypeGroup } from "../../../lib/format";
+import { approveAndIndexResources, runBulkJob } from "../../../lib/resource-pipeline";
+import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../lib/session";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const DEFAULT_PAGE_SIZE = 25;
 
 async function importResourceAction(formData: FormData) {
   "use server";
@@ -30,27 +32,206 @@ async function importResourceAction(formData: FormData) {
   if (result.resource) redirect(`/resources/${result.resource.id}`);
 }
 
-const TYPE_ICON: Record<string, React.ReactNode> = {
-  VIDEOS: <Video size={16} />,
-  PODCASTS: <Mic size={16} />,
-  ARTICLES: <Newspaper size={16} />,
-  DOCUMENTS: <FileText size={16} />,
-  OTHER: <FileText size={16} />,
-};
+async function importChannelAction(formData: FormData): Promise<BulkImportSummary> {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  const channelUrl = String(formData.get("channelUrl") ?? "").trim();
+  if (!channelUrl) throw new Error("Channel URL is required");
+  const autoApprove = formData.get("autoApprove") === "on";
+  const trackAutoSync = formData.get("trackAutoSync") === "on";
+
+  const result = await importYouTubeChannel(organization.id, channelUrl);
+  if (autoApprove && result.createdResourceIds.length > 0) {
+    await approveAndIndexResources(organization.id, result.createdResourceIds);
+  }
+  if (trackAutoSync) {
+    await contentSourceService.trackContentSource({
+      organizationId: organization.id,
+      provider: "YOUTUBE",
+      sourceUrl: channelUrl,
+      autoApprove,
+    });
+  }
+
+  const user = await getCurrentUser();
+  await auditService.recordAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user?.id,
+    action: "channel.imported",
+    targetType: "ImportJob",
+    targetId: result.importJobId,
+    metadata: {
+      channelUrl,
+      totalFound: result.totalItems,
+      created: result.createdResourceIds.length,
+      alreadyExisted: result.existingResourceIds.length,
+      failed: result.failureCount,
+      autoApproved: autoApprove,
+    },
+  });
+
+  revalidatePath("/resources");
+  revalidatePath("/dashboard");
+
+  return {
+    totalFound: result.totalItems,
+    created: result.createdResourceIds.length,
+    alreadyExisted: result.existingResourceIds.length,
+    failed: result.failureCount,
+    autoApproved: autoApprove,
+  };
+}
+
+async function importFeedAction(formData: FormData): Promise<BulkImportSummary> {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  const feedUrl = String(formData.get("feedUrl") ?? "").trim();
+  if (!feedUrl) throw new Error("Feed URL is required");
+  const autoApprove = formData.get("autoApprove") === "on";
+  const trackAutoSync = formData.get("trackAutoSync") === "on";
+
+  const result = await importRSSFeed(organization.id, feedUrl);
+  if (autoApprove && result.createdResourceIds.length > 0) {
+    await approveAndIndexResources(organization.id, result.createdResourceIds);
+  }
+  if (trackAutoSync) {
+    await contentSourceService.trackContentSource({
+      organizationId: organization.id,
+      provider: "RSS",
+      sourceUrl: feedUrl,
+      autoApprove,
+    });
+  }
+
+  const user = await getCurrentUser();
+  await auditService.recordAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user?.id,
+    action: "feed.imported",
+    targetType: "ImportJob",
+    targetId: result.importJobId,
+    metadata: {
+      feedUrl,
+      totalFound: result.totalItems,
+      created: result.createdResourceIds.length,
+      alreadyExisted: result.existingResourceIds.length,
+      failed: result.failureCount,
+      autoApproved: autoApprove,
+    },
+  });
+
+  revalidatePath("/resources");
+  revalidatePath("/dashboard");
+
+  return {
+    totalFound: result.totalItems,
+    created: result.createdResourceIds.length,
+    alreadyExisted: result.existingResourceIds.length,
+    failed: result.failureCount,
+    autoApproved: autoApprove,
+  };
+}
+
+/**
+ * Every bulk toolbar action shares this shape: validate, enqueue a BulkJob row, and
+ * schedule the actual work via next/server's after() so the response goes back to
+ * the client (and its click's Server Action call resolves) before any per-resource
+ * work starts. This is what stops a large selection from blocking sidebar
+ * navigation -- the action used to await the whole batch inline, and Next's router
+ * queues <Link> clicks behind a still-pending Server-Action transition. The client
+ * polls /api/bulk-jobs/[jobId] for progress instead.
+ */
+async function enqueueBulkJob(type: "ANALYZE" | "APPROVE" | "REJECT" | "DELETE" | "FIND_LINKS" | "INCLUDE_LINKS", resourceIds: string[]) {
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+  if (resourceIds.length === 0) return null;
+
+  const user = await getCurrentUser();
+  const job = await bulkJobService.createBulkJob(organization.id, type, resourceIds, user?.id);
+  after(() => runBulkJob(organization.id, job.id, user?.id));
+  return { jobId: job.id, totalCount: resourceIds.length };
+}
+
+async function bulkAnalyzeAction(resourceIds: string[]) {
+  "use server";
+  return enqueueBulkJob("ANALYZE", resourceIds);
+}
+
+async function bulkFindLinksAction(resourceIds: string[]) {
+  "use server";
+  return enqueueBulkJob("FIND_LINKS", resourceIds);
+}
+
+async function bulkIncludeLinksAction(resourceIds: string[]) {
+  "use server";
+  return enqueueBulkJob("INCLUDE_LINKS", resourceIds);
+}
+
+async function bulkApproveAction(resourceIds: string[]) {
+  "use server";
+  return enqueueBulkJob("APPROVE", resourceIds);
+}
+
+async function bulkRejectAction(resourceIds: string[]) {
+  "use server";
+  return enqueueBulkJob("REJECT", resourceIds);
+}
+
+async function bulkDeleteAction(resourceIds: string[]) {
+  "use server";
+  return enqueueBulkJob("DELETE", resourceIds);
+}
+
+async function toggleAutoSyncAction(contentSourceId: string, enabled: boolean) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+  await contentSourceService.setAutoSyncEnabled(organization.id, contentSourceId, enabled);
+  revalidatePath("/resources");
+}
+
+async function toggleAutoApproveAction(contentSourceId: string, enabled: boolean) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+  await contentSourceService.setAutoApprove(organization.id, contentSourceId, enabled);
+  revalidatePath("/resources");
+}
+
+async function removeContentSourceAction(contentSourceId: string) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+  await contentSourceService.deleteContentSource(organization.id, contentSourceId);
+  revalidatePath("/resources");
+}
 
 export default async function ResourcesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; type?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; type?: string; q?: string; page?: string; pageSize?: string }>;
 }) {
   const organization = await getCurrentOrganization();
   if (!organization) return null;
   const params = await searchParams;
+  const contentSources = await contentSourceService.listContentSources(organization.id);
+  const activeJob = await bulkJobService.getMostRecentActiveJob(organization.id);
 
   const validStatus =
     params.status && (Object.values(ResourceStatus) as string[]).includes(params.status)
       ? (params.status as ResourceStatus)
       : undefined;
+  const isReviewQueue = validStatus === ResourceStatus.REVIEW_REQUIRED;
   const allResources = await resourceService.listResources(organization.id, validStatus ? { status: validStatus } : undefined);
 
   const counts = { ALL: allResources.length } as Record<string, number>;
@@ -62,6 +243,9 @@ export default async function ResourcesPage({
   const typeFilter = params.type ?? "ALL";
   const search = (params.q ?? "").trim().toLowerCase();
   const page = Math.max(1, Number(params.page ?? "1") || 1);
+  const pageSize = PAGE_SIZE_OPTIONS.includes(Number(params.pageSize) as (typeof PAGE_SIZE_OPTIONS)[number])
+    ? Number(params.pageSize)
+    : DEFAULT_PAGE_SIZE;
 
   const filtered = allResources.filter((r) => {
     if (typeFilter !== "ALL" && resourceTypeGroup(r.resourceType) !== typeFilter) return false;
@@ -69,35 +253,61 @@ export default async function ResourcesPage({
     return true;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageResources = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageResources = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const baseParams = new URLSearchParams();
   if (params.status) baseParams.set("status", params.status);
   if (params.q) baseParams.set("q", params.q);
+  if (params.pageSize) baseParams.set("pageSize", params.pageSize);
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Resources</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">
+          {isReviewQueue ? "Review Queue" : "Resources"}
+        </h1>
+        {isReviewQueue && (
+          <p className="mt-1 text-sm text-ink-secondary">
+            Resources awaiting a decision before they&rsquo;re visible to visitors. Approve, reject, or analyze them
+            below -- switch the status filter to &ldquo;All statuses&rdquo; to return to the full library.
+          </p>
+        )}
       </div>
 
-      <div className="shadow-panel mb-8 rounded-lg border border-border bg-surface p-5">
-        <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
-          <Sparkles size={15} className="text-accent" /> Add a resource
-        </h2>
-        <p className="mb-3 text-sm text-ink-secondary">
-          Paste a YouTube or Vimeo URL (e.g.{" "}
-          <code className="rounded bg-surface-muted px-1 py-0.5 text-xs">
-            https://www.youtube.com/watch?v=mock-yt-anxiety-01
-          </code>
-          ), or any other public HTTPS URL. Mock providers are used in local development -- no live credentials
-          required.
-        </p>
-        <ImportResourceForm action={importResourceAction} />
-      </div>
+      {!isReviewQueue && (
+        <Card className="mb-8">
+          <ImportTabs
+            importResourceAction={importResourceAction}
+            importChannelAction={importChannelAction}
+            importFeedAction={importFeedAction}
+            youtubeApiKeyConfigured={Boolean(process.env.YOUTUBE_API_KEY)}
+            vimeoAccessTokenConfigured={Boolean(process.env.VIMEO_ACCESS_TOKEN)}
+          />
+        </Card>
+      )}
 
-      <div className="shadow-panel rounded-lg border border-border bg-surface">
+      {!isReviewQueue && (
+        <Card padding="none" className="mb-8">
+          <div className="border-b border-border p-5">
+            <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+              <Sparkles size={15} className="text-accent" /> Auto-sync sources
+            </h2>
+            <p className="text-sm text-ink-secondary">
+              Channels and feeds checked here are automatically re-imported and analyzed on a schedule. Track a
+              channel or feed by checking &ldquo;Keep checking for new...&rdquo; when importing it above.
+            </p>
+          </div>
+          <ContentSourceList
+            sources={contentSources}
+            onToggleAutoSync={toggleAutoSyncAction}
+            onToggleAutoApprove={toggleAutoApproveAction}
+            onRemove={removeContentSourceAction}
+          />
+        </Card>
+      )}
+
+      <Card padding="none">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="flex flex-wrap items-center gap-5">
             {RESOURCE_TYPE_FILTERS.map((filter) => {
@@ -108,7 +318,7 @@ export default async function ResourcesPage({
                 <Link
                   key={filter.key}
                   href={`/resources?${qs.toString()}`}
-                  className={`border-b-2 pb-1 text-sm transition-colors duration-180 ${
+                  className={`rounded-sm border-b-2 pb-1 text-sm transition-colors duration-180 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ${
                     isActive ? "border-accent font-medium text-ink" : "border-transparent text-ink-muted hover:text-ink"
                   }`}
                 >
@@ -126,7 +336,7 @@ export default async function ResourcesPage({
                 name="q"
                 defaultValue={params.q}
                 placeholder="Search resources..."
-                className="w-56 rounded border border-border-strong bg-surface py-2 pl-8 pr-3 text-sm text-ink outline-none transition-colors duration-180 focus:border-accent"
+                className="w-56 rounded-sm border border-border-strong bg-surface py-2 pl-8 pr-3 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
               />
             </div>
             <div className="relative">
@@ -141,69 +351,35 @@ export default async function ResourcesPage({
                   { value: "DRAFT", label: "Draft" },
                   { value: "ARCHIVED", label: "Rejected" },
                 ]}
-                className="appearance-none rounded border border-border-strong bg-surface py-2 pl-8 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus:border-accent"
+                className="appearance-none rounded-sm border border-border-strong bg-surface py-2 pl-8 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
               />
             </div>
+            <label className="flex items-center gap-1.5 text-sm text-ink-secondary">
+              Show
+              <AutoSubmitSelect
+                name="pageSize"
+                defaultValue={String(pageSize)}
+                options={PAGE_SIZE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
+                className="rounded-sm border border-border-strong bg-surface py-2 pl-2 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+              />
+            </label>
           </form>
         </div>
 
         {pageResources.length === 0 ? (
-          <p className="p-8 text-center text-sm text-ink-muted">No resources match this filter.</p>
+          <EmptyState description="No resources match this filter." />
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-muted">
-                <th className="px-5 py-3 font-medium">Title</th>
-                <th className="px-3 py-3 font-medium">Type</th>
-                <th className="px-3 py-3 font-medium">Topics</th>
-                <th className="px-3 py-3 font-medium">Status</th>
-                <th className="px-3 py-3 font-medium">Imported</th>
-                <th className="w-10 px-3 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {pageResources.map((resource) => (
-                <tr key={resource.id} className="border-b border-border last:border-0 hover:bg-surface-muted">
-                  <td className="px-5 py-3">
-                    <Link href={`/resources/${resource.id}`} className="flex items-center gap-3">
-                      <span className="h-10 w-14 shrink-0 overflow-hidden rounded bg-surface-muted">
-                        {resource.thumbnailUrl && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={resource.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                        )}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="truncate font-medium text-ink">{resource.title}</div>
-                        <div className="truncate text-xs text-ink-muted">
-                          {[resource.speakerName, resource.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </div>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="px-3 py-3 text-ink-secondary">
-                    <span className="flex items-center gap-1.5">
-                      {TYPE_ICON[resourceTypeGroup(resource.resourceType)]}
-                      <span className="text-xs">{resource.resourceType}</span>
-                    </span>
-                  </td>
-                  <td className="max-w-[220px] truncate px-3 py-3 text-ink-secondary">
-                    {resource.topics.length > 0 ? resource.topics.join(", ") : <span className="text-ink-muted">--</span>}
-                  </td>
-                  <td className="px-3 py-3">
-                    <Badge variant={resourceStatusTone(resource.status)}>{resourceStatusLabel(resource.status)}</Badge>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-ink-muted">{timeAgo(resource.createdAt)}</td>
-                  <td className="px-3 py-3">
-                    <Link href={`/resources/${resource.id}`} className="text-ink-muted hover:text-ink">
-                      <MoreHorizontal size={16} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ResourcesTable
+            resources={pageResources}
+            allResourceIds={filtered.map((r) => r.id)}
+            initialJob={activeJob ? { id: activeJob.id, type: activeJob.type, totalCount: activeJob.totalCount, processedCount: activeJob.processedCount, status: activeJob.status } : null}
+            onAnalyze={bulkAnalyzeAction}
+            onApprove={bulkApproveAction}
+            onReject={bulkRejectAction}
+            onDelete={bulkDeleteAction}
+            onFindLinks={bulkFindLinksAction}
+            onIncludeLinks={bulkIncludeLinksAction}
+          />
         )}
 
         {totalPages > 1 && (
@@ -213,19 +389,25 @@ export default async function ResourcesPage({
             </span>
             <div className="flex gap-2">
               {page > 1 && (
-                <Link href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page - 1) }).toString()}`} className="rounded border border-border-strong px-2.5 py-1 hover:bg-surface-muted">
+                <Link
+                  href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page - 1) }).toString()}`}
+                  className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                >
                   Previous
                 </Link>
               )}
               {page < totalPages && (
-                <Link href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page + 1) }).toString()}`} className="rounded border border-border-strong px-2.5 py-1 hover:bg-surface-muted">
+                <Link
+                  href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page + 1) }).toString()}`}
+                  className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                >
                   Next
                 </Link>
               )}
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

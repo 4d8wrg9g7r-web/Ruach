@@ -19,10 +19,14 @@ const TENANT_SCOPED_MODELS = new Set([
   "ResourceCollection",
   "ImportJob",
   "ImportJobItem",
+  "BulkJob",
   "Conversation",
   "ConversationMessage",
   "ActionLink",
   "AuditLog",
+  "ContentSource",
+  "PrayerWallAccount",
+  "PrayerRequest",
 ]);
 
 const FIND_UNIQUE_OPS = new Set(["findUnique", "findUniqueOrThrow"]);

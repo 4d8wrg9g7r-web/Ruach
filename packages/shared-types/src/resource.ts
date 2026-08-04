@@ -13,5 +13,5 @@ export const ResourceTypeSchema = z.enum([
 ]);
 export type ResourceTypeValue = z.infer<typeof ResourceTypeSchema>;
 
-export const ResourceProviderTypeSchema = z.enum(["YOUTUBE", "VIMEO", "SUBSPLASH", "GENERIC_URL", "MANUAL"]);
+export const ResourceProviderTypeSchema = z.enum(["YOUTUBE", "VIMEO", "SUBSPLASH", "GENERIC_URL", "MANUAL", "RSS"]);
 export type ResourceProviderTypeValue = z.infer<typeof ResourceProviderTypeSchema>;

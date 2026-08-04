@@ -28,10 +28,17 @@ export interface CategorizationOutput {
   keyTakeaways: GeneratedField<string[]>;
 }
 
+/** Real, already-validated data about a candidate resource -- enough for the model to explain genuine relevance without inventing anything. */
+export interface ConversationalCandidate {
+  title: string;
+  primaryTopic: string | null;
+  summary: string | null;
+}
+
 export interface ConversationalResponseInput {
   message: string;
   intent: ExtractedIntent;
-  candidateTitles: string[];
+  candidates: ConversationalCandidate[];
 }
 
 export interface ConversationalResponseOutput {

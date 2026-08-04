@@ -128,6 +128,28 @@ export async function archiveResource(organizationId: string, resourceId: string
   return getResource(organizationId, resourceId);
 }
 
+export async function archiveResources(organizationId: string, resourceIds: string[]) {
+  if (resourceIds.length === 0) return { count: 0 };
+  return tenantDb.resource.updateMany({
+    where: { id: { in: resourceIds }, organizationId },
+    data: { status: "ARCHIVED" },
+  });
+}
+
+/**
+ * Hard delete. Cascades to ResourceSourceDocument/GeneratedMetadataEvidence/
+ * ResourceCollection (schema onDelete: Cascade); ImportJobItem.resourceId is set
+ * null (onDelete: SetNull) so import history is preserved. Irreversible -- the
+ * caller (dashboard bulk-action UI) is responsible for confirming with the user
+ * before calling this; archiveResources is the reversible alternative.
+ */
+export async function deleteResources(organizationId: string, resourceIds: string[]) {
+  if (resourceIds.length === 0) return { count: 0 };
+  return tenantDb.resource.deleteMany({
+    where: { id: { in: resourceIds }, organizationId },
+  });
+}
+
 export async function markIndexed(organizationId: string, resourceId: string) {
   return tenantDb.resource.updateMany({
     where: { id: resourceId, organizationId },
@@ -145,14 +167,41 @@ export async function addSourceDocument(params: {
   cleanText?: string | null;
   discoveredAutomatically?: boolean;
   approvedByUser?: boolean;
+  /** Defaults true, matching every existing caller -- auto-discovered links (see link-discovery.ts) are the one case that overrides it to false until a human approves. */
+  includedInAnalysis?: boolean;
 }) {
+  const { includedInAnalysis = true, ...rest } = params;
   return tenantDb.resourceSourceDocument.create({
-    data: { ...params, includedInAnalysis: true },
+    data: { ...rest, includedInAnalysis },
   });
 }
 
 export async function listSourceDocuments(organizationId: string, resourceId: string) {
   return tenantDb.resourceSourceDocument.findMany({ where: { organizationId, resourceId } });
+}
+
+/**
+ * The "staff approved a discovered link" step (brief §22-23): stamps the fetched,
+ * cleaned text onto the pending row and flips it into analysis. `id` (not just
+ * resourceId+organizationId) narrows the update to exactly this one document.
+ */
+export async function approveSourceDocument(
+  organizationId: string,
+  resourceId: string,
+  sourceDocumentId: string,
+  text: { originalText: string; cleanText: string },
+) {
+  return tenantDb.resourceSourceDocument.updateMany({
+    where: { id: sourceDocumentId, organizationId, resourceId },
+    data: { ...text, approvedByUser: true, includedInAnalysis: true },
+  });
+}
+
+/** Dismissing a discovered-but-unwanted link just removes the candidate row -- there's nothing worth keeping once staff has said "not this one." */
+export async function rejectSourceDocument(organizationId: string, resourceId: string, sourceDocumentId: string) {
+  return tenantDb.resourceSourceDocument.deleteMany({
+    where: { id: sourceDocumentId, organizationId, resourceId },
+  });
 }
 
 export async function addEvidence(params: {

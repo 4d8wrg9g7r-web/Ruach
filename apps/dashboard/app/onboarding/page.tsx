@@ -6,6 +6,14 @@ import { getCurrentOrganization, requireCurrentUser } from "../../lib/session";
 async function createOrganizationAction(formData: FormData) {
   "use server";
   const user = await requireCurrentUser();
+
+  // Page-level check (below) already redirects an existing member away before they
+  // ever see this form -- this is the defense-in-depth check against a direct POST
+  // to the action itself, so a race/bypass fails with a clear message instead of a
+  // raw unique-constraint error from OrganizationMember.userId.
+  const existingMemberships = await organizationService.getMembershipsForUser(user.id);
+  if (existingMemberships.length > 0) redirect("/dashboard");
+
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Organization name is required");
 

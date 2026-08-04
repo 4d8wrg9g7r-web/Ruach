@@ -1,8 +1,16 @@
 import { defineConfig } from "@playwright/test";
 
-// The standard test suite must run with no live third-party credentials (brief §57) --
-// only DATABASE_URL is required. The dev server is started automatically here against
-// the already-migrated/seeded local database.
+const E2E_PORT = 3100;
+
+// The standard test suite must run with no live third-party credentials (brief §57)
+// -- only DATABASE_URL is required. This is mechanized, not just conventional: the
+// e2e suite always spawns its OWN dev server on a dedicated port (never reuses
+// whatever a developer happens to have running on :3000) with provider credentials
+// explicitly blanked out, regardless of what's in the local .env. Next.js's env
+// loader never overwrites a variable already present in process.env, so setting
+// these to "" here forces YouTubeProvider/VimeoProvider/OpenAIProvider to fall back
+// to their mocks for the duration of the test run -- e2e specs use fake video IDs
+// (e.g. mock-yt-e2e-01) that only the mocks recognize.
 export default defineConfig({
   testDir: "./e2e",
   timeout: 45_000,
@@ -13,12 +21,22 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: `http://localhost:${E2E_PORT}`,
   },
   webServer: {
-    command: "pnpm dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: true,
+    command: `pnpm exec next dev --port ${E2E_PORT}`,
+    url: `http://localhost:${E2E_PORT}`,
+    reuseExistingServer: false,
     timeout: 60_000,
+    env: {
+      YOUTUBE_API_KEY: "",
+      VIMEO_ACCESS_TOKEN: "",
+      OPENAI_API_KEY: "",
+      // .env hardcodes NEXTAUTH_URL to :3000; NextAuth uses it verbatim to build
+      // redirect targets (sign-in, etc.), so without this override every auth
+      // redirect on this dedicated test server would send the browser to the wrong
+      // port and fail with ERR_CONNECTION_REFUSED.
+      NEXTAUTH_URL: `http://localhost:${E2E_PORT}`,
+    },
   },
 });

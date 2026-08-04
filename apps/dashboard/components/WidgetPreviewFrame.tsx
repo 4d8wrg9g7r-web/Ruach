@@ -3,8 +3,21 @@
 import { useState } from "react";
 import { Laptop, Smartphone } from "lucide-react";
 
-export function WidgetPreviewFrame({ publicWidgetId }: { publicWidgetId: string }) {
+interface WidgetPreviewFrameProps {
+  publicWidgetId: string;
+  /** Cosmetic-only overrides forwarded to the embed page's previewColor/previewLogo searchParams -- see WidgetEmbedPage's doc comment. Omitted -> the iframe shows the real saved widget, unchanged from before this prop existed. */
+  previewColor?: string;
+  previewLogo?: string | null;
+}
+
+export function WidgetPreviewFrame({ publicWidgetId, previewColor, previewLogo }: WidgetPreviewFrameProps) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+
+  const params = new URLSearchParams();
+  if (previewColor) params.set("previewColor", previewColor);
+  if (previewLogo !== undefined) params.set("previewLogo", previewLogo ?? "");
+  const query = params.toString();
+  const src = `/widget/embed/${publicWidgetId}${query ? `?${query}` : ""}`;
 
   return (
     <div>
@@ -30,12 +43,15 @@ export function WidgetPreviewFrame({ publicWidgetId }: { publicWidgetId: string 
           <Smartphone size={15} />
         </button>
       </div>
-      <div className="flex justify-center rounded-xl bg-surface-warm p-6">
+      {/* overflow-x-auto so the fixed-width device mockup (a deliberate simulated
+          screen size, not meant to shrink) scrolls within this panel on narrow
+          viewports instead of forcing the whole page wider than the viewport. */}
+      <div className="flex justify-center overflow-x-auto rounded-xl bg-surface-warm p-6">
         <div
-          className="shadow-panel overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-180"
+          className="shadow-panel shrink-0 overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-180"
           style={{ width: device === "desktop" ? 390 : 320, height: 640 }}
         >
-          <iframe src={`/widget/embed/${publicWidgetId}`} title="Widget preview" className="h-full w-full border-0" />
+          <iframe src={src} title="Widget preview" className="h-full w-full border-0" />
         </div>
       </div>
     </div>

@@ -103,8 +103,10 @@ defeats the purpose. See the doc comment in `LocalRetrievalProvider.search()`.
 
 Per the build plan and the brief's own phasing, these are intentionally not built yet:
 
-- Billing (Stripe, plan entitlements, usage metering) -- brief instruction #25: don't
-  build billing before organization/website/widget/resource architecture is stable.
+- Real billing (Stripe, plan entitlements, payment processing) -- brief instruction
+  #25: don't build billing before organization/website/widget/resource architecture
+  is stable. A mock billing UI wired to real usage data now exists (docs/billing.md)
+  as an interim step; real payment processing is still not built.
 - Live YouTube/Vimeo API integration, OAuth connections, playlist/channel sync --
   brief instruction #24: don't build live sync until mock flows work. Needs
   user-provisioned API credentials when it happens.
@@ -112,6 +114,6 @@ Per the build plan and the brief's own phasing, these are intentionally not buil
   instant; a queue matters once live provider sync needs retries/backoff.
 - Subsplash live integration -- no public documented API; stays a scaffold-only
   provider interface per brief §16's explicit ban on inventing endpoints.
-- Platform administration app, analytics, team management UI, audit-log viewer (audit
-  log *writes* already happen from day one, per the build plan).
+- Platform administration app (a cross-organization admin surface -- separate from
+  the per-org `/audit-log` viewer, which now exists alongside `/analytics` and `/team`).
 - `apps/widget` / `apps/worker` / `apps/platform-admin` as separate deployable units.

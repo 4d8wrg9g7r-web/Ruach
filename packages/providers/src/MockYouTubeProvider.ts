@@ -5,8 +5,8 @@ import type {
   ProviderValidationResult,
   TranscriptResult,
 } from "@ruach/shared-types";
-import type { ResourceProvider } from "./ResourceProvider";
-import { parseYouTubeUrl } from "./url-parsing";
+import type { ProviderConfiguration, ResourceProvider } from "./ResourceProvider";
+import { parseYouTubeChannelUrl, parseYouTubeUrl } from "./url-parsing";
 
 const KNOWN_MOCK_VIDEOS: Record<string, { title: string; description: string; creator: string; duration: number }> = {
   "mock-yt-anxiety-01": {
@@ -69,5 +69,14 @@ export class MockYouTubeProvider implements ResourceProvider {
 
   async getSupportingDocuments(_source: ExternalResourceSource): Promise<DiscoveredDocument[]> {
     return [];
+  }
+
+  /** Deterministic, no network calls -- returns a fixed set of synthetic videos for any valid channel URL. */
+  async listResources(configuration: ProviderConfiguration): Promise<NormalizedExternalResource[]> {
+    if (!configuration.channelUrl || !parseYouTubeChannelUrl(configuration.channelUrl)) {
+      throw new Error(`"${configuration.channelUrl}" doesn't look like a YouTube channel URL.`);
+    }
+    const mockIds = ["mock-yt-channel-01", "mock-yt-channel-02", "mock-yt-channel-03"];
+    return Promise.all(mockIds.map((id) => this.getResource({ provider: "YOUTUBE", externalId: id, url: "" })));
   }
 }

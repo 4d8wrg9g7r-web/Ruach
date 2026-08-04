@@ -20,10 +20,16 @@ export async function recordAuditEvent(params: {
   });
 }
 
+/**
+ * Includes the actor so the viewer can show "who" without a second round trip per
+ * row -- actorUserId is nullable (system/cron-triggered events like source.synced
+ * have no actor), so `actor` comes back null for those rather than throwing.
+ */
 export async function listAuditEvents(organizationId: string, limit = 50) {
   return tenantDb.auditLog.findMany({
     where: { organizationId },
     orderBy: { createdAt: "desc" },
     take: limit,
+    include: { actor: { select: { name: true, email: true } } },
   });
 }
