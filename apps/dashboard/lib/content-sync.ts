@@ -1,4 +1,4 @@
-import { auditService, contentSourceService, type ContentSource } from "@ruach/database";
+import { auditService, billingService, contentSourceService, organizationService, type ContentSource } from "@ruach/database";
 import { importYouTubeChannel, importRSSFeed } from "@ruach/providers";
 import { approveAndIndexResources, categorizeResources } from "./resource-pipeline";
 
@@ -27,9 +27,11 @@ export async function syncContentSource(organizationId: string, source: ContentS
         : await importRSSFeed(organizationId, source.sourceUrl);
 
     if (result.createdResourceIds.length > 0) {
-      await categorizeResources(organizationId, result.createdResourceIds);
+      const organization = await organizationService.getOrganization(organizationId);
+      const concurrency = billingService.bulkConcurrency(organization?.planKey ?? "essential");
+      await categorizeResources(organizationId, result.createdResourceIds, undefined, concurrency);
       if (source.autoApprove) {
-        await approveAndIndexResources(organizationId, result.createdResourceIds);
+        await approveAndIndexResources(organizationId, result.createdResourceIds, undefined, concurrency);
       }
     }
 

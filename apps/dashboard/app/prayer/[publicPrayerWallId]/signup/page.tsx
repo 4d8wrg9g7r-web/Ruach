@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { UserPlus } from "lucide-react";
-import { organizationService, prayerService } from "@ruach/database";
+import { prayerService, prayerWallService } from "@ruach/database";
 import { PrayerPageIntro } from "../../../../components/PrayerPageIntro";
 import { PrayerWallHeader } from "../../../../components/PrayerWallHeader";
 import { SubmitButton } from "../../../../components/SubmitButton";
@@ -15,14 +15,14 @@ const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
 async function signupAction(publicPrayerWallId: string, formData: FormData) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
 
   const next = String(formData.get("next") ?? "");
   const nextQuery = next ? `&next=${encodeURIComponent(next)}` : "";
 
   const ip = getClientIp(await headers());
-  const rateCheck = checkRateLimit(`prayer-signup:${organization.id}:${ip ?? "unknown"}`, 5, 60 * 60 * 1000);
+  const rateCheck = checkRateLimit(`prayer-signup:${wall.organizationId}:${ip ?? "unknown"}`, 5, 60 * 60 * 1000);
   if (!rateCheck.allowed) redirect(`/prayer/${publicPrayerWallId}/signup?error=rate_limited${nextQuery}`);
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -33,13 +33,13 @@ async function signupAction(publicPrayerWallId: string, formData: FormData) {
     redirect(`/prayer/${publicPrayerWallId}/signup?error=invalid${nextQuery}`);
   }
 
-  const existing = await prayerService.findAccountByEmail(organization.id, email);
+  const existing = await prayerService.findAccountByEmail(wall.organizationId, email);
   if (existing) {
     redirect(`/prayer/${publicPrayerWallId}/signup?error=exists${nextQuery}`);
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const account = await prayerService.createAccount({ organizationId: organization.id, email, passwordHash, displayName });
+  const account = await prayerService.createAccount({ organizationId: wall.organizationId, email, passwordHash, displayName });
   const token = await prayerService.createSession(account.id, new Date(Date.now() + SESSION_DURATION_MS));
   await setPrayerSessionCookie(publicPrayerWallId, token);
 
@@ -61,20 +61,20 @@ export default async function PrayerSignupPage({
 }) {
   const { publicPrayerWallId } = await params;
   const sp = await searchParams;
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) notFound();
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) notFound();
 
   const boundSignup = signupAction.bind(null, publicPrayerWallId);
   const loginHref = `/prayer/${publicPrayerWallId}/login${sp.next ? `?next=${sp.next}` : ""}`;
-  const brandColor = organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const brandColor = wall.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
   const hasCustomBrandColor = brandColor !== DEFAULT_PRAYER_WALL_BRAND_COLOR;
 
   return (
     <div className={`min-h-screen ${hasCustomBrandColor ? "bg-surface" : "bg-surface-muted"}`}>
       <PrayerWallHeader
-        organizationName={organization.name}
+        organizationName={wall.displayName}
         publicPrayerWallId={publicPrayerWallId}
-        logoUrl={organization.prayerWallLogoUrl}
+        logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
         isLoggedIn={false}
       />
@@ -82,7 +82,7 @@ export default async function PrayerSignupPage({
         <PrayerPageIntro
           icon={<UserPlus size={20} style={{ color: brandColor }} />}
           title="Create an account"
-          description="Sign up to submit and manage your prayer requests."
+          description="A quick, free account to submit and manage your prayer requests. We only ask so this wall stays free of spam and bots -- nothing else."
           brandColor={brandColor}
         />
         {sp.error && (

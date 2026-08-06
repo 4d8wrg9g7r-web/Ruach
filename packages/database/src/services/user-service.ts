@@ -36,6 +36,15 @@ export async function updatePassword(userId: string, passwordHash: string) {
   return rawDb.user.update({ where: { id: userId }, data: { passwordHash } });
 }
 
+export async function updateUser(userId: string, params: { name: string | null; email: string }) {
+  const email = params.email.toLowerCase();
+  const existing = await rawDb.user.findUnique({ where: { email } });
+  if (existing && existing.id !== userId) {
+    throw new Error("That email address is already in use.");
+  }
+  return rawDb.user.update({ where: { id: userId }, data: { name: params.name, email } });
+}
+
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 /**

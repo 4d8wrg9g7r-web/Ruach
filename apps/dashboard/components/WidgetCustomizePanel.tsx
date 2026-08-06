@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { ColorPickerField } from "./ColorPickerField";
 import { LogoUploadField } from "./LogoUploadField";
+import { SubmitButton } from "./SubmitButton";
 import { WidgetPreviewFrame } from "./WidgetPreviewFrame";
-import { buttonClasses } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Input, Select, Textarea } from "./ui/Input";
+import { useToast } from "./ui/Toast";
 
 const PREVIEW_DEBOUNCE_MS = 200;
 
@@ -29,6 +30,8 @@ interface WidgetForPanel {
 interface WidgetCustomizePanelProps {
   widget: WidgetForPanel;
   updateAction: (formData: FormData) => Promise<void>;
+  /** Which plan-gated fields this org's plan actually allows changing -- the update Server Action also defensively ignores attempts to set these past what the plan allows, so this is UI-affordance only, not the real enforcement. */
+  entitlements: { removeBranding: boolean; advancedWidgetCustomization: boolean };
   /** Server-rendered content (Installation snippet, Standard Links card) slotted into the same left column below the form -- stays a Server Component even though this wrapper is a Client Component. */
   children?: React.ReactNode;
 }
@@ -39,22 +42,32 @@ interface WidgetCustomizePanelProps {
  * (WidgetPreviewFrame just iframes the real embed page), this makes it update as
  * you edit, before "Publish Changes" is ever clicked.
  */
-export function WidgetCustomizePanel({ widget, updateAction, children }: WidgetCustomizePanelProps) {
+export function WidgetCustomizePanel({ widget, updateAction, entitlements, children }: WidgetCustomizePanelProps) {
   const [previewColor, setPreviewColor] = useState(widget.primaryColor);
   const [previewLogo, setPreviewLogo] = useState<string | null>(widget.logoUrl);
   const [debouncedColor, setDebouncedColor] = useState(previewColor);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedColor(previewColor), PREVIEW_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [previewColor]);
 
+  async function handlePublish(formData: FormData) {
+    try {
+      await updateAction(formData);
+      showToast("Widget published");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Something went wrong. Please try again.", "error");
+    }
+  }
+
   return (
     <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_440px]">
       <div className="flex min-w-0 flex-col gap-6">
         <Card>
           <h2 className="mb-4 text-sm font-semibold text-ink">Customize</h2>
-          <form action={updateAction} className="flex flex-col gap-4">
+          <form action={handlePublish} className="flex flex-col gap-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Content</h3>
             <label className="text-sm text-ink-secondary">
               Assistant name
@@ -70,7 +83,16 @@ export function WidgetCustomizePanel({ widget, updateAction, children }: WidgetC
             </label>
             <label className="text-sm text-ink-secondary">
               Suggested prompts (one per line)
-              <Textarea name="suggestedPrompts" defaultValue={widget.suggestedPrompts.join("\n")} rows={3} className="mt-1 block" />
+              <Textarea
+                name="suggestedPrompts"
+                defaultValue={widget.suggestedPrompts.join("\n")}
+                rows={3}
+                className="mt-1 block"
+                disabled={!entitlements.advancedWidgetCustomization}
+              />
+              {!entitlements.advancedWidgetCustomization && (
+                <span className="mt-1 block text-xs text-ink-muted">Upgrade your plan to set suggested prompts.</span>
+              )}
             </label>
             <label className="text-sm text-ink-secondary">
               No-result message
@@ -109,15 +131,21 @@ export function WidgetCustomizePanel({ widget, updateAction, children }: WidgetC
                 Allow inline playback
               </label>
               <label className="flex items-center gap-2 text-sm text-ink-secondary">
-                <input type="checkbox" name="showPlatformBranding" defaultChecked={widget.showPlatformBranding} />
+                <input
+                  type="checkbox"
+                  name="showPlatformBranding"
+                  defaultChecked={entitlements.removeBranding ? widget.showPlatformBranding : true}
+                  disabled={!entitlements.removeBranding}
+                />
                 Show &ldquo;Powered by Ruach&rdquo;
               </label>
+              {!entitlements.removeBranding && (
+                <span className="text-xs text-ink-muted">Upgrade your plan to remove Ruach branding.</span>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <button type="submit" className={buttonClasses("primary", "md")}>
-                Publish Changes
-              </button>
+              <SubmitButton pendingLabel="Publishing...">Publish Changes</SubmitButton>
             </div>
           </form>
         </Card>

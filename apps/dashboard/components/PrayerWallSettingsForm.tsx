@@ -5,15 +5,18 @@ import { ColorPickerField } from "./ColorPickerField";
 import { CopySnippetButton } from "./CopySnippetButton";
 import { LogoUploadField } from "./LogoUploadField";
 import { PrayerWallPreviewFrame } from "./PrayerWallPreviewFrame";
-import { buttonClasses } from "./ui/Button";
-import { Input } from "./ui/Input";
+import { SubmitButton } from "./SubmitButton";
+import { Textarea } from "./ui/Input";
+import { useToast } from "./ui/Toast";
 
 const PREVIEW_DEBOUNCE_MS = 200;
 
 interface PrayerWallSettingsFormProps {
   publicPrayerWallId: string;
   prayerWallEnabled: boolean;
-  forwardingEmail: string;
+  forwardingEmails: string[];
+  /** null = unlimited. Essential/free are capped at 1 -- see billingService's prayerTeamNotifications feature. */
+  maxForwardingEmails: number | null;
   brandColor: string;
   logoUrl: string | null;
   prayerWallUrl: string;
@@ -29,7 +32,8 @@ interface PrayerWallSettingsFormProps {
 export function PrayerWallSettingsForm({
   publicPrayerWallId,
   prayerWallEnabled,
-  forwardingEmail,
+  forwardingEmails,
+  maxForwardingEmails,
   brandColor,
   logoUrl,
   prayerWallUrl,
@@ -38,28 +42,45 @@ export function PrayerWallSettingsForm({
   const [previewColor, setPreviewColor] = useState(brandColor);
   const [previewLogo, setPreviewLogo] = useState<string | null>(logoUrl);
   const [debouncedColor, setDebouncedColor] = useState(previewColor);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedColor(previewColor), PREVIEW_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [previewColor]);
 
+  async function handleSave(formData: FormData) {
+    try {
+      await action(formData);
+      showToast("Prayer wall settings saved");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Something went wrong. Please try again.", "error");
+    }
+  }
+
   return (
-    <div className="grid gap-6 md:grid-cols-[1fr_280px]">
-      <form action={action} className="flex flex-col gap-4">
+    <div className="grid min-w-0 gap-6 md:grid-cols-[1fr_280px]">
+      <form action={handleSave} className="flex min-w-0 flex-col gap-4">
         <label className="flex items-center gap-2 text-sm text-ink-secondary">
           <input type="checkbox" name="prayerWallEnabled" defaultChecked={prayerWallEnabled} />
           Enable the public prayer wall
         </label>
         <label className="text-sm text-ink-secondary">
-          Forward new submissions to
-          <Input
-            name="forwardingEmail"
-            type="email"
+          Forward new submissions to {maxForwardingEmails === 1 ? "" : "(one per line)"}
+          <Textarea
+            name="forwardingEmails"
             placeholder="staff@example.org"
-            defaultValue={forwardingEmail}
+            defaultValue={forwardingEmails.join("\n")}
+            rows={maxForwardingEmails === 1 ? 1 : 3}
             className="mt-1 block w-full max-w-sm"
           />
+          {maxForwardingEmails !== null && (
+            <span className="mt-1 block text-xs text-ink-muted">
+              {maxForwardingEmails === 1
+                ? "Your plan supports one forwarding address. Upgrade to notify your whole prayer team."
+                : `Up to ${maxForwardingEmails} addresses on your plan.`}
+            </span>
+          )}
         </label>
         <ColorPickerField label="Brand color" name="brandColor" defaultValue={brandColor} onChange={setPreviewColor} />
         <LogoUploadField
@@ -74,13 +95,11 @@ export function PrayerWallSettingsForm({
           </div>
         )}
         <div className="flex justify-end">
-          <button type="submit" className={buttonClasses("primary", "md")}>
-            Save
-          </button>
+          <SubmitButton pendingLabel="Saving...">Save</SubmitButton>
         </div>
       </form>
 
-      <div>
+      <div className="min-w-0">
         <div className="mb-3">
           <h3 className="text-sm font-semibold text-ink">Preview</h3>
           <p className="text-xs text-ink-muted">How the wall looks to visitors.</p>

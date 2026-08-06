@@ -8,6 +8,12 @@ function daysAgo(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
+/** Every function below accepts an optional websiteId to scope to one campus's widgets (via Conversation.widget.websiteId) instead of the whole org. Omit/undefined for org-wide, matching pre-Phase-3 behavior exactly. */
+type WebsiteFilter = { widget: { websiteId: string } };
+function websiteFilter(websiteId: string | null | undefined): WebsiteFilter | Record<string, never> {
+  return websiteId ? { widget: { websiteId } } : {};
+}
+
 export interface EngagementPoint {
   date: string;
   conversations: number;
@@ -15,12 +21,15 @@ export interface EngagementPoint {
 }
 
 /** Conversations started and messages sent, bucketed by day, for the trailing `days` window. */
-export async function getEngagementOverTime(organizationId: string, days = 14): Promise<EngagementPoint[]> {
+export async function getEngagementOverTime(organizationId: string, days = 14, websiteId?: string | null): Promise<EngagementPoint[]> {
   const since = daysAgo(days);
   const [conversations, messages] = await Promise.all([
-    tenantDb.conversation.findMany({ where: { organizationId, createdAt: { gte: since } }, select: { createdAt: true } }),
+    tenantDb.conversation.findMany({
+      where: { organizationId, createdAt: { gte: since }, ...websiteFilter(websiteId) },
+      select: { createdAt: true },
+    }),
     tenantDb.conversationMessage.findMany({
-      where: { organizationId, role: "USER", createdAt: { gte: since } },
+      where: { organizationId, role: "USER", createdAt: { gte: since }, conversation: websiteFilter(websiteId) },
       select: { createdAt: true },
     }),
   ]);
@@ -54,10 +63,16 @@ export interface TopTopic {
  * dataset sizes at this stage are small and it keeps every query going through
  * tenantDb the same way as the rest of the service layer.
  */
-export async function getTopTopics(organizationId: string, days = 30, limit = 8): Promise<TopTopic[]> {
+export async function getTopTopics(organizationId: string, days = 30, limit = 8, websiteId?: string | null): Promise<TopTopic[]> {
   const since = daysAgo(days);
   const messages = await tenantDb.conversationMessage.findMany({
-    where: { organizationId, role: "ASSISTANT", createdAt: { gte: since }, recommendedResourceIds: { isEmpty: false } },
+    where: {
+      organizationId,
+      role: "ASSISTANT",
+      createdAt: { gte: since },
+      recommendedResourceIds: { isEmpty: false },
+      conversation: websiteFilter(websiteId),
+    },
     select: { recommendedResourceIds: true },
   });
   const resourceIds = Array.from(new Set(messages.flatMap((m) => m.recommendedResourceIds)));
@@ -93,10 +108,16 @@ export interface ContentGap {
 }
 
 /** Visitor questions that came back with no matching resource -- the clearest signal of missing content. */
-export async function getContentGaps(organizationId: string, days = 30, limit = 10): Promise<ContentGap[]> {
+export async function getContentGaps(organizationId: string, days = 30, limit = 10, websiteId?: string | null): Promise<ContentGap[]> {
   const since = daysAgo(days);
   const noResultReplies = await tenantDb.conversationMessage.findMany({
-    where: { organizationId, role: "ASSISTANT", responseType: "NO_RESULTS", createdAt: { gte: since } },
+    where: {
+      organizationId,
+      role: "ASSISTANT",
+      responseType: "NO_RESULTS",
+      createdAt: { gte: since },
+      conversation: websiteFilter(websiteId),
+    },
     select: { conversationId: true, createdAt: true },
     orderBy: { createdAt: "desc" },
     take: limit * 3, // over-fetch -- several no-result replies can share one preceding question
@@ -129,10 +150,16 @@ export interface TopResource {
   recommendationCount: number;
 }
 
-export async function getTopResources(organizationId: string, days = 30, limit = 8): Promise<TopResource[]> {
+export async function getTopResources(organizationId: string, days = 30, limit = 8, websiteId?: string | null): Promise<TopResource[]> {
   const since = daysAgo(days);
   const messages = await tenantDb.conversationMessage.findMany({
-    where: { organizationId, role: "ASSISTANT", createdAt: { gte: since }, recommendedResourceIds: { isEmpty: false } },
+    where: {
+      organizationId,
+      role: "ASSISTANT",
+      createdAt: { gte: since },
+      recommendedResourceIds: { isEmpty: false },
+      conversation: websiteFilter(websiteId),
+    },
     select: { recommendedResourceIds: true },
   });
 
@@ -169,10 +196,10 @@ export interface RecentQuestion {
  * getContentGaps; "pending" covers a question with no reply yet (e.g. sent seconds
  * before this query ran).
  */
-export async function getRecentQuestions(organizationId: string, days = 30, limit = 50): Promise<RecentQuestion[]> {
+export async function getRecentQuestions(organizationId: string, days = 30, limit = 50, websiteId?: string | null): Promise<RecentQuestion[]> {
   const since = daysAgo(days);
   const userMessages = await tenantDb.conversationMessage.findMany({
-    where: { organizationId, role: "USER", createdAt: { gte: since } },
+    where: { organizationId, role: "USER", createdAt: { gte: since }, conversation: websiteFilter(websiteId) },
     select: { conversationId: true, content: true, createdAt: true },
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -200,12 +227,16 @@ export interface AnalyticsSummary {
   noResultRate: number;
 }
 
-export async function getSummaryMetrics(organizationId: string, days = 30): Promise<AnalyticsSummary> {
+export async function getSummaryMetrics(organizationId: string, days = 30, websiteId?: string | null): Promise<AnalyticsSummary> {
   const since = daysAgo(days);
   const [totalConversations, totalQuestions, noResultCount] = await Promise.all([
-    tenantDb.conversation.count({ where: { organizationId, createdAt: { gte: since } } }),
-    tenantDb.conversationMessage.count({ where: { organizationId, role: "USER", createdAt: { gte: since } } }),
-    tenantDb.conversationMessage.count({ where: { organizationId, role: "ASSISTANT", responseType: "NO_RESULTS", createdAt: { gte: since } } }),
+    tenantDb.conversation.count({ where: { organizationId, createdAt: { gte: since }, ...websiteFilter(websiteId) } }),
+    tenantDb.conversationMessage.count({
+      where: { organizationId, role: "USER", createdAt: { gte: since }, conversation: websiteFilter(websiteId) },
+    }),
+    tenantDb.conversationMessage.count({
+      where: { organizationId, role: "ASSISTANT", responseType: "NO_RESULTS", createdAt: { gte: since }, conversation: websiteFilter(websiteId) },
+    }),
   ]);
   return {
     totalConversations,
@@ -213,4 +244,21 @@ export async function getSummaryMetrics(organizationId: string, days = 30): Prom
     noResultCount,
     noResultRate: totalQuestions === 0 ? 0 : Math.round((noResultCount / totalQuestions) * 100),
   };
+}
+
+export interface WebsiteAnalyticsSummary extends AnalyticsSummary {
+  websiteId: string;
+  websiteName: string;
+}
+
+/** Per-campus breakdown for the org-wide analytics view (orgWideAnalytics feature, Multi-Site+). */
+export async function getAnalyticsByWebsite(organizationId: string, days = 30): Promise<WebsiteAnalyticsSummary[]> {
+  const websites = await tenantDb.website.findMany({ where: { organizationId }, select: { id: true, name: true }, orderBy: { createdAt: "asc" } });
+  return Promise.all(
+    websites.map(async (website) => ({
+      websiteId: website.id,
+      websiteName: website.name,
+      ...(await getSummaryMetrics(organizationId, days, website.id)),
+    })),
+  );
 }

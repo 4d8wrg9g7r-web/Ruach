@@ -1,7 +1,7 @@
 import "./test-env";
 import bcrypt from "bcryptjs";
 import { expect, test } from "@playwright/test";
-import { userService } from "@ruach/database";
+import { organizationService, userService } from "@ruach/database";
 
 /**
  * The milestone-1 golden path (build plan / brief §66's closing list): create an org,
@@ -9,23 +9,27 @@ import { userService } from "@ruach/database";
  * transcript, generate mock AI categories, approve the resource, open the widget
  * preview, ask a question, and receive a real database-backed recommendation.
  *
- * Test data (the login user) is created directly via the service layer rather than
- * through a signup UI -- brief's milestone-1 scope starts from an already-authenticated
- * developer (the seeded dev user pattern), not public registration.
+ * Test data (the login user + org) is created directly via the service layer rather
+ * than through the UI. Org creation is no longer reachable through /onboarding at
+ * all (it's now gated behind real Stripe checkout or a redeemed access code -- see
+ * the billing feature); this test isn't exercising that gate, so it bypasses it the
+ * same way it already bypassed public signup.
  */
 test("golden path: org through database-backed recommendation", async ({ page, context }) => {
   const email = `e2e-${Date.now()}@ruach.dev`;
   const password = "e2e-password-123";
-  await userService.createUser({ email, passwordHash: await bcrypt.hash(password, 10) });
+  const user = await userService.createUser({ email, passwordHash: await bcrypt.hash(password, 10) });
+  await organizationService.createOrganizationWithOwner({
+    name: `E2E Org ${Date.now()}`,
+    slug: `e2e-org-${Date.now()}`,
+    ownerUserId: user.id,
+  });
 
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await page.waitForURL("**/onboarding");
-  await page.getByLabel("Organization name").fill(`E2E Org ${Date.now()}`);
-  await page.getByRole("button", { name: "Create organization" }).click();
   await page.waitForURL("**/dashboard");
 
   await page.goto("/websites");

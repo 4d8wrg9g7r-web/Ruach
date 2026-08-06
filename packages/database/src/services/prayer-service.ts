@@ -1,3 +1,4 @@
+import type { PrayerRequestCategory } from "@prisma/client";
 import { rawDb, tenantDb } from "../client";
 
 export async function createAccount(params: {
@@ -99,6 +100,10 @@ export async function createPrayerRequest(params: {
   message: string;
   isPublic: boolean;
   isAnonymous?: boolean;
+  /** Only ever set when the org's plan has the prayerCategories feature -- caller's responsibility, see the submit Server Action. */
+  category?: PrayerRequestCategory | null;
+  /** null = submitted via the org-level default wall. Set = submitted via a specific campus's wall. */
+  websiteId?: string | null;
 }) {
   return tenantDb.prayerRequest.create({
     data: { ...params, publicizedAt: params.isPublic ? new Date() : null },
@@ -112,10 +117,15 @@ export async function createPrayerRequest(params: {
  * is responsible for not showing it when isAnonymous is true (kept here rather than
  * filtered out of the query so a request's own author can still see their name on
  * "My requests" regardless of the public anonymous flag).
+ *
+ * websiteId omitted = the org-level default wall, which shows every public request
+ * org-wide (unchanged pre-Phase-3 behavior, regardless of which campus it came
+ * through). websiteId set = a specific campus's wall, showing only requests
+ * submitted through that same campus.
  */
-export async function listPublicPrayerRequests(organizationId: string) {
+export async function listPublicPrayerRequests(organizationId: string, websiteId?: string) {
   return tenantDb.prayerRequest.findMany({
-    where: { organizationId, isPublic: true },
+    where: { organizationId, isPublic: true, ...(websiteId ? { websiteId } : {}) },
     orderBy: { publicizedAt: "desc" },
     include: { account: { select: { displayName: true } } },
   });
@@ -190,4 +200,48 @@ export async function markForwarded(organizationId: string, requestId: string) {
     where: { id: requestId, organizationId },
     data: { forwardedAt: new Date() },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Staff moderation (apps/dashboard/app/(dashboard)/prayer-wall) -- distinct from
+// the functions above, which are all gated by the submitter's own accountId. These
+// act on behalf of church staff via requireOrgRole/PRAYER_MODERATOR instead, so they
+// intentionally have no accountId check: any request in the org is fair game.
+// ---------------------------------------------------------------------------
+
+/** Every request for the org, not just public ones -- the staff review surface, unlike listPublicPrayerRequests. Includes which campus (if any) it came through. */
+export async function listPrayerRequestsForModeration(organizationId: string) {
+  return tenantDb.prayerRequest.findMany({
+    where: { organizationId },
+    orderBy: { createdAt: "desc" },
+    include: { account: { select: { displayName: true, email: true } }, website: { select: { name: true } } },
+  });
+}
+
+export async function staffSetPublicVisibility(organizationId: string, requestId: string, isPublic: boolean) {
+  return tenantDb.prayerRequest.updateMany({
+    where: { id: requestId, organizationId },
+    data: { isPublic, ...(isPublic ? { publicizedAt: new Date() } : {}) },
+  });
+}
+
+export async function staffMarkAnswered(organizationId: string, requestId: string) {
+  return tenantDb.prayerRequest.updateMany({
+    where: { id: requestId, organizationId },
+    data: { status: "ANSWERED", answeredAt: new Date() },
+  });
+}
+
+export async function deletePrayerRequest(organizationId: string, requestId: string) {
+  return tenantDb.prayerRequest.deleteMany({ where: { id: requestId, organizationId } });
+}
+
+/** Gated by the org's plan having the prayerCategories feature -- callers are responsible for that check. */
+export async function setCategory(organizationId: string, requestId: string, category: PrayerRequestCategory | null) {
+  return tenantDb.prayerRequest.updateMany({ where: { id: requestId, organizationId }, data: { category } });
+}
+
+/** Gated by the org's plan having the internalPrayerNotes feature -- callers are responsible for that check. Never rendered on any public/submitter-facing page. */
+export async function setInternalNotes(organizationId: string, requestId: string, notes: string | null) {
+  return tenantDb.prayerRequest.updateMany({ where: { id: requestId, organizationId }, data: { internalNotes: notes } });
 }

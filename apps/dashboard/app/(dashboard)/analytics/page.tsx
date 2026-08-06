@@ -1,5 +1,5 @@
-import { AlertCircle, BarChart3, MessageSquareText, Sparkles } from "lucide-react";
-import { analyticsService } from "@ruach/database";
+import { AlertCircle, BarChart3, Building2, MessageSquareText, Sparkles } from "lucide-react";
+import { analyticsService, billingService } from "@ruach/database";
 import { EngagementChart } from "../../../components/analytics/EngagementChart";
 import { RankedBarList } from "../../../components/analytics/RankedBarList";
 import { RecentQuestionsList } from "../../../components/analytics/RecentQuestionsList";
@@ -15,13 +15,16 @@ export default async function AnalyticsPage() {
   const organization = await getCurrentOrganization();
   if (!organization) return null;
 
-  const [summary, engagement, topTopics, topResources, contentGaps, recentQuestions] = await Promise.all([
+  const canViewByWebsite = billingService.planHasFeature(organization.planKey, "orgWideAnalytics");
+
+  const [summary, engagement, topTopics, topResources, contentGaps, recentQuestions, byWebsite] = await Promise.all([
     analyticsService.getSummaryMetrics(organization.id, WINDOW_DAYS),
     analyticsService.getEngagementOverTime(organization.id, WINDOW_DAYS),
     analyticsService.getTopTopics(organization.id, WINDOW_DAYS),
     analyticsService.getTopResources(organization.id, WINDOW_DAYS),
     analyticsService.getContentGaps(organization.id, WINDOW_DAYS),
     analyticsService.getRecentQuestions(organization.id, WINDOW_DAYS),
+    canViewByWebsite ? analyticsService.getAnalyticsByWebsite(organization.id, WINDOW_DAYS) : Promise.resolve([]),
   ]);
 
   if (summary.totalConversations === 0) {
@@ -59,6 +62,26 @@ export default async function AnalyticsPage() {
         <h2 className="mb-4 text-sm font-semibold text-ink">Engagement over time</h2>
         <EngagementChart data={engagement} />
       </Card>
+
+      {byWebsite.length > 1 && (
+        <Card padding="md" className="mb-6">
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
+            <Building2 size={15} className="text-accent" /> By campus
+          </h2>
+          <p className="mb-4 text-xs text-ink-muted">The same {WINDOW_DAYS}-day totals above, broken out by campus.</p>
+          <ul className="flex flex-col divide-y divide-border">
+            {byWebsite.map((w) => (
+              <li key={w.websiteId} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                <span className="text-ink">{w.websiteName}</span>
+                <span className="shrink-0 text-xs text-ink-muted">
+                  {w.totalConversations} conversation{w.totalConversations === 1 ? "" : "s"} &middot; {w.totalQuestions} question
+                  {w.totalQuestions === 1 ? "" : "s"} &middot; {w.noResultRate}% no-match
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <div className="mb-6 grid grid-cols-2 gap-6">
         <Card padding="md">

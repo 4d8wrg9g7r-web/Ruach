@@ -1,4 +1,8 @@
+import type { Metadata } from "next";
 import { AuthError } from "next-auth";
+import { noIndexMetadata } from "../../lib/no-index-metadata";
+
+export const metadata: Metadata = noIndexMetadata;
 import { redirect } from "next/navigation";
 import { signIn } from "../../auth";
 import { SubmitButton } from "../../components/SubmitButton";
@@ -29,11 +33,7 @@ export default async function LoginPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 text-2xl font-semibold text-ink">Sign in to Ruach</h1>
-      <p className="mb-6 text-sm text-ink-secondary">
-        Dev seed login: <code className="rounded-sm bg-surface-muted px-1 py-0.5 text-xs">owner@ruach.dev</code> /{" "}
-        <code className="rounded-sm bg-surface-muted px-1 py-0.5 text-xs">devpassword123</code>
-      </p>
+      <h1 className="mb-6 text-2xl font-semibold text-ink">Sign in to Ruach</h1>
       {params.error && (
         <p className="mb-4 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">Invalid email or password.</p>
       )}
@@ -55,9 +55,12 @@ export default async function LoginPage({
           <SubmitButton pendingLabel="Signing in...">Sign in</SubmitButton>
         </form>
       </Card>
-      <p className="mt-4 text-sm text-ink-secondary">
+      <p className="mt-4 flex items-center justify-between text-sm text-ink-secondary">
         <a href="/forgot-password" className="text-accent hover:underline">
           Forgot password?
+        </a>
+        <a href="/signup" className="text-accent hover:underline">
+          Create an account
         </a>
       </p>
     </main>

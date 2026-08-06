@@ -54,8 +54,8 @@ export function PrayerWallList({ requests, onPray, brandColor }: PrayerWallListP
             style={{ borderLeftColor: brandColor }}
           >
             <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{request.message}</p>
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-ink-muted">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                 {isAnswered && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-success-bg px-2 py-0.5 font-medium text-success">
                     <CheckCircle2 size={11} /> Answered

@@ -3,13 +3,25 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { UserPlus } from "lucide-react";
 import type { OrganizationRole } from "@ruach/database";
-import { auditService, teamService } from "@ruach/database";
+import { auditService, billingService, teamService } from "@ruach/database";
 import { getEmailProvider } from "@ruach/email";
 import { TeamMemberList } from "../../../components/TeamMemberList";
 import { buttonClasses } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { Input, Select } from "../../../components/ui/Input";
 import { getCurrentOrganization, getCurrentOrgRole, getCurrentUser, requireOrgRole } from "../../../lib/session";
+
+/**
+ * OWNER/ADMIN/CONTENT_MANAGER/ANALYTICS_VIEWER are always assignable (OWNER via this
+ * same role Select doubles as the ownership-transfer flow -- teamService.updateMemberRole's
+ * assertNotLastOwner is what actually guards it, not plan gating). PRAYER_MODERATOR
+ * is the only role gated by plan, on advancedRolesPermissions (Multi-Site+) -- this
+ * doubles as Phase 4's "advanced roles" deliverable, see the plan doc.
+ */
+function assignableRoles(planKey: string): OrganizationRole[] {
+  const base: OrganizationRole[] = ["OWNER", "ADMIN", "CONTENT_MANAGER", "ANALYTICS_VIEWER"];
+  return billingService.planHasFeature(planKey, "advancedRolesPermissions") ? [...base, "PRAYER_MODERATOR"] : base;
+}
 
 async function inviteMemberAction(formData: FormData) {
   "use server";
@@ -20,6 +32,11 @@ async function inviteMemberAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "CONTENT_MANAGER") as OrganizationRole;
   if (!email) throw new Error("Enter an email address.");
+  if (!assignableRoles(organization.planKey).includes(role)) throw new Error("That role isn't available on your plan.");
+
+  const plan = billingService.getPlan(organization.planKey);
+  const memberCount = await teamService.countMembers(organization.id);
+  billingService.assertUnderCap(memberCount, plan.maxTeamMembers, "team member");
 
   const tempPassword = randomBytes(9).toString("base64url");
   const passwordHash = await bcrypt.hash(tempPassword, 10);
@@ -52,6 +69,7 @@ async function updateMemberRoleAction(userId: string, role: OrganizationRole) {
   const organization = await getCurrentOrganization();
   if (!organization) throw new Error("No organization");
   await requireOrgRole(organization.id, ["OWNER", "ADMIN"]);
+  if (!assignableRoles(organization.planKey).includes(role)) throw new Error("That role isn't available on your plan.");
 
   await teamService.updateMemberRole(organization.id, userId, role);
 
@@ -98,6 +116,7 @@ export default async function TeamPage() {
     getCurrentOrgRole(organization.id),
   ]);
   const canManage = currentRole === "OWNER" || currentRole === "ADMIN";
+  const canAssignModerator = billingService.planHasFeature(organization.planKey, "advancedRolesPermissions");
 
   const memberRows = members.map((m) => ({
     userId: m.userId,
@@ -131,6 +150,7 @@ export default async function TeamPage() {
                 <option value="ADMIN">Admin</option>
                 <option value="CONTENT_MANAGER">Content Manager</option>
                 <option value="ANALYTICS_VIEWER">Analytics Viewer</option>
+                {canAssignModerator && <option value="PRAYER_MODERATOR">Prayer Moderator</option>}
               </Select>
             </label>
             <button type="submit" className={buttonClasses("primary", "md")}>
@@ -146,6 +166,7 @@ export default async function TeamPage() {
           members={memberRows}
           currentUserId={user.id}
           canManage={canManage}
+          canAssignModerator={canAssignModerator}
           onUpdateRole={updateMemberRoleAction}
           onRemove={removeMemberAction}
         />

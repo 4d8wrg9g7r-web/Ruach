@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { Filter, Search, Sparkles } from "lucide-react";
-import { ResourceStatus, auditService, bulkJobService, contentSourceService, resourceService } from "@ruach/database";
+import { ResourceStatus, auditService, billingService, bulkJobService, contentSourceService, resourceService } from "@ruach/database";
 import { importResourceFromUrl, importYouTubeChannel, importRSSFeed } from "@ruach/providers";
 import { AutoSubmitSelect } from "../../../components/AutoSubmitSelect";
 import type { BulkImportSummary } from "../../../components/BulkImportForm";
@@ -16,8 +16,30 @@ import { RESOURCE_TYPE_FILTERS, resourceTypeGroup } from "../../../lib/format";
 import { approveAndIndexResources, runBulkJob } from "../../../lib/resource-pipeline";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../lib/session";
 
+// Server Actions defined in this file inherit it -- runBulkJob (via after(), see
+// enqueueBulkJob below) does real per-resource work (OpenAI calls, web fetches) for
+// potentially hundreds of resources in one invocation, well past the platform's
+// short default. 300s matches the existing cron routes' ceiling (api/cron/sync,
+// api/cron/usage-warnings); still not unlimited -- see bulk-job-service.ts's stale-
+// job detection for what happens to a batch too large to finish even at this cap.
+export const maxDuration = 300;
+
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 const DEFAULT_PAGE_SIZE = 25;
+
+/**
+ * Approval is the one bulk/auto-approve action that's plan-capped -- decide upfront
+ * how many of the given ids fit under the org's indexed-resource limit rather than
+ * checking per-item inside a concurrent worker pool (see resource-pipeline.ts's
+ * mapWithConcurrency), which would race. Anything past the cap is simply never
+ * attempted, not silently ignored.
+ */
+async function capToRemainingResourceSlots(organizationId: string, planKey: string, resourceIds: string[]): Promise<string[]> {
+  const plan = billingService.getPlan(planKey);
+  const activeCount = await resourceService.countActiveResources(organizationId);
+  const remaining = billingService.remainingCapacity(activeCount, plan.maxIndexedResources);
+  return remaining === null ? resourceIds : resourceIds.slice(0, remaining);
+}
 
 async function importResourceAction(formData: FormData) {
   "use server";
@@ -45,7 +67,7 @@ async function importChannelAction(formData: FormData): Promise<BulkImportSummar
 
   const result = await importYouTubeChannel(organization.id, channelUrl);
   if (autoApprove && result.createdResourceIds.length > 0) {
-    await approveAndIndexResources(organization.id, result.createdResourceIds);
+    await approveAndIndexResources(organization.id, await capToRemainingResourceSlots(organization.id, organization.planKey, result.createdResourceIds), undefined, billingService.bulkConcurrency(organization.planKey));
   }
   if (trackAutoSync) {
     await contentSourceService.trackContentSource({
@@ -98,7 +120,7 @@ async function importFeedAction(formData: FormData): Promise<BulkImportSummary> 
 
   const result = await importRSSFeed(organization.id, feedUrl);
   if (autoApprove && result.createdResourceIds.length > 0) {
-    await approveAndIndexResources(organization.id, result.createdResourceIds);
+    await approveAndIndexResources(organization.id, await capToRemainingResourceSlots(organization.id, organization.planKey, result.createdResourceIds), undefined, billingService.bulkConcurrency(organization.planKey));
   }
   if (trackAutoSync) {
     await contentSourceService.trackContentSource({
@@ -153,10 +175,18 @@ async function enqueueBulkJob(type: "ANALYZE" | "APPROVE" | "REJECT" | "DELETE" 
   await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
   if (resourceIds.length === 0) return null;
 
+  let idsToProcess = resourceIds;
+  if (type === "APPROVE") {
+    idsToProcess = await capToRemainingResourceSlots(organization.id, organization.planKey, resourceIds);
+    if (idsToProcess.length === 0) {
+      throw new Error("You've reached your plan's indexed-resource limit. Upgrade to approve more.");
+    }
+  }
+
   const user = await getCurrentUser();
-  const job = await bulkJobService.createBulkJob(organization.id, type, resourceIds, user?.id);
+  const job = await bulkJobService.createBulkJob(organization.id, type, idsToProcess, user?.id);
   after(() => runBulkJob(organization.id, job.id, user?.id));
-  return { jobId: job.id, totalCount: resourceIds.length };
+  return { jobId: job.id, totalCount: idsToProcess.length };
 }
 
 async function bulkAnalyzeAction(resourceIds: string[]) {

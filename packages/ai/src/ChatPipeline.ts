@@ -12,6 +12,8 @@ const MAX_MESSAGE_LENGTH = 2000;
 export interface ChatPipelineInput {
   organizationId: string;
   widgetId: string;
+  /** The widget's campus (Website), if any -- see getResourcesByIds's websiteId param. */
+  websiteId: string | null;
   conversationId: string;
   messageId: string;
   message: string;
@@ -28,6 +30,22 @@ function formatDurationLabel(seconds: number | null): string | null {
   const hours = Math.floor(minutes / 60);
   const remaining = minutes % 60;
   return remaining === 0 ? `${hours} hr` : `${hours} hr ${remaining} min`;
+}
+
+/**
+ * ts_headline's excerpt is pulled straight out of the resource's searchDocument
+ * (buildSearchDocument in CategorizationService.ts), which uses Markdown-style
+ * headers ("# Title", "## Summary") and "- " bullets purely to help full-text search
+ * relevance -- it was never meant to be read verbatim. When the matched excerpt
+ * window lands on/near one of those lines, the literal #/##/- characters leak into
+ * what's shown to a visitor as "why this matches your question," so strip them here.
+ */
+function cleanExcerpt(excerpt: string): string {
+  return excerpt
+    .replace(/#{1,6}\s*/g, "")
+    .replace(/(^|\s)-\s+/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 function buttonLabelFor(resourceType: string): ResourceRecommendation["buttonLabel"] {
@@ -125,9 +143,11 @@ export class ChatPipeline {
 
     // Step 6: database validation. This is the real tenant + approval boundary: even
     // if retrieval returned a stale or cross-tenant id, getResourcesByIds re-filters by
-    // organizationId AND status === 'ACTIVE' against the database directly.
+    // organizationId AND status === 'ACTIVE' against the database directly. Passing
+    // websiteId also enforces campus scoping here -- a resource scoped to campus A
+    // never reaches campus B's widget, regardless of what retrieval returned.
     const candidateIds = candidates.map((c) => c.resourceId);
-    const validResources = await resourceService.getResourcesByIds(input.organizationId, candidateIds);
+    const validResources = await resourceService.getResourcesByIds(input.organizationId, candidateIds, input.websiteId);
     const scoreByResourceId = new Map(candidates.map((c) => [c.resourceId, c]));
 
     // Step 7: ranking (semantic score from retrieval; ties broken by transcript presence).
@@ -171,7 +191,7 @@ export class ChatPipeline {
       publicUrl: resource.publicUrl,
       embedUrl: resource.embedUrl,
       buttonLabel: buttonLabelFor(resource.resourceType),
-      relevanceExplanation: score.matchedExcerpt ?? `Matches what you're looking for.`,
+      relevanceExplanation: (score.matchedExcerpt && cleanExcerpt(score.matchedExcerpt)) || `Matches what you're looking for.`,
     }));
 
     if (isNonAcuteSafetyConcern) {

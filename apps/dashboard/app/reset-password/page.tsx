@@ -1,4 +1,8 @@
+import type { Metadata } from "next";
 import bcrypt from "bcryptjs";
+import { noIndexMetadata } from "../../lib/no-index-metadata";
+
+export const metadata: Metadata = noIndexMetadata;
 import { redirect } from "next/navigation";
 import { userService } from "@ruach/database";
 import { SubmitButton } from "../../components/SubmitButton";

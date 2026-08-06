@@ -60,15 +60,30 @@ export async function getResource(organizationId: string, resourceId: string) {
   });
 }
 
-export async function getResourcesByIds(organizationId: string, resourceIds: string[]) {
+/**
+ * websiteId scopes to a single campus's widget: resources are visible if they're
+ * org-wide (websiteId null) or scoped to that same campus. Omit it for org-wide
+ * callers (e.g. the review queue) that should see every resource regardless of scope.
+ */
+export async function getResourcesByIds(organizationId: string, resourceIds: string[], websiteId?: string | null) {
   if (resourceIds.length === 0) return [];
   return tenantDb.resource.findMany({
-    where: { organizationId, id: { in: resourceIds }, status: "ACTIVE" },
+    where: {
+      organizationId,
+      id: { in: resourceIds },
+      status: "ACTIVE",
+      ...(websiteId !== undefined ? { OR: [{ websiteId: null }, { websiteId }] } : {}),
+    },
   });
 }
 
 export async function listActiveResources(organizationId: string) {
   return tenantDb.resource.findMany({ where: { organizationId, status: "ACTIVE" } });
+}
+
+/** Used to enforce the org's plan-tier indexed-resource cap before approving another one -- see billingService.assertUnderCap. */
+export async function countActiveResources(organizationId: string) {
+  return tenantDb.resource.count({ where: { organizationId, status: "ACTIVE" } });
 }
 
 export async function setTranscript(
@@ -105,6 +120,16 @@ export async function applyCategorization(
   const result = await tenantDb.resource.updateMany({
     where: { id: resourceId, organizationId },
     data: { ...categorization, status: "REVIEW_REQUIRED" },
+  });
+  if (result.count === 0) return null;
+  return getResource(organizationId, resourceId);
+}
+
+/** null = org-wide (visible to every campus's widgets). See getResourcesByIds's websiteId param. */
+export async function setResourceWebsiteScope(organizationId: string, resourceId: string, websiteId: string | null) {
+  const result = await tenantDb.resource.updateMany({
+    where: { id: resourceId, organizationId },
+    data: { websiteId },
   });
   if (result.count === 0) return null;
   return getResource(organizationId, resourceId);

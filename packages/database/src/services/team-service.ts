@@ -13,6 +13,11 @@ export async function countOwners(organizationId: string) {
   return tenantDb.organizationMember.count({ where: { organizationId, role: "OWNER" } });
 }
 
+/** Used to enforce the org's plan-tier team-member cap before inviting a new one -- see billingService.assertUnderCap. */
+export async function countMembers(organizationId: string) {
+  return tenantDb.organizationMember.count({ where: { organizationId } });
+}
+
 /**
  * Invites always resolve to a real, immediately-usable account (a random temp
  * password, emailed via EmailProvider by the caller) rather than a pending-invite

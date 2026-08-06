@@ -52,3 +52,8 @@ export async function countRecommendationResponses(organizationId: string) {
     where: { organizationId, role: "ASSISTANT", responseType: "RESOURCE_RECOMMENDATION" },
   });
 }
+
+/** Guided-onboarding checklist's "embed the widget" step: real chat traffic is a more honest signal than Widget.status (which defaults to ACTIVE at creation regardless of whether the script tag was ever installed anywhere). */
+export async function countConversations(organizationId: string) {
+  return tenantDb.conversation.count({ where: { organizationId } });
+}

@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { organizationService, prayerService } from "@ruach/database";
+import { prayerService, prayerWallService } from "@ruach/database";
 import { MyPrayerRequestList } from "../../../../components/MyPrayerRequestList";
 import { PrayerWallHeader } from "../../../../components/PrayerWallHeader";
 import { DEFAULT_PRAYER_WALL_BRAND_COLOR } from "../../../../lib/prayer-branding";
@@ -8,61 +8,61 @@ import { getCurrentPrayerAccount } from "../../../../lib/prayer-session";
 
 async function markAnsweredAction(publicPrayerWallId: string, requestId: string) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
-  const account = await getCurrentPrayerAccount(organization.id);
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
+  const account = await getCurrentPrayerAccount(wall.organizationId);
   if (!account) throw new Error("Not logged in");
 
-  await prayerService.markAnswered(organization.id, account.id, requestId);
+  await prayerService.markAnswered(wall.organizationId, account.id, requestId);
   revalidatePath(`/prayer/${publicPrayerWallId}/mine`);
 }
 
 async function togglePublicAction(publicPrayerWallId: string, requestId: string, isPublic: boolean) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
-  const account = await getCurrentPrayerAccount(organization.id);
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
+  const account = await getCurrentPrayerAccount(wall.organizationId);
   if (!account) throw new Error("Not logged in");
 
-  await prayerService.setPublicVisibility(organization.id, account.id, requestId, isPublic);
+  await prayerService.setPublicVisibility(wall.organizationId, account.id, requestId, isPublic);
   revalidatePath(`/prayer/${publicPrayerWallId}/mine`);
   revalidatePath(`/prayer/${publicPrayerWallId}`);
 }
 
 async function toggleAnonymousAction(publicPrayerWallId: string, requestId: string, isAnonymous: boolean) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
-  const account = await getCurrentPrayerAccount(organization.id);
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
+  const account = await getCurrentPrayerAccount(wall.organizationId);
   if (!account) throw new Error("Not logged in");
 
-  await prayerService.setAnonymous(organization.id, account.id, requestId, isAnonymous);
+  await prayerService.setAnonymous(wall.organizationId, account.id, requestId, isAnonymous);
   revalidatePath(`/prayer/${publicPrayerWallId}/mine`);
   revalidatePath(`/prayer/${publicPrayerWallId}`);
 }
 
 export default async function MyPrayerRequestsPage({ params }: { params: Promise<{ publicPrayerWallId: string }> }) {
   const { publicPrayerWallId } = await params;
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) notFound();
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) notFound();
 
-  const account = await getCurrentPrayerAccount(organization.id);
+  const account = await getCurrentPrayerAccount(wall.organizationId);
   if (!account) redirect(`/prayer/${publicPrayerWallId}/login?next=mine`);
 
-  const requests = await prayerService.listMyPrayerRequests(organization.id, account.id);
+  const requests = await prayerService.listMyPrayerRequests(wall.organizationId, account.id);
 
   const boundMarkAnswered = markAnsweredAction.bind(null, publicPrayerWallId);
   const boundTogglePublic = togglePublicAction.bind(null, publicPrayerWallId);
   const boundToggleAnonymous = toggleAnonymousAction.bind(null, publicPrayerWallId);
-  const brandColor = organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const brandColor = wall.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
   const hasCustomBrandColor = brandColor !== DEFAULT_PRAYER_WALL_BRAND_COLOR;
 
   return (
     <div className={`min-h-screen ${hasCustomBrandColor ? "bg-surface" : "bg-surface-muted"}`}>
       <PrayerWallHeader
-        organizationName={organization.name}
+        organizationName={wall.displayName}
         publicPrayerWallId={publicPrayerWallId}
-        logoUrl={organization.prayerWallLogoUrl}
+        logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
         isLoggedIn
       />

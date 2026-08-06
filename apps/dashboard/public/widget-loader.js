@@ -38,11 +38,45 @@
       // Fail gracefully -- no launcher renders if the widget is unavailable.
     });
 
+  // Real stylesheet + media query rather than a single inline clamp() -- a lone
+  // clamp() tuned to look right on desktop (a small vw coefficient, since desktop
+  // viewports are huge) barely moves at all across the *mobile* width range, so
+  // small phones all got pinned to the same fixed floor regardless of how small
+  // the screen actually was. This gives phones their own genuinely proportional
+  // rule instead of inheriting desktop's. dvh (not vh) so a phone's address-bar
+  // chrome doesn't inflate how big "80% of the viewport" actually renders; the
+  // plain vh declaration first is a fallback for browsers that don't support dvh
+  // (an unsupported later declaration is just ignored, keeping the earlier one).
+  //
+  // On mobile, a small floating panel doesn't work well -- the fixed positioning
+  // + a nested-iframe vh-computation bug in mobile browsers made it appear to
+  // drift/resize on its own. Rather than fight that, phones get a real full-screen
+  // overlay instead (matches how most embeddable chat widgets behave on mobile).
+  // The `!important`s are required here because `panel`'s own bottom/left/right
+  // positioning is set inline via JS (see mount()) -- inline styles otherwise beat
+  // any stylesheet rule, `!important` is the one thing that outranks them.
+  var STYLE_ID = "ruach-widget-panel-styles";
+  if (!document.getElementById(STYLE_ID)) {
+    var styleEl = document.createElement("style");
+    styleEl.id = STYLE_ID;
+    styleEl.textContent =
+      ".ruach-widget-panel{width:clamp(380px,26vw,440px);height:clamp(480px,65vh,720px);height:clamp(480px,65dvh,720px);max-width:90vw;max-height:80vh;max-height:80dvh;}" +
+      "@media (max-width:640px){.ruach-widget-panel{" +
+      "top:0!important;right:0!important;bottom:0!important;left:0!important;" +
+      "width:100vw!important;height:100vh!important;height:100dvh!important;" +
+      "max-width:100vw!important;max-height:100vh!important;max-height:100dvh!important;" +
+      "border-radius:0!important;border:none!important;box-shadow:none!important;" +
+      "}}";
+    document.head.appendChild(styleEl);
+  }
+
+  function isMobilePanel() {
+    return window.matchMedia ? window.matchMedia("(max-width:640px)").matches : window.innerWidth <= 640;
+  }
+
   function mount(config) {
     var isOpen = false;
     var iframeCreated = false;
-    var panelWidth = "380px";
-    var panelHeight = "600px";
     var margin = "20px";
     var side = config.launcherPosition === "BOTTOM_LEFT" ? "left" : "right";
 
@@ -102,13 +136,10 @@
     launcher.appendChild(label);
 
     var panel = document.createElement("div");
+    panel.className = "ruach-widget-panel";
     setStyles(panel, {
       position: "fixed",
       bottom: "calc(" + margin + " + 64px)",
-      width: panelWidth,
-      height: panelHeight,
-      maxHeight: "80vh",
-      maxWidth: "90vw",
       borderRadius: "22px",
       overflow: "hidden",
       border: "1px solid rgba(20, 17, 13, 0.08)",
@@ -121,6 +152,19 @@
     function setOpen(next) {
       isOpen = next;
       panel.style.display = isOpen ? "block" : "none";
+      // The launcher and panel share the same fixed-position stacking layer, and
+      // the launcher (appended after the panel) would otherwise render on top of
+      // an open panel rather than being covered by it. Hiding it while open also
+      // matches how most chat widgets behave (bubble disappears in favor of the
+      // panel's own close button).
+      launcher.style.display = isOpen ? "none" : "inline-flex";
+      // Locks the host page's own scroll while the full-screen mobile panel is
+      // open -- without this, scrolling the host page underneath a `position:fixed`
+      // overlay triggers a well-known iOS Safari bug where fixed elements visibly
+      // lag/jump during the scroll instead of staying put.
+      if (isMobilePanel()) {
+        document.body.style.overflow = isOpen ? "hidden" : "";
+      }
       if (isOpen && !iframeCreated) {
         var iframe = document.createElement("iframe");
         iframe.title = config.assistantName || "Resource assistant";

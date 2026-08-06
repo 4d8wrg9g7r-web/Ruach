@@ -1,6 +1,8 @@
 import {
   BarChart3,
+  Compass,
   Globe,
+  HandHeart,
   Library,
   LayoutDashboard,
   LifeBuoy,
@@ -11,13 +13,18 @@ import {
   Users,
   Wind,
 } from "lucide-react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { billingService, resourceService } from "@ruach/database";
 import { DashboardShell } from "../../components/DashboardShell";
 import { SidebarNavItem } from "../../components/ui/SidebarNavItem";
+import { ToastProvider } from "../../components/ui/Toast";
 import { signOut } from "../../auth";
 import { getCurrentOrganization, getCurrentUser } from "../../lib/session";
+
+/** Every page behind this layout is authenticated-only content -- never meant to be indexed, regardless of what robots.txt already disallows (defense in depth: a disallowed URL can still get indexed by title alone if linked externally). */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 async function signOutAction() {
   "use server";
@@ -39,8 +46,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const user = await getCurrentUser();
   const pendingReview = await resourceService.listResources(organization.id, { status: "REVIEW_REQUIRED" });
-  const usage = await billingService.getCurrentUsage(organization.id);
-  const usagePercent = Math.min(100, Math.round((usage.queriesUsed / usage.plan.monthlyQueryLimit) * 100));
+  const usage = await billingService.getCurrentUsage(organization.id, organization.planKey);
+  const usagePercent = Math.min(100, Math.round(billingService.usageRatio(usage) * 100));
 
   const sidebar = (
     <>
@@ -63,6 +70,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3">
         <SidebarNavItem href="/dashboard" label="Overview" icon={<LayoutDashboard size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem href="/getting-started" label="Getting Started" icon={<Compass size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/resources" label="Resources" icon={<Library size={17} strokeWidth={1.75} />} />
         <SidebarNavItem
           href="/resources?status=REVIEW_REQUIRED"
@@ -73,6 +81,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNavItem href="/widgets" label="Widgets" icon={<Monitor size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/websites" label="Websites" icon={<Globe size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/analytics" label="Analytics" icon={<BarChart3 size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem href="/prayer-wall" label="Prayer Wall" icon={<HandHeart size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/team" label="Team" icon={<Users size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/settings" label="Settings" icon={<SettingsIcon size={17} strokeWidth={1.75} />} />
       </nav>
@@ -88,7 +97,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </p>
           <div className="mb-1 flex items-center justify-between text-[11px] text-white/60">
             <span>
-              {usage.queriesUsed.toLocaleString()} / {usage.plan.monthlyQueryLimit.toLocaleString()} queries
+              {usage.queriesUsed.toLocaleString()} /{" "}
+              {usage.plan.monthlyQueryLimit === null ? "unlimited" : usage.plan.monthlyQueryLimit.toLocaleString()}{" "}
+              queries
             </span>
           </div>
           <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
@@ -128,5 +139,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     </>
   );
 
-  return <DashboardShell sidebar={sidebar}>{children}</DashboardShell>;
+  return (
+    <ToastProvider>
+      <DashboardShell sidebar={sidebar}>{children}</DashboardShell>
+    </ToastProvider>
+  );
 }

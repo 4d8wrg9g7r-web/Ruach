@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { Mail } from "lucide-react";
-import { organizationService, prayerService } from "@ruach/database";
+import { prayerService, prayerWallService } from "@ruach/database";
 import { getEmailProvider } from "@ruach/email";
 import { PrayerPageIntro } from "../../../../components/PrayerPageIntro";
 import { PrayerWallHeader } from "../../../../components/PrayerWallHeader";
@@ -12,24 +12,24 @@ import { checkRateLimit, getClientIp } from "../../../../lib/rate-limit";
 
 async function requestResetAction(publicPrayerWallId: string, formData: FormData) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
 
   const ip = getClientIp(await headers());
-  const rateCheck = checkRateLimit(`prayer-forgot-password:${organization.id}:${ip ?? "unknown"}`, 5, 60 * 60 * 1000);
+  const rateCheck = checkRateLimit(`prayer-forgot-password:${wall.organizationId}:${ip ?? "unknown"}`, 5, 60 * 60 * 1000);
   if (!rateCheck.allowed) redirect(`/prayer/${publicPrayerWallId}/forgot-password?error=rate_limited`);
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (email) {
     // Same "always show the same confirmation" approach as the staff-account flow --
     // this endpoint can't be used to enumerate which emails have an account here.
-    const account = await prayerService.findAccountByEmail(organization.id, email);
+    const account = await prayerService.findAccountByEmail(wall.organizationId, email);
     if (account) {
-      const token = await prayerService.createPasswordResetToken(organization.id, account.id);
+      const token = await prayerService.createPasswordResetToken(wall.organizationId, account.id);
       const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
       await getEmailProvider().sendEmail({
         to: account.email,
-        subject: `Reset your password for ${organization.name}'s prayer wall`,
+        subject: `Reset your password for ${wall.displayName}'s prayer wall`,
         text: `Reset your password: ${appOrigin}/prayer/${publicPrayerWallId}/reset-password?token=${token}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`,
       });
     }
@@ -51,19 +51,19 @@ export default async function PrayerForgotPasswordPage({
 }) {
   const { publicPrayerWallId } = await params;
   const sp = await searchParams;
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) notFound();
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) notFound();
 
   const boundRequest = requestResetAction.bind(null, publicPrayerWallId);
-  const brandColor = organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const brandColor = wall.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
   const hasCustomBrandColor = brandColor !== DEFAULT_PRAYER_WALL_BRAND_COLOR;
 
   return (
     <div className={`min-h-screen ${hasCustomBrandColor ? "bg-surface" : "bg-surface-muted"}`}>
       <PrayerWallHeader
-        organizationName={organization.name}
+        organizationName={wall.displayName}
         publicPrayerWallId={publicPrayerWallId}
-        logoUrl={organization.prayerWallLogoUrl}
+        logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
         isLoggedIn={false}
       />

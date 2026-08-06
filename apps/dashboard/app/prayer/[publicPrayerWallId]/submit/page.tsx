@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { organizationService, prayerService } from "@ruach/database";
+import { billingService, prayerService, prayerWallService } from "@ruach/database";
+import type { PrayerRequestCategory } from "@ruach/database";
 import { getAIProvider } from "@ruach/ai";
 import { getEmailProvider } from "@ruach/email";
 import { PenLine } from "lucide-react";
@@ -8,21 +9,22 @@ import { PrayerPageIntro } from "../../../../components/PrayerPageIntro";
 import { PrayerWallHeader } from "../../../../components/PrayerWallHeader";
 import { SubmitButton } from "../../../../components/SubmitButton";
 import { Card } from "../../../../components/ui/Card";
+import { PRAYER_CATEGORY_OPTIONS } from "../../../../lib/format";
 import { brandButtonStyle, brandInputClasses, brandInputStyle, DEFAULT_PRAYER_WALL_BRAND_COLOR } from "../../../../lib/prayer-branding";
 import { getCurrentPrayerAccount } from "../../../../lib/prayer-session";
 import { checkRateLimit, getClientIp } from "../../../../lib/rate-limit";
 
 async function submitPrayerRequestAction(publicPrayerWallId: string, formData: FormData) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
 
-  const account = await getCurrentPrayerAccount(organization.id);
+  const account = await getCurrentPrayerAccount(wall.organizationId);
   if (!account) redirect(`/prayer/${publicPrayerWallId}/login?next=submit`);
 
   const ip = getClientIp(await headers());
-  const ipCheck = checkRateLimit(`prayer-submit-ip:${organization.id}:${ip ?? "unknown"}`, 10, 60 * 60 * 1000);
-  const accountCheck = checkRateLimit(`prayer-submit-account:${organization.id}:${account.id}`, 10, 24 * 60 * 60 * 1000);
+  const ipCheck = checkRateLimit(`prayer-submit-ip:${wall.organizationId}:${ip ?? "unknown"}`, 10, 60 * 60 * 1000);
+  const accountCheck = checkRateLimit(`prayer-submit-account:${wall.organizationId}:${account.id}`, 10, 24 * 60 * 60 * 1000);
   if (!ipCheck.allowed || !accountCheck.allowed) {
     redirect(`/prayer/${publicPrayerWallId}/submit?error=rate_limited`);
   }
@@ -32,6 +34,14 @@ async function submitPrayerRequestAction(publicPrayerWallId: string, formData: F
 
   let isPublic = formData.get("isPublic") === "on";
   const isAnonymous = formData.get("isAnonymous") === "on";
+
+  let category: PrayerRequestCategory | null = null;
+  if (billingService.planHasFeature(wall.organizationPlanKey, "prayerCategories")) {
+    const rawCategory = String(formData.get("category") ?? "");
+    if (PRAYER_CATEGORY_OPTIONS.some((o) => o.key === rawCategory)) {
+      category = rawCategory as PrayerRequestCategory;
+    }
+  }
 
   // Anything the requester wants to make public first passes through the same
   // safety classifier the chat pipeline already uses -- if it reads as an active
@@ -48,21 +58,27 @@ async function submitPrayerRequestAction(publicPrayerWallId: string, formData: F
   }
 
   const request = await prayerService.createPrayerRequest({
-    organizationId: organization.id,
+    organizationId: wall.organizationId,
     accountId: account.id,
     message,
     isPublic,
     isAnonymous,
+    category,
+    websiteId: wall.websiteId,
   });
 
-  if (organization.prayerRequestForwardingEmail) {
+  if (wall.prayerRequestForwardingEmails.length > 0) {
     try {
-      await getEmailProvider().sendEmail({
-        to: organization.prayerRequestForwardingEmail,
-        subject: `New prayer request${isPublic ? " (public)" : ""}`,
-        text: `A new prayer request was submitted:\n\n${message}\n\nFrom: ${account.displayName ?? account.email}`,
-      });
-      await prayerService.markForwarded(organization.id, request.id);
+      await Promise.all(
+        wall.prayerRequestForwardingEmails.map((to) =>
+          getEmailProvider().sendEmail({
+            to,
+            subject: `New prayer request${isPublic ? " (public)" : ""}`,
+            text: `A new prayer request was submitted:\n\n${message}\n\nFrom: ${account.displayName ?? account.email}`,
+          }),
+        ),
+      );
+      await prayerService.markForwarded(wall.organizationId, request.id);
     } catch (err) {
       // Forwarding failure must never fail an already-saved submission.
       console.error("Failed to forward prayer request email:", err);
@@ -86,22 +102,23 @@ export default async function PrayerSubmitPage({
 }) {
   const { publicPrayerWallId } = await params;
   const sp = await searchParams;
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) notFound();
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) notFound();
 
-  const account = await getCurrentPrayerAccount(organization.id);
+  const account = await getCurrentPrayerAccount(wall.organizationId);
   if (!account) redirect(`/prayer/${publicPrayerWallId}/login?next=submit`);
 
   const boundSubmit = submitPrayerRequestAction.bind(null, publicPrayerWallId);
-  const brandColor = organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const brandColor = wall.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
   const hasCustomBrandColor = brandColor !== DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const hasCategories = billingService.planHasFeature(wall.organizationPlanKey, "prayerCategories");
 
   return (
     <div className={`min-h-screen ${hasCustomBrandColor ? "bg-surface" : "bg-surface-muted"}`}>
       <PrayerWallHeader
-        organizationName={organization.name}
+        organizationName={wall.displayName}
         publicPrayerWallId={publicPrayerWallId}
-        logoUrl={organization.prayerWallLogoUrl}
+        logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
         isLoggedIn
       />
@@ -123,6 +140,19 @@ export default async function PrayerSubmitPage({
               Your request
               <textarea name="message" required rows={5} style={brandInputStyle(brandColor)} className={`mt-1 ${brandInputClasses}`} />
             </label>
+            {hasCategories && (
+              <label className="text-sm text-ink-secondary">
+                Category <span className="font-normal text-ink-muted">(optional)</span>
+                <select name="category" style={brandInputStyle(brandColor)} className={`mt-1 ${brandInputClasses}`} defaultValue="">
+                  <option value="">Choose one...</option>
+                  {PRAYER_CATEGORY_OPTIONS.map((option) => (
+                    <option key={option.key} value={option.key}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="flex items-center gap-2 text-sm text-ink-secondary">
               <input type="checkbox" name="isPublic" />
               Post this publicly on the prayer wall

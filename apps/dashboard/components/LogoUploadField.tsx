@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ImageOff, Trash2 } from "lucide-react";
 
 /** A data-URL logo preview larger than this is skipped -- kept out of a cross-frame preview iframe's query string, not out of the actual upload (which is unaffected). */
@@ -36,7 +36,9 @@ export function LogoUploadField({
   removeFieldName = "removeLogo",
   onFileSelected,
 }: LogoUploadFieldProps) {
+  const inputId = useId();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [markedForRemoval, setMarkedForRemoval] = useState(false);
 
   // currentUrl only changes once the server action has actually persisted a new value
@@ -44,6 +46,7 @@ export function LogoUploadField({
   // choice was applied, so the transient client state can be dropped in favor of it.
   useEffect(() => {
     setPreviewUrl(null);
+    setSelectedFileName(null);
     setMarkedForRemoval(false);
   }, [currentUrl]);
 
@@ -62,7 +65,27 @@ export function LogoUploadField({
           )}
         </div>
         <div className="flex flex-1 flex-col gap-1.5">
+          {/* Native file inputs never show a previously-uploaded filename after a page
+              load -- browsers never pre-populate them, for any site, ever. Showing that
+              raw "No file chosen" text next to a thumbnail that clearly has a logo
+              already read as broken, so this hides the input (still focusable/keyboard-
+              operable via the label's `for`) and drives the visible text from our own
+              state instead, using accurate copy for each case. */}
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor={inputId}
+              className={`rounded-sm bg-surface-warm px-3 py-1.5 text-xs font-medium text-accent-dark transition-colors duration-180 hover:bg-accent/15 ${
+                markedForRemoval ? "pointer-events-none opacity-50" : "cursor-pointer"
+              }`}
+            >
+              {currentUrl || previewUrl ? "Change logo" : "Choose File"}
+            </label>
+            <span className="text-xs text-ink-muted">
+              {markedForRemoval ? "Logo will be removed" : (selectedFileName ?? (currentUrl ? "Current logo" : "No file chosen"))}
+            </span>
+          </div>
           <input
+            id={inputId}
             type="file"
             name={name}
             accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
@@ -70,6 +93,7 @@ export function LogoUploadField({
             onChange={(e) => {
               const file = e.currentTarget.files?.[0];
               setPreviewUrl(file ? URL.createObjectURL(file) : null);
+              setSelectedFileName(file?.name ?? null);
               if (file) setMarkedForRemoval(false);
 
               if (!onFileSelected) return;
@@ -81,7 +105,7 @@ export function LogoUploadField({
                 reader.readAsDataURL(file);
               }
             }}
-            className="block w-full text-xs text-ink-secondary file:mr-3 file:rounded-sm file:border-0 file:bg-surface-warm file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-accent-dark hover:file:bg-accent/15 disabled:opacity-50"
+            className="sr-only"
           />
           <p className="text-[11px] text-ink-muted">Recommended: square, at least 256&times;256px (PNG, JPG, WEBP, GIF, or SVG)</p>
           {currentUrl && (

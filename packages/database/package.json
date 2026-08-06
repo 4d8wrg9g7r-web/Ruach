@@ -9,7 +9,8 @@
     "lint": "echo 'lint: not configured for milestone 1'",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -1,4 +1,8 @@
+import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { noIndexMetadata } from "../../lib/no-index-metadata";
+
+export const metadata: Metadata = noIndexMetadata;
 import { redirect } from "next/navigation";
 import { userService } from "@ruach/database";
 import { getEmailProvider } from "@ruach/email";

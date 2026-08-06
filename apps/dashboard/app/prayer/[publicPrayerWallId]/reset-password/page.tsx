@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { KeyRound } from "lucide-react";
-import { organizationService, prayerService } from "@ruach/database";
+import { prayerService, prayerWallService } from "@ruach/database";
 import { PrayerPageIntro } from "../../../../components/PrayerPageIntro";
 import { PrayerWallHeader } from "../../../../components/PrayerWallHeader";
 import { SubmitButton } from "../../../../components/SubmitButton";
@@ -10,10 +10,10 @@ import { brandButtonStyle, brandInputClasses, brandInputStyle, DEFAULT_PRAYER_WA
 
 async function resetPasswordAction(publicPrayerWallId: string, token: string, formData: FormData) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
 
-  const record = await prayerService.getValidPasswordResetToken(organization.id, token);
+  const record = await prayerService.getValidPasswordResetToken(wall.organizationId, token);
   if (!record) redirect(`/prayer/${publicPrayerWallId}/reset-password?error=invalid_token`);
 
   const password = String(formData.get("password") ?? "");
@@ -22,8 +22,8 @@ async function resetPasswordAction(publicPrayerWallId: string, token: string, fo
   if (password !== confirmPassword) redirect(`/prayer/${publicPrayerWallId}/reset-password?token=${token}&error=mismatch`);
 
   const passwordHash = await bcrypt.hash(password, 10);
-  await prayerService.updateAccountPassword(organization.id, record.accountId, passwordHash);
-  await prayerService.deletePasswordResetToken(organization.id, token);
+  await prayerService.updateAccountPassword(wall.organizationId, record.accountId, passwordHash);
+  await prayerService.deletePasswordResetToken(wall.organizationId, token);
 
   redirect(`/prayer/${publicPrayerWallId}/login?reset=1`);
 }
@@ -43,21 +43,21 @@ export default async function PrayerResetPasswordPage({
 }) {
   const { publicPrayerWallId } = await params;
   const sp = await searchParams;
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) notFound();
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) notFound();
 
   const token = sp.token ?? "";
-  const record = token ? await prayerService.getValidPasswordResetToken(organization.id, token) : null;
+  const record = token ? await prayerService.getValidPasswordResetToken(wall.organizationId, token) : null;
   const boundReset = resetPasswordAction.bind(null, publicPrayerWallId, token);
-  const brandColor = organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const brandColor = wall.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
   const hasCustomBrandColor = brandColor !== DEFAULT_PRAYER_WALL_BRAND_COLOR;
 
   return (
     <div className={`min-h-screen ${hasCustomBrandColor ? "bg-surface" : "bg-surface-muted"}`}>
       <PrayerWallHeader
-        organizationName={organization.name}
+        organizationName={wall.displayName}
         publicPrayerWallId={publicPrayerWallId}
-        logoUrl={organization.prayerWallLogoUrl}
+        logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
         isLoggedIn={false}
       />

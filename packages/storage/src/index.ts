@@ -1,19 +1,22 @@
 export type { SaveFileInput, SaveFileResult, StorageProvider } from "./StorageProvider";
 export { LocalStorageProvider } from "./LocalStorageProvider";
+export { VercelBlobStorageProvider } from "./VercelBlobStorageProvider";
 
 import type { StorageProvider } from "./StorageProvider";
 import { LocalStorageProvider } from "./LocalStorageProvider";
+import { VercelBlobStorageProvider } from "./VercelBlobStorageProvider";
 
 let cachedProvider: StorageProvider | null = null;
 
 /**
- * Unlike getAIProvider()/getResourceProvider(), this does not branch on an env var --
- * there is no real provider to switch to yet (product decision: ship the feature
- * against a local-disk stub now). When a real provider is chosen, swap the returned
- * instance here -- the interface and every call site already support it.
+ * Same real-vs-mock branch as getAIProvider()/getResourceProvider(): a real
+ * BLOB_READ_WRITE_TOKEN (set automatically once a Vercel Blob store is linked to the
+ * project) switches to VercelBlobStorageProvider; otherwise falls back to
+ * LocalStorageProvider for plain local dev. `publicDir` is only used by the local
+ * fallback -- Blob storage needs no filesystem path.
  */
 export function getStorageProvider(publicDir: string): StorageProvider {
   if (cachedProvider) return cachedProvider;
-  cachedProvider = new LocalStorageProvider(publicDir);
+  cachedProvider = process.env.BLOB_READ_WRITE_TOKEN ? new VercelBlobStorageProvider() : new LocalStorageProvider(publicDir);
   return cachedProvider;
 }

@@ -1,0 +1,531 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import {
+  BarChart3,
+  BookOpen,
+  Check,
+  Code2,
+  HeartHandshake,
+  MessageCircleQuestion,
+  Palette,
+  Search,
+  Sparkles,
+  UploadCloud,
+  X,
+} from "lucide-react";
+import { getCurrentOrganization, getCurrentUser } from "../../lib/session";
+import { AssistantDemo } from "../../components/marketing/AssistantDemo";
+import { EyebrowLabel } from "../../components/marketing/EyebrowLabel";
+import { FadeIn } from "../../components/marketing/FadeIn";
+import { FeatureCard } from "../../components/marketing/FeatureCard";
+import { LogoGrid } from "../../components/marketing/LogoGrid";
+import { PrayerWallPreview } from "../../components/marketing/PrayerWallPreview";
+import { PricingGrid } from "../../components/marketing/PricingGrid";
+import { StepProcess } from "../../components/marketing/StepProcess";
+import { TestimonialCard } from "../../components/marketing/TestimonialCard";
+import { buttonClasses } from "../../components/ui/Button";
+import { MARKETING_PLANS } from "../../lib/marketing/pricing-data";
+import { pageMetadata } from "../../lib/marketing/page-metadata";
+
+export const metadata: Metadata = pageMetadata({
+  title: "Ruach | Help People Discover Your Church's Content",
+  description:
+    "Ruach helps churches turn sermons, articles, ministry pages, and other resources into a conversational website experience, with an optional moderated Prayer Wall.",
+  path: "/",
+});
+
+const SITE_URL = process.env.NEXTAUTH_URL ?? "https://ruachplatform.com";
+
+/**
+ * JSON-LD structured data -- Organization (brand identity for knowledge-panel-style
+ * results) and SoftwareApplication (eligible for rich results like pricing/rating
+ * snippets). Only on the homepage, not repeated per marketing page, since both
+ * describe the product/company as a whole rather than page-specific content.
+ */
+const STRUCTURED_DATA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Ruach",
+    url: SITE_URL,
+    description: "Ruach helps churches turn sermons, articles, ministry pages, and other resources into a conversational website experience.",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Ruach",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: SITE_URL,
+    description: "A conversational assistant and Prayer Wall for church websites, grounded entirely in a church's own approved content.",
+    offers: {
+      "@type": "AggregateOffer",
+      priceCurrency: "USD",
+      lowPrice: "29",
+      highPrice: "179",
+      offerCount: "4",
+    },
+  },
+];
+
+const HOW_STEPS = [
+  {
+    number: 1,
+    title: "Connect your content",
+    description: "Import or sync sermons, videos, podcasts, articles, website pages, and ministry resources -- your own, or ones you trust from other ministries.",
+    icon: <UploadCloud size={18} />,
+  },
+  {
+    number: 2,
+    title: "Ruach organizes it",
+    description: "Ruach processes and categorizes the church's content so it can be found through natural questions.",
+    icon: <Sparkles size={18} />,
+  },
+  {
+    number: 3,
+    title: "Add Ruach to your website",
+    description: "Install the widget with a simple embed. Customize the name, colors, welcome message, and suggested questions.",
+    icon: <Code2 size={18} />,
+  },
+  {
+    number: 4,
+    title: "Help people take a next step",
+    description: "Visitors receive real recommendations from the church's own content library.",
+    icon: <HeartHandshake size={18} />,
+  },
+];
+
+const FEATURES = [
+  {
+    icon: <MessageCircleQuestion size={18} />,
+    title: "See what people are looking for.",
+    description: "Understand the questions visitors are asking, which resources are being opened, and where your church may need clearer next steps.",
+  },
+  {
+    icon: <Search size={18} />,
+    title: "Turn your archive into a conversation.",
+    description: "Sermons, podcasts, and articles become discoverable through the questions people actually ask, not just navigation menus.",
+  },
+  {
+    icon: <BookOpen size={18} />,
+    title: "Search your whole website, not just your media library.",
+    description: "Ministry pages, blog posts, and event pages are just as easy to surface as a sermon or podcast episode.",
+  },
+  {
+    icon: <Palette size={18} />,
+    title: "Make it feel like your church.",
+    description: "Set your accent color, logo, assistant name, and welcome message so the experience feels native to your site.",
+  },
+  {
+    icon: <HeartHandshake size={18} />,
+    title: "Give your community a place to pray together.",
+    description: "A moderated Prayer Wall lets people submit requests, pray for one another, and share answered prayers.",
+  },
+  {
+    icon: <BarChart3 size={18} />,
+    title: "Know where to invest next.",
+    description: "Engagement insights show which resources connect and which topics your church may want to address next.",
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    quote: "Ruach helps our website feel less like an archive and more like an extension of our ministry.",
+    role: "Communications Director",
+    churchLabel: "Church name coming soon",
+  },
+  {
+    quote: "Our sermon library goes back a decade. Now people actually find what they're looking for.",
+    role: "Executive Pastor",
+    churchLabel: "Church name coming soon",
+  },
+  {
+    quote: "The Prayer Wall gave our congregation a simple way to stay connected between services.",
+    role: "Pastoral Care Coordinator",
+    churchLabel: "Church name coming soon",
+  },
+];
+
+const AUDIENCES = [
+  {
+    name: "Small Churches",
+    description: "Affordable, simple setup, one website, one clear place for people to find resources and submit prayer requests.",
+    href: "/pricing#essential",
+  },
+  {
+    name: "Growing Churches",
+    description: "Larger content libraries, multiple ministry areas, richer customization, analytics, and prayer workflows.",
+    href: "/pricing#growth",
+  },
+  {
+    name: "Multi-Site Churches",
+    description: "Campus-specific content, multiple widgets, team permissions, organization-wide oversight.",
+    href: "/pricing#multisite",
+  },
+];
+
+const RUACH_DOES = [
+  "Recommend your content",
+  "Surface relevant ministries",
+  "Link people to next steps",
+  "Help visitors navigate",
+  "Connect people to prayer",
+];
+
+const RUACH_DOES_NOT = [
+  "Replace pastors",
+  "Create independent doctrine",
+  "Pretend to be a counselor",
+  "Search unrestricted sources",
+  "Publish content without church control",
+];
+
+export default async function HomePage() {
+  const user = await getCurrentUser();
+  if (user) {
+    const organization = await getCurrentOrganization();
+    redirect(organization ? "/dashboard" : "/onboarding");
+  }
+
+  return (
+    <div>
+      {STRUCTURED_DATA.map((schema, i) => (
+        // eslint-disable-next-line react/no-danger
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      ))}
+      {/* Hero */}
+      <section className="mx-auto max-w-6xl px-5 pb-16 pt-14 sm:pt-20">
+        <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr]">
+          <FadeIn>
+            <EyebrowLabel>For churches</EyebrowLabel>
+            <h1 className="max-w-xl text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-5xl">
+              Breathe fresh life into your content.
+            </h1>
+            <p className="mt-4 max-w-lg text-xl font-medium leading-snug text-ink-secondary">
+              Help people find what your church has already shared.
+            </p>
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-ink-secondary">
+              Ruach turns your sermons, articles, ministries, events, and resources into a conversational
+              experience&mdash;helping people discover the right next step without searching through your entire
+              website.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link href="/signup" className={buttonClasses("primary", "lg")}>
+                Start with Ruach
+              </Link>
+              <Link href="/how-it-works" className={buttonClasses("secondary", "lg")}>
+                See how it works
+              </Link>
+            </div>
+            <p className="mt-5 text-sm text-ink-muted">Built for churches. Easy to install. Grounded only in your content.</p>
+          </FadeIn>
+
+          <FadeIn delay={0.15}>
+            <AssistantDemo />
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Why section */}
+      <section className="border-t border-border bg-surface-muted/60 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <FadeIn>
+              <EyebrowLabel>Why Ruach</EyebrowLabel>
+              <h2 className="max-w-md text-3xl font-semibold tracking-tight text-ink">
+                Your church has already done the hard work.
+              </h2>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-ink-secondary">
+                Churches spend years creating sermons, podcasts, articles, ministry pages, studies, and resources,
+                yet much of that content becomes difficult to find after it is published. Ruach helps recover that
+                value.
+              </p>
+            </FadeIn>
+            <FadeIn delay={0.15}>
+              <div className="flex flex-col gap-3">
+                {["Your church teaches.", "Your church creates.", "Your church serves.", "Ruach helps people find it."].map(
+                  (line, i) => (
+                    <div
+                      key={line}
+                      className={`rounded-lg border px-5 py-4 text-sm ${
+                        i === 3 ? "border-accent/30 bg-surface-warm font-medium text-ink" : "border-border bg-surface text-ink-secondary"
+                      }`}
+                    >
+                      {line}
+                    </div>
+                  ),
+                )}
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* How Ruach works */}
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <FadeIn>
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <EyebrowLabel>How it works</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">From archive to conversation.</h2>
+            </div>
+          </FadeIn>
+          <StepProcess steps={HOW_STEPS} />
+        </div>
+      </section>
+
+      {/* Fill content gaps with trusted outside voices */}
+      <section className="border-t border-border bg-surface-muted/60 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <FadeIn>
+              <EyebrowLabel>Fill the gaps</EyebrowLabel>
+              <h2 className="max-w-md text-3xl font-semibold tracking-tight text-ink">
+                Don&rsquo;t have a message on it? Borrow one you trust.
+              </h2>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-ink-secondary">
+                No church has taught on everything. Add sermons, teaching, and messages from other ministries and
+                speakers you already trust, and Ruach will recommend the right one right alongside your own
+                content&mdash;whenever it actually fits what someone&rsquo;s asking.
+              </p>
+              <ul className="mt-6 flex flex-col gap-2.5">
+                {[
+                  "Add any sermon, podcast, or teaching video by URL -- not just your own",
+                  "Blends with your own library in every recommendation",
+                  "Always links back and gives credit to the original source",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-ink-secondary">
+                    <Check size={14} className="mt-0.5 shrink-0 text-accent" /> {item}
+                  </li>
+                ))}
+              </ul>
+            </FadeIn>
+            <FadeIn delay={0.15}>
+              <div className="rounded-2xl border border-border bg-surface p-5 shadow-panel">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-ink-muted">Recommended together</p>
+                <div className="flex flex-col gap-2.5">
+                  <div className="rounded-lg border border-border bg-surface-muted p-3.5">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-accent-dark">Your church</p>
+                    <p className="text-sm font-medium text-ink">Anxiety and the Peace of God</p>
+                    <p className="text-xs text-ink-muted">Pastor Elena Ruiz &middot; Grace Fellowship</p>
+                  </div>
+                  <div className="rounded-lg border border-dashed border-accent/40 bg-surface-warm p-3.5">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-accent-dark">Added by you &middot; another ministry</p>
+                    <p className="text-sm font-medium text-ink">When Worry Takes Over</p>
+                    <p className="text-xs text-ink-muted">Pastor David Kim &middot; Redeemer Fellowship</p>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust and guardrails */}
+      <section className="border-t border-border bg-surface-muted/60 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <FadeIn>
+            <div className="mx-auto mb-10 max-w-2xl text-center">
+              <EyebrowLabel>Trust and guardrails</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">Grounded in your church. Not the open internet.</h2>
+              <p className="mt-4 text-base leading-relaxed text-ink-secondary">
+                Ruach searches the content approved by the church. It should not invent sermon recommendations, and
+                it clearly links to original sources. The church controls what is indexed and can edit or remove
+                resources at any time. Ruach supports ministry rather than replacing pastoral relationships.
+              </p>
+            </div>
+          </FadeIn>
+
+          <div className="grid gap-6 sm:grid-cols-2">
+            <FadeIn>
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Check size={16} className="text-success" /> Ruach does
+                </h3>
+                <ul className="flex flex-col gap-2.5">
+                  {RUACH_DOES.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-ink-secondary">
+                      <Check size={14} className="mt-0.5 shrink-0 text-success" /> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+                  <X size={16} className="text-danger" /> Ruach does not
+                </h3>
+                <ul className="flex flex-col gap-2.5">
+                  {RUACH_DOES_NOT.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm text-ink-secondary">
+                      <X size={14} className="mt-0.5 shrink-0 text-danger" /> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* Prayer Wall introduction */}
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <FadeIn>
+              <EyebrowLabel>Prayer Wall</EyebrowLabel>
+              <h2 className="max-w-md text-3xl font-semibold tracking-tight text-ink">
+                Make room for your church to pray together.
+              </h2>
+              <p className="mt-4 max-w-md text-base leading-relaxed text-ink-secondary">
+                The Prayer Wall allows people to submit requests, pray for one another, and share answered prayers,
+                while giving church staff control over moderation and privacy.
+              </p>
+              <Link href="/product/prayer-wall" className={`${buttonClasses("secondary", "md")} mt-6`}>
+                Explore the Prayer Wall
+              </Link>
+            </FadeIn>
+            <FadeIn delay={0.15}>
+              <PrayerWallPreview />
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature highlights */}
+      <section className="border-t border-border bg-surface-muted/60 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <FadeIn>
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <EyebrowLabel>Features</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">Everything ministry needs, none of the noise.</h2>
+            </div>
+          </FadeIn>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((feature, i) => (
+              <FadeIn key={feature.title} delay={i * 0.06}>
+                <FeatureCard {...feature} />
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Built for the way churches already work */}
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <FadeIn>
+            <div className="mx-auto mb-10 max-w-2xl text-center">
+              <EyebrowLabel>Built for how churches work</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+                Bring together content from the platforms your church already uses.
+              </h2>
+              <p className="mt-4 text-sm text-ink-muted">Supported sources and sync options may vary by plan.</p>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <LogoGrid />
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Audience segmentation */}
+      <section className="border-t border-border bg-surface-muted/60 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <FadeIn>
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <EyebrowLabel>Built to grow with you</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">Churches of every size.</h2>
+            </div>
+          </FadeIn>
+          <div className="grid gap-6 sm:grid-cols-3">
+            {AUDIENCES.map((audience, i) => (
+              <FadeIn key={audience.name} delay={i * 0.08}>
+                <div className="flex h-full flex-col rounded-lg border border-border bg-surface p-6">
+                  <h3 className="mb-2 text-sm font-semibold text-ink">{audience.name}</h3>
+                  <p className="mb-5 flex-1 text-sm leading-relaxed text-ink-secondary">{audience.description}</p>
+                  <Link href={audience.href} className="rounded-sm text-sm font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
+                    See plan details &rarr;
+                  </Link>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <FadeIn>
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <EyebrowLabel>What churches are saying</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">Early feedback from ministry teams.</h2>
+            </div>
+          </FadeIn>
+          <div className="grid gap-5 sm:grid-cols-3">
+            {TESTIMONIALS.map((testimonial, i) => (
+              <FadeIn key={testimonial.role} delay={i * 0.08}>
+                <TestimonialCard {...testimonial} />
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing preview */}
+      <section className="border-t border-border bg-surface-muted/60 py-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <FadeIn>
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <EyebrowLabel>Pricing</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">Built to remain accessible for churches of every size.</h2>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <PricingGrid plans={MARKETING_PLANS.filter((p) => !p.isCustom)} compact />
+          </FadeIn>
+          <FadeIn delay={0.15}>
+            <div className="mt-10 text-center">
+              <Link href="/pricing" className={buttonClasses("secondary", "md")}>
+                Compare all plans
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Closing CTA */}
+      <section className="relative overflow-hidden bg-sidebar py-24">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{ background: "radial-gradient(600px circle at 50% 0%, rgba(184,123,56,0.25), transparent 70%)" }}
+        />
+        <div className="relative mx-auto max-w-3xl px-5 text-center">
+          <FadeIn>
+            <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              Your church&rsquo;s content should keep serving people long after it is published.
+            </h2>
+            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/70">
+              Ruach helps people discover the sermons, ministries, resources, and prayer support they need&mdash;through
+              an experience that feels like part of your church.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/signup" className={buttonClasses("primary", "lg")}>
+                Start with Ruach
+              </Link>
+              <Link
+                href="/demo"
+                className="inline-flex h-[3.25rem] items-center justify-center gap-2 rounded-sm border border-white/20 px-7 text-base font-medium text-white transition-colors duration-180 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-light focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+              >
+                Request a Demo
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+    </div>
+  );
+}

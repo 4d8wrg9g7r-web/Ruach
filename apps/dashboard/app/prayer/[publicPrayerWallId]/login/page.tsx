@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { LogIn } from "lucide-react";
-import { organizationService, prayerService } from "@ruach/database";
+import { prayerService, prayerWallService } from "@ruach/database";
 import { PrayerPageIntro } from "../../../../components/PrayerPageIntro";
 import { PrayerWallHeader } from "../../../../components/PrayerWallHeader";
 import { SubmitButton } from "../../../../components/SubmitButton";
@@ -15,20 +15,20 @@ const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
 async function loginAction(publicPrayerWallId: string, formData: FormData) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
 
   const next = String(formData.get("next") ?? "");
   const nextQuery = next ? `&next=${encodeURIComponent(next)}` : "";
 
   const ip = getClientIp(await headers());
-  const rateCheck = checkRateLimit(`prayer-login:${organization.id}:${ip ?? "unknown"}`, 10, 60 * 60 * 1000);
+  const rateCheck = checkRateLimit(`prayer-login:${wall.organizationId}:${ip ?? "unknown"}`, 10, 60 * 60 * 1000);
   if (!rateCheck.allowed) redirect(`/prayer/${publicPrayerWallId}/login?error=rate_limited${nextQuery}`);
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  const account = await prayerService.findAccountByEmail(organization.id, email);
+  const account = await prayerService.findAccountByEmail(wall.organizationId, email);
   const isValid = account ? await bcrypt.compare(password, account.passwordHash) : false;
   if (!account || !isValid) {
     redirect(`/prayer/${publicPrayerWallId}/login?error=invalid${nextQuery}`);
@@ -54,20 +54,20 @@ export default async function PrayerLoginPage({
 }) {
   const { publicPrayerWallId } = await params;
   const sp = await searchParams;
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) notFound();
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) notFound();
 
   const boundLogin = loginAction.bind(null, publicPrayerWallId);
   const signupHref = `/prayer/${publicPrayerWallId}/signup${sp.next ? `?next=${sp.next}` : ""}`;
-  const brandColor = organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const brandColor = wall.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
   const hasCustomBrandColor = brandColor !== DEFAULT_PRAYER_WALL_BRAND_COLOR;
 
   return (
     <div className={`min-h-screen ${hasCustomBrandColor ? "bg-surface" : "bg-surface-muted"}`}>
       <PrayerWallHeader
-        organizationName={organization.name}
+        organizationName={wall.displayName}
         publicPrayerWallId={publicPrayerWallId}
-        logoUrl={organization.prayerWallLogoUrl}
+        logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
         isLoggedIn={false}
       />

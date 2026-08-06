@@ -1,5 +1,5 @@
 import type { OrganizationRole } from "@ruach/database";
-import { organizationService } from "@ruach/database";
+import { organizationService, userService } from "@ruach/database";
 import { auth } from "../auth";
 
 /**
@@ -39,4 +39,17 @@ export async function requireOrgRole(organizationId: string, allowed: Organizati
   const role = await getCurrentOrgRole(organizationId);
   if (!role || !allowed.includes(role)) throw new Error("Not authorized for this organization");
   return role;
+}
+
+/**
+ * Platform-admin (not org-scoped) gate for /admin -- the session/JWT doesn't carry
+ * isPlatformAdmin, so this always does a fresh DB read rather than trusting a stale
+ * claim. No self-serve way to become a platform admin exists; the flag is flipped
+ * once, out-of-band, via prisma/grant-admin.ts.
+ */
+export async function requirePlatformAdmin() {
+  const user = await requireCurrentUser();
+  const record = await userService.getUser(user.id);
+  if (!record?.isPlatformAdmin) throw new Error("Not authorized");
+  return user;
 }

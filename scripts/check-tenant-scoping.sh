@@ -13,6 +13,7 @@ ALLOWED_PREFIXES=(
   "packages/database/src/client.ts"
   "packages/database/src/services/"
   "packages/database/prisma/seed.ts"
+  "packages/database/prisma/grant-admin.ts"
   "packages/retrieval/src/LocalRetrievalProvider.ts"
 )
 

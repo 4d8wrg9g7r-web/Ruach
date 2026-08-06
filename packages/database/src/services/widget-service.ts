@@ -29,6 +29,11 @@ export async function listWidgets(organizationId: string) {
   });
 }
 
+/** Used to enforce the org's plan-tier widget cap before creating a new one -- see billingService.assertUnderCap. */
+export async function countWidgets(organizationId: string) {
+  return tenantDb.widgetConfiguration.count({ where: { organizationId } });
+}
+
 export async function updateWidget(
   organizationId: string,
   widgetId: string,

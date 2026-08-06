@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { HeartHandshake } from "lucide-react";
-import { organizationService, prayerService } from "@ruach/database";
+import { prayerService, prayerWallService } from "@ruach/database";
 import { getEmailProvider } from "@ruach/email";
 import { PrayerWallHeader } from "../../../components/PrayerWallHeader";
 import { PrayerWallList } from "../../../components/PrayerWallList";
@@ -16,24 +16,24 @@ const PRAY_LIMIT = { max: 30, windowMs: 60 * 60 * 1000 };
 
 async function prayAction(publicPrayerWallId: string, requestId: string) {
   "use server";
-  const organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
-  if (!organization) throw new Error("Not found");
+  const wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
+  if (!wall) throw new Error("Not found");
 
   const ip = getClientIp(await headers());
-  const rateCheck = checkRateLimit(`pray:${organization.id}:${ip ?? "unknown"}`, PRAY_LIMIT.max, PRAY_LIMIT.windowMs);
+  const rateCheck = checkRateLimit(`pray:${wall.organizationId}:${ip ?? "unknown"}`, PRAY_LIMIT.max, PRAY_LIMIT.windowMs);
   if (!rateCheck.allowed) throw new Error("Too many prayers sent recently -- please try again in a bit.");
 
-  await prayerService.incrementPrayerCount(organization.id, requestId);
+  await prayerService.incrementPrayerCount(wall.organizationId, requestId);
 
   // Best-effort notification -- a failed/slow email must never surface as a broken
   // "pray" click, the count is already saved regardless.
   try {
-    const request = await prayerService.getPrayerRequestById(organization.id, requestId);
+    const request = await prayerService.getPrayerRequestById(wall.organizationId, requestId);
     if (request) {
       await getEmailProvider().sendEmail({
         to: request.account.email,
         subject: `Someone is praying for you`,
-        text: `Someone from ${organization.name}'s prayer wall just prayed for your request: "${request.message}"`,
+        text: `Someone from ${wall.displayName}'s prayer wall just prayed for your request: "${request.message}"`,
       });
     }
   } catch (err) {
@@ -66,27 +66,28 @@ export default async function PrayerWallPage({
 }) {
   const { publicPrayerWallId } = await params;
   const { previewColor, previewLogo } = await searchParams;
-  let organization = await organizationService.getOrganizationByPublicPrayerWallId(publicPrayerWallId);
+  let wall = await prayerWallService.resolvePublicPrayerWall(publicPrayerWallId);
 
   // The wall being disabled must still 404 for real visitors. The one exception:
-  // Settings' own live preview iframe needs to render even before an admin has
-  // enabled the wall, so that request is allowed through, but only after confirming
-  // the requester is signed into the dashboard AS that same organization's staff --
-  // never for an arbitrary visitor who happens to add ?previewColor= to the URL.
-  if (!organization && (previewColor !== undefined || previewLogo !== undefined)) {
+  // Settings'/Websites' own live preview iframe needs to render even before an admin
+  // has enabled the wall, so that request is allowed through, but only after
+  // confirming the requester is signed into the dashboard AS that same
+  // organization's staff -- never for an arbitrary visitor who happens to add
+  // ?previewColor= to the URL.
+  if (!wall && (previewColor !== undefined || previewLogo !== undefined)) {
     const staffOrg = await getCurrentOrganization();
     if (staffOrg) {
-      const unfiltered = await organizationService.getOrganizationByPublicPrayerWallIdForPreview(publicPrayerWallId);
-      if (unfiltered && unfiltered.id === staffOrg.id) organization = unfiltered;
+      const unfiltered = await prayerWallService.resolvePublicPrayerWallForPreview(publicPrayerWallId);
+      if (unfiltered && unfiltered.organizationId === staffOrg.id) wall = unfiltered;
     }
   }
 
-  if (!organization) notFound();
+  if (!wall) notFound();
 
-  const account = await getCurrentPrayerAccount(organization.id);
-  const requests = await prayerService.listPublicPrayerRequests(organization.id);
-  const brandColor = previewColor ?? organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
-  const logoUrl = previewLogo !== undefined ? previewLogo || null : organization.prayerWallLogoUrl;
+  const account = await getCurrentPrayerAccount(wall.organizationId);
+  const requests = await prayerService.listPublicPrayerRequests(wall.organizationId, wall.websiteId ?? undefined);
+  const brandColor = previewColor ?? wall.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR;
+  const logoUrl = previewLogo !== undefined ? previewLogo || null : wall.prayerWallLogoUrl;
   // The cream --surface-muted wash is tuned to complement Ruach's own bronze default;
   // once an org picks a different color it can clash, so the page goes plain white instead.
   const hasCustomBrandColor = brandColor !== DEFAULT_PRAYER_WALL_BRAND_COLOR;
@@ -97,7 +98,7 @@ export default async function PrayerWallPage({
   return (
     <div className={`min-h-screen ${hasCustomBrandColor ? "bg-surface" : "bg-surface-muted"}`}>
       <PrayerWallHeader
-        organizationName={organization.name}
+        organizationName={wall.displayName}
         publicPrayerWallId={publicPrayerWallId}
         logoUrl={logoUrl}
         brandColor={brandColor}
@@ -119,7 +120,7 @@ export default async function PrayerWallPage({
           </p>
           {!account && (
             <a
-              href={`/prayer/${publicPrayerWallId}/signup`}
+              href={`/prayer/${publicPrayerWallId}/signup?next=submit`}
               style={brandButtonStyle(brandColor)}
               className={`mt-5 ${buttonClasses("primary", "md")}`}
             >

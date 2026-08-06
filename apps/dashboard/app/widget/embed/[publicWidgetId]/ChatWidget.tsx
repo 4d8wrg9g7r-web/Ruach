@@ -182,8 +182,21 @@ export function ChatWidget(props: ChatWidgetProps) {
   // standalone tab renders the exact same iframe-cramped layout stretched full-bleed.
   const isStandalone = !props.host;
 
+  // `fixed inset-0` rather than `h-screen` (100vh) for the embedded case -- mobile
+  // browsers have long-standing bugs computing vh units *inside* a nested iframe,
+  // where the value tracks the outer host page's dynamic viewport (which shifts as
+  // the address bar/keyboard show and hide) instead of this iframe's own fixed box,
+  // making the whole layout appear to drift/resize inside the panel that's hosting
+  // it. `position:fixed` sizes against the iframe's own initial containing block
+  // regardless of ancestor heights, sidestepping that entirely. Standalone (a real
+  // top-level tab, not inside an iframe) doesn't have this problem, so it keeps
+  // h-screen.
   return (
-    <div className={`flex h-screen flex-col bg-surface ${isStandalone ? "mx-auto w-full max-w-[480px] border-x border-border" : ""}`}>
+    <div
+      className={`flex flex-col bg-surface ${
+        isStandalone ? "h-screen mx-auto w-full max-w-[480px] border-x border-border" : "fixed inset-0"
+      }`}
+    >
       <header
         className="flex items-center gap-3 border-b border-border px-5 py-4"
         style={{ backgroundColor: hexToRgba(props.primaryColor, 0.05) }}

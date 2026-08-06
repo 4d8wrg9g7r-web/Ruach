@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MessageSquare, PlusCircle } from "lucide-react";
-import { auditService, websiteService, widgetService } from "@ruach/database";
+import { auditService, billingService, websiteService, widgetService } from "@ruach/database";
 import { Badge } from "../../../components/ui/Badge";
 import { buttonClasses } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
@@ -19,6 +19,10 @@ async function createWidgetAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const websiteId = String(formData.get("websiteId") ?? "");
   if (!name || !websiteId) throw new Error("Name and website are required");
+
+  const plan = billingService.getPlan(organization.planKey);
+  const widgetCount = await widgetService.countWidgets(organization.id);
+  billingService.assertUnderCap(widgetCount, plan.maxWidgets, "widget");
 
   const widget = await widgetService.createWidget({ organizationId: organization.id, websiteId, name });
   const user = await getCurrentUser();

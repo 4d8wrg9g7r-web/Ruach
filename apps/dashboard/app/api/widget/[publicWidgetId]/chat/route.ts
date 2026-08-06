@@ -80,6 +80,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
   const response = await pipeline.respond({
     organizationId: widget.organizationId,
     widgetId: widget.id,
+    websiteId: widget.websiteId,
     conversationId: conversation.id,
     messageId: randomUUID(),
     message,

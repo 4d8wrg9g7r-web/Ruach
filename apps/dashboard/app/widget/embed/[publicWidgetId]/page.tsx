@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { actionLinkService, organizationService, websiteService, widgetService } from "@ruach/database";
 import { ChatWidget } from "./ChatWidget";
+import { noIndexMetadata } from "../../../../lib/no-index-metadata";
+
+export const metadata: Metadata = noIndexMetadata;
 
 /**
  * previewColor/previewLogo are cosmetic-only render overrides used exclusively by

@@ -12,7 +12,7 @@ import { userService } from "@ruach/database";
  * constraint. Chosen specifically because it needs no external account or API key,
  * satisfying brief §57's "runs without production credentials."
  */
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
   providers: [
@@ -37,8 +37,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt: async ({ token, user }) => {
+    jwt: async ({ token, user, trigger, session }) => {
       if (user?.id) token.userId = user.id;
+      // Server Actions call unstable_update({ user: {...} }) after an account-info
+      // edit (see settings/page.tsx) so the token reflects it immediately instead of
+      // only on next login. This runs in the Node runtime (Server Action), never on
+      // the Edge-bundled middleware path, so it's safe to trust here.
+      if (trigger === "update" && session?.user) {
+        if (typeof session.user.name !== "undefined") token.name = session.user.name;
+        if (typeof session.user.email !== "undefined") token.email = session.user.email;
+      }
       return token;
     },
     session: async ({ session, token }) => {

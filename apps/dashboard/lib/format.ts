@@ -48,6 +48,10 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   "team.member_invited": "Teammate invited",
   "team.member_role_updated": "Teammate role changed",
   "team.member_removed": "Teammate removed",
+  "account.updated": "Account details updated",
+  "billing.plan_changed": "Plan changed",
+  "billing.cancel_scheduled": "Cancellation scheduled",
+  "billing.cancel_undone": "Cancellation undone",
 };
 
 export function auditActionLabel(action: string): string {
@@ -99,6 +103,25 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function resourceStatusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
+}
+
+export const PRAYER_CATEGORY_OPTIONS = [
+  { key: "HEALTH", label: "Health" },
+  { key: "FAMILY", label: "Family" },
+  { key: "FINANCIAL", label: "Financial" },
+  { key: "SPIRITUAL_GROWTH", label: "Spiritual growth" },
+  { key: "GRIEF_LOSS", label: "Grief & loss" },
+  { key: "GUIDANCE", label: "Guidance" },
+  { key: "OTHER", label: "Other" },
+] as const;
+
+const PRAYER_CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  PRAYER_CATEGORY_OPTIONS.map((o) => [o.key, o.label]),
+);
+
+export function prayerCategoryLabel(category: string | null): string {
+  if (!category) return "Uncategorized";
+  return PRAYER_CATEGORY_LABELS[category] ?? category;
 }
 
 export type BadgeTone = "success" | "warning" | "danger" | "neutral";

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { ArrowLeft, Calendar, CheckCircle2, Clock, ExternalLink, RefreshCw, User, X, XCircle } from "lucide-react";
-import { auditService, resourceService } from "@ruach/database";
+import { auditService, billingService, resourceService, websiteService } from "@ruach/database";
 import { CategorizationService, getAIProvider } from "@ruach/ai";
 import { extractReadableText, safeFetch, UnsafeUrlError } from "@ruach/providers";
 import { LocalRetrievalProvider } from "@ruach/retrieval";
@@ -10,7 +10,7 @@ import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
 import { EmptyState } from "../../../../components/ui/EmptyState";
-import { Textarea } from "../../../../components/ui/Input";
+import { Select, Textarea } from "../../../../components/ui/Input";
 import { confidenceLevel, resourceStatusLabel, resourceStatusTone } from "../../../../lib/format";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../../lib/session";
 
@@ -116,6 +116,10 @@ async function approveAction(resourceId: string) {
   if (!organization) throw new Error("No organization");
   await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
 
+  const plan = billingService.getPlan(organization.planKey);
+  const activeCount = await resourceService.countActiveResources(organization.id);
+  billingService.assertUnderCap(activeCount, plan.maxIndexedResources, "indexed-resource");
+
   const resource = await resourceService.approveResource(organization.id, resourceId);
   if (resource) {
     const retrieval = new LocalRetrievalProvider();
@@ -141,6 +145,25 @@ async function approveAction(resourceId: string) {
   }
   revalidatePath(`/resources/${resourceId}`);
   revalidatePath("/resources");
+}
+
+async function setCampusAction(resourceId: string, websiteId: string) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+  if (!billingService.planHasFeature(organization.planKey, "campusScopedContentLibraries")) return;
+
+  if (websiteId === "") {
+    await resourceService.setResourceWebsiteScope(organization.id, resourceId, null);
+  } else {
+    // getWebsite is org-scoped -- this both validates the id belongs to this org and
+    // confirms it's a real campus before attaching it to the resource.
+    const website = await websiteService.getWebsite(organization.id, websiteId);
+    if (!website) return;
+    await resourceService.setResourceWebsiteScope(organization.id, resourceId, website.id);
+  }
+  revalidatePath(`/resources/${resourceId}`);
 }
 
 async function rejectAction(resourceId: string) {
@@ -175,6 +198,10 @@ export default async function ResourceDetailPage({
   const boundCategorize = categorizeAction.bind(null, resourceId);
   const boundApprove = approveAction.bind(null, resourceId);
   const boundReject = rejectAction.bind(null, resourceId);
+  const boundSetCampus = setCampusAction.bind(null, resourceId);
+
+  const canScopeCampus = billingService.planHasFeature(organization.planKey, "campusScopedContentLibraries");
+  const websites = canScopeCampus ? await websiteService.listWebsites(organization.id) : [];
 
   const pendingLinks = resource.sourceDocuments.filter(
     (doc) => doc.sourceType === "WEB_PAGE" && doc.discoveredAutomatically && !doc.approvedByUser,
@@ -258,6 +285,30 @@ export default async function ResourceDetailPage({
               </dd>
             </dl>
           </Card>
+
+          {websites.length > 1 && (
+            <Card padding="none" className="p-4">
+              <h2 className="mb-1 text-sm font-semibold text-ink">Campus</h2>
+              <p className="mb-3 text-xs text-ink-muted">
+                Which campus this resource is available to. Org-wide resources are available to every campus&rsquo;s widget.
+              </p>
+              <form
+                action={async (formData: FormData) => {
+                  "use server";
+                  await boundSetCampus(String(formData.get("websiteId") ?? ""));
+                }}
+              >
+                <Select name="websiteId" defaultValue={resource.websiteId ?? ""} onChange={(e) => e.currentTarget.form?.requestSubmit()}>
+                  <option value="">All campuses (org-wide)</option>
+                  {websites.map((website) => (
+                    <option key={website.id} value={website.id}>
+                      {website.name}
+                    </option>
+                  ))}
+                </Select>
+              </form>
+            </Card>
+          )}
 
           <Card padding="none" className="p-4">
             <h2 className="mb-3 text-sm font-semibold text-ink">Transcript</h2>

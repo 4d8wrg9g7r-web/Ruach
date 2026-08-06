@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from "react";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
-type ButtonSize = "sm" | "md";
+type ButtonSize = "sm" | "md" | "lg";
 
 const BASE =
   "inline-flex items-center justify-center gap-2 rounded-sm font-medium transition-all duration-180 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-50";
@@ -17,6 +17,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 const SIZE_CLASSES: Record<ButtonSize, string> = {
   sm: "h-9 px-3.5 text-sm",
   md: "h-11 px-5 text-sm",
+  lg: "h-[3.25rem] px-7 text-base",
 };
 
 export function buttonClasses(variant: ButtonVariant = "primary", size: ButtonSize = "md") {

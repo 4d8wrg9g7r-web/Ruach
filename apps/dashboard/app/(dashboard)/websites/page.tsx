@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
-import { Globe, PlusCircle } from "lucide-react";
-import { auditService, websiteService, widgetService } from "@ruach/database";
+import Link from "next/link";
+import { ChevronRight, Globe, PlusCircle } from "lucide-react";
+import { auditService, billingService, websiteService, widgetService } from "@ruach/database";
 import { InstallCodeModal } from "../../../components/InstallCodeModal";
 import { Badge } from "../../../components/ui/Badge";
 import { buttonClasses } from "../../../components/ui/Button";
@@ -18,6 +19,10 @@ async function createWebsiteAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const primaryDomain = String(formData.get("primaryDomain") ?? "").trim();
   if (!name || !primaryDomain) throw new Error("Name and domain are required");
+
+  const plan = billingService.getPlan(organization.planKey);
+  const websiteCount = await websiteService.countWebsites(organization.id);
+  billingService.assertUnderCap(websiteCount, plan.maxWebsites, "website");
 
   const website = await websiteService.createWebsite({ organizationId: organization.id, name, primaryDomain });
   const user = await getCurrentUser();
@@ -93,6 +98,12 @@ export default async function WebsitesPage() {
                       {activeWidget ? "Connected" : "Awaiting installation"}
                     </Badge>
                     {snippet && <InstallCodeModal snippet={snippet} websiteName={site.name} />}
+                    <Link
+                      href={`/websites/${site.id}`}
+                      className="flex items-center gap-0.5 rounded-sm text-sm text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    >
+                      Manage <ChevronRight size={14} />
+                    </Link>
                   </div>
                 </div>
               );

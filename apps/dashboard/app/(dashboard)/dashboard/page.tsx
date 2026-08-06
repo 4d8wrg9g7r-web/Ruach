@@ -14,12 +14,14 @@ import {
   Sparkles,
   Video,
 } from "lucide-react";
-import { auditService, conversationService, resourceService, websiteService, widgetService } from "@ruach/database";
+import { revalidatePath } from "next/cache";
+import { auditService, conversationService, organizationService, resourceService, websiteService, widgetService } from "@ruach/database";
 import { MetricCard } from "../../../components/ui/MetricCard";
 import { Badge } from "../../../components/ui/Badge";
 import { buttonClasses } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { EmptyState } from "../../../components/ui/EmptyState";
+import { OnboardingChecklist, type OnboardingStep } from "../../../components/OnboardingChecklist";
 import { WidgetPreviewFrame } from "../../../components/WidgetPreviewFrame";
 import {
   auditActionLabel,
@@ -53,18 +55,27 @@ const CONFIDENCE_BADGE: Record<string, "success" | "warning" | "danger"> = {
   Low: "danger",
 };
 
+async function dismissOnboardingChecklistAction() {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await organizationService.dismissOnboardingChecklist(organization.id);
+  revalidatePath("/dashboard");
+}
+
 export default async function OverviewPage() {
   const organization = await getCurrentOrganization();
   const user = await getCurrentUser();
   if (!organization) return null;
 
-  const [resources, websites, widgets, questionsAnswered, activity, reviewQueue] = await Promise.all([
+  const [resources, websites, widgets, questionsAnswered, activity, reviewQueue, conversationCount] = await Promise.all([
     resourceService.listResources(organization.id),
     websiteService.listWebsites(organization.id),
     widgetService.listWidgets(organization.id),
     conversationService.countRecommendationResponses(organization.id),
     auditService.listAuditEvents(organization.id, 6),
     resourceService.listReviewQueue(organization.id, 5),
+    conversationService.countConversations(organization.id),
   ]);
 
   const activeCount = resources.filter((r) => r.status === "ACTIVE").length;
@@ -74,6 +85,15 @@ export default async function OverviewPage() {
   const firstName = (user?.name || user?.email || "there").split(" ")[0]?.split("@")[0];
   const previewWidget = activeWidgets[0] ?? widgets[0] ?? null;
   const recentResources = resources.slice(0, 5);
+
+  const onboardingSteps: OnboardingStep[] = [
+    { label: "Add a website", done: websites.length > 0, href: "/websites", actionLabel: "Add website" },
+    { label: "Create a widget", done: widgets.length > 0, href: "/widgets", actionLabel: "Create widget" },
+    { label: "Import a resource", done: resources.length > 0, href: "/resources", actionLabel: "Import resource" },
+    { label: "Approve a resource", done: activeCount > 0, href: "/resources?status=REVIEW_REQUIRED", actionLabel: "Review" },
+    { label: "Embed the widget on your site", done: conversationCount > 0, href: "/widgets", actionLabel: "Get code" },
+  ];
+  const showOnboardingChecklist = !organization.onboardingChecklistDismissedAt && onboardingSteps.some((s) => !s.done);
 
   return (
     <div className="flex gap-6">
@@ -89,6 +109,8 @@ export default async function OverviewPage() {
             <PlusCircle size={16} /> Import Resource <ChevronDown size={14} className="opacity-70" />
           </Link>
         </div>
+
+        {showOnboardingChecklist && <OnboardingChecklist steps={onboardingSteps} onDismiss={dismissOnboardingChecklistAction} />}
 
         <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <MetricCard label="Resources" value={activeCount} helperText={`${resources.length} total`} icon={<Database size={16} />} />
@@ -227,23 +249,6 @@ export default async function OverviewPage() {
           )}
         </Card>
 
-        {websites.length === 0 && (
-          <p className="mt-8 text-sm text-ink-secondary">
-            Get started by{" "}
-            <Link href="/websites" className="rounded-sm text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-              adding a website
-            </Link>
-            , then{" "}
-            <Link href="/widgets" className="rounded-sm text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-              creating a widget
-            </Link>{" "}
-            and{" "}
-            <Link href="/resources" className="rounded-sm text-accent underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2">
-              importing a resource
-            </Link>
-            .
-          </p>
-        )}
       </div>
 
       <aside className="hidden w-[400px] shrink-0 xl:block">

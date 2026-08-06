@@ -1,4 +1,4 @@
-import { OrganizationRole } from "@prisma/client";
+import { BillingInterval, OrganizationRole, SubscriptionStatus } from "@prisma/client";
 import { rawDb, tenantDb } from "../client";
 
 export async function createOrganizationWithOwner(params: {
@@ -19,6 +19,106 @@ export async function createOrganizationWithOwner(params: {
     });
     return organization;
   });
+}
+
+/**
+ * Free-tier org creation via a redeemed FreeTierAccessCode: creates the org
+ * (planKey "free") + owner membership + marks the code used, all in one
+ * transaction so the same code can never be redeemed twice under a race.
+ * FreeTierAccessCode isn't tenant-scoped, so it passes through the guard
+ * unintercepted inside this same tenantDb transaction (see tenant-guard.ts).
+ */
+export async function createOrganizationFromAccessCode(params: {
+  name: string;
+  slug: string;
+  ownerUserId: string;
+  accessCodeId: string;
+}) {
+  return tenantDb.$transaction(async (tx) => {
+    const organization = await tx.organization.create({
+      data: { name: params.name, slug: params.slug, planKey: "free" },
+    });
+    await tx.organizationMember.create({
+      data: { organizationId: organization.id, userId: params.ownerUserId, role: OrganizationRole.OWNER },
+    });
+    const claimed = await tx.freeTierAccessCode.updateMany({
+      where: { id: params.accessCodeId, usedAt: null },
+      data: { usedByUserId: params.ownerUserId, usedAt: new Date() },
+    });
+    if (claimed.count === 0) throw new Error("This access code has already been used.");
+    return organization;
+  });
+}
+
+/**
+ * Paid-org creation from a completed Stripe Checkout session (signup flow) --
+ * creates the org + owner membership with the purchased plan/subscription fields
+ * already set, in one transaction (mirrors createOrganizationFromAccessCode).
+ */
+export async function createOrganizationFromCheckout(params: {
+  name: string;
+  slug: string;
+  ownerUserId: string;
+  planKey: string;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  subscriptionStatus: SubscriptionStatus;
+  billingInterval: BillingInterval;
+  currentPeriodEnd: Date;
+}) {
+  return tenantDb.$transaction(async (tx) => {
+    const organization = await tx.organization.create({
+      data: {
+        name: params.name,
+        slug: params.slug,
+        planKey: params.planKey,
+        stripeCustomerId: params.stripeCustomerId,
+        stripeSubscriptionId: params.stripeSubscriptionId,
+        subscriptionStatus: params.subscriptionStatus,
+        billingInterval: params.billingInterval,
+        currentPeriodEnd: params.currentPeriodEnd,
+      },
+    });
+    await tx.organizationMember.create({
+      data: { organizationId: organization.id, userId: params.ownerUserId, role: OrganizationRole.OWNER },
+    });
+    return organization;
+  });
+}
+
+/** Syncs subscription state onto an already-existing org (plan upgrade/downgrade, renewal, cancellation). */
+export async function applySubscriptionToOrganization(
+  organizationId: string,
+  params: {
+    planKey?: string;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
+    subscriptionStatus?: SubscriptionStatus;
+    billingInterval?: BillingInterval;
+    currentPeriodEnd?: Date;
+    cancelAtPeriodEnd?: boolean;
+  },
+) {
+  return rawDb.organization.update({ where: { id: organizationId }, data: params });
+}
+
+export async function getOrganizationByStripeCustomerId(stripeCustomerId: string) {
+  return rawDb.organization.findUnique({ where: { stripeCustomerId } });
+}
+
+/** Cross-tenant by design -- used by the usage-warning cron (lib/usage-warnings.ts), which has to check every org's usage, not one tenant's. Not exposed to any request path that resolves a single organizationId. */
+export async function listAllOrganizations() {
+  return rawDb.organization.findMany();
+}
+
+/** Dedup marker for the usage-warning cron so the same 75%/90% threshold email isn't sent more than once per billing period -- see usage-warnings.ts for how this is compared against the current period's start. */
+export async function recordUsageWarningSent(organizationId: string, threshold: "75" | "90") {
+  const field = threshold === "75" ? "usageWarning75SentAt" : "usageWarning90SentAt";
+  return rawDb.organization.update({ where: { id: organizationId }, data: { [field]: new Date() } });
+}
+
+export async function getOrganizationByStripeSubscriptionId(stripeSubscriptionId: string) {
+  return rawDb.organization.findUnique({ where: { stripeSubscriptionId } });
 }
 
 /**
@@ -74,15 +174,19 @@ export async function getOrganizationByPublicPrayerWallIdForPreview(publicPrayer
   return rawDb.organization.findUnique({ where: { publicPrayerWallId } });
 }
 
+export async function dismissOnboardingChecklist(organizationId: string) {
+  return rawDb.organization.update({ where: { id: organizationId }, data: { onboardingChecklistDismissedAt: new Date() } });
+}
+
 export async function enablePrayerWall(
   organizationId: string,
-  params: { enabled: boolean; forwardingEmail: string | null; brandColor: string | null; logoUrl: string | null },
+  params: { enabled: boolean; forwardingEmails: string[]; brandColor: string | null; logoUrl: string | null },
 ) {
   return rawDb.organization.update({
     where: { id: organizationId },
     data: {
       prayerWallEnabled: params.enabled,
-      prayerRequestForwardingEmail: params.forwardingEmail,
+      prayerRequestForwardingEmails: params.forwardingEmails,
       prayerWallBrandColor: params.brandColor,
       prayerWallLogoUrl: params.logoUrl,
     },

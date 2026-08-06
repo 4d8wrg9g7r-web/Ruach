@@ -61,7 +61,10 @@ export class LocalRetrievalProvider implements RetrievalProvider {
             'english',
             coalesce(r."searchDocument", ''),
             parsed_query.tsq,
-            'MaxFragments=1, MaxWords=30, MinWords=10'
+            -- StartSel/StopSel blanked out -- ts_headline defaults to wrapping matches
+            -- in literal <b>...</b>, which this excerpt shows to visitors as raw text
+            -- (it's never HTML-rendered), so the default highlighting just leaked tags.
+            'MaxFragments=1, MaxWords=30, MinWords=10, StartSel="", StopSel=""'
           ) AS excerpt
         FROM "Resource" r, parsed_query
         WHERE r."organizationId" = ${query.organizationId}

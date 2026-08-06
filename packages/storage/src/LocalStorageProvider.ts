@@ -1,22 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { extensionForContentType } from "./content-type";
 import type { SaveFileInput, SaveFileResult, StorageProvider } from "./StorageProvider";
 
-const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
-  "image/png": ".png",
-  "image/jpeg": ".jpg",
-  "image/webp": ".webp",
-  "image/svg+xml": ".svg",
-  "image/gif": ".gif",
-};
-
 /**
- * No real object storage is wired up yet (same product-stage decision as
- * ConsoleEmailProvider: ship the feature end-to-end against a local stub, swap the
- * provider later without touching callers). Saves under `${publicDir}/uploads/` so
- * Next.js serves the result as a static asset -- `publicDir` is the dashboard app's
- * own `public/` directory, passed in by the caller so this package stays app-agnostic.
+ * Local-disk fallback for environments with no BLOB_READ_WRITE_TOKEN (plain `next
+ * dev` without `vercel env pull`, CI, etc.) -- see VercelBlobStorageProvider for the
+ * real provider used whenever that token is present. Saves under `${publicDir}/uploads/`
+ * so Next.js serves the result as a static asset; not suitable for any deployment
+ * with an ephemeral/read-only filesystem (serverless functions).
  */
 export class LocalStorageProvider implements StorageProvider {
   constructor(
@@ -25,7 +18,7 @@ export class LocalStorageProvider implements StorageProvider {
   ) {}
 
   async saveFile(input: SaveFileInput): Promise<SaveFileResult> {
-    const extension = EXTENSION_BY_CONTENT_TYPE[input.contentType] ?? path.extname(input.fileName) ?? "";
+    const extension = extensionForContentType(input.contentType, input.fileName);
     const fileName = `${randomUUID()}${extension}`;
     const orgDir = path.join(this.publicDir, "uploads", input.organizationId);
 

@@ -4,12 +4,23 @@
 // architecture is stable (brief instruction #25).
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" covers local dev (darwin-arm64 etc.); rhel-openssl-3.0.x is what
+  // Vercel's serverless functions actually run on at request time, which differs
+  // from whatever OS ran `prisma generate` during the build step -- without this
+  // explicit target the client builds fine but can't find its query engine at
+  // runtime in production.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon's DATABASE_URL is pooled (PgBouncer), which the migration engine can't
+  // reliably run schema changes / advisory locks through -- directUrl routes
+  // `prisma migrate` at the unpooled connection while the generated client still
+  // uses the pooled url above at runtime.
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------------
@@ -17,16 +28,53 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String?
+  passwordHash    String
+  isPlatformAdmin Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   memberships         OrganizationMember[]
   auditLogs           AuditLog[]
   passwordResetTokens PasswordResetToken[]
+  createdAccessCodes  FreeTierAccessCode[] @relation("AccessCodeCreatedBy")
+  usedAccessCode      FreeTierAccessCode?  @relation("AccessCodeUsedBy")
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+/**
+ * Single-use, admin-issued code that waives payment for one signup, creating a
+ * free-tier org -- deliberately NOT named "invite": that word already means "add a
+ * teammate to my existing org" everywhere else in this codebase (team-service.ts).
+ * Not tenant-scoped (predates any organization existing).
+ */
+model FreeTierAccessCode {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  note            String?
+  createdByUserId String
+  usedByUserId    String?   @unique
+  usedAt          DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  createdBy User  @relation("AccessCodeCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  usedBy    User? @relation("AccessCodeUsedBy", fields: [usedByUserId], references: [id], onDelete: SetNull)
 }
 
 /**
@@ -49,20 +97,77 @@ enum OrganizationRole {
   ADMIN
   CONTENT_MANAGER
   ANALYTICS_VIEWER
+  // Scoped to exactly one function: the prayer moderation page and nothing else --
+  // see requirePrayerModeratorAccess in lib/session.ts. Only assignable from the
+  // team-invite role picker on plans with the advancedRolesPermissions feature.
+  PRAYER_MODERATOR
+}
+
+// ---------------------------------------------------------------------------
+// Marketing site
+// ---------------------------------------------------------------------------
+
+/**
+ * "Request a Demo" form submissions (apps/dashboard/app/(marketing)/demo) --
+ * pre-account, so there's no organizationId to scope by. Not tenant-scoped; excluded
+ * from the tenant-guard the same way FreeTierAccessCode is.
+ */
+model DemoRequest {
+  id                String   @id @default(cuid())
+  name              String
+  churchName        String
+  role              String
+  email             String
+  churchWebsite     String?
+  attendanceRange   String
+  campusCount       String?
+  currentPlatform   String?
+  contentPlatforms  String?
+  message           String?
+  preferredContact  String?
+  createdAt         DateTime @default(now())
 }
 
 model Organization {
-  id                           String             @id @default(cuid())
-  name                         String
-  slug                         String             @unique
-  categorizationMode           CategorizationMode @default(ASSISTED)
-  prayerWallEnabled            Boolean            @default(false)
-  publicPrayerWallId           String             @unique @default(cuid())
-  prayerRequestForwardingEmail String?
-  prayerWallBrandColor         String?
-  prayerWallLogoUrl            String?
-  createdAt                    DateTime           @default(now())
-  updatedAt                    DateTime           @updatedAt
+  id                            String              @id @default(cuid())
+  name                          String
+  slug                          String              @unique
+  categorizationMode            CategorizationMode  @default(ASSISTED)
+  prayerWallEnabled             Boolean             @default(false)
+  publicPrayerWallId            String              @unique @default(cuid())
+  // A plain list, not a join table -- just a set of addresses with no other
+  // attributes. Essential/free are capped at 1 entry (enforced in the Settings
+  // Server Action); prayerTeamNotifications entitles more.
+  prayerRequestForwardingEmails String[]            @default([])
+  prayerWallBrandColor          String?
+  prayerWallLogoUrl             String?
+  // planKey resolves into the PLANS map in billing-service.ts, not a DB table --
+  // see that file's doc comment. The default exists only to backfill pre-billing
+  // rows during migration; every real creation path (Stripe webhook, access-code
+  // redemption) sets it explicitly.
+  planKey                       String              @default("essential")
+  stripeCustomerId              String?             @unique
+  stripeSubscriptionId          String?             @unique
+  subscriptionStatus            SubscriptionStatus?
+  billingInterval               BillingInterval?
+  currentPeriodEnd              DateTime?
+  // True once Cancel plan has been confirmed -- the subscription stays ACTIVE and
+  // fully usable through currentPeriodEnd, then Stripe's subscription.deleted event
+  // flips subscriptionStatus to CANCELED. Resume plan just sets this back to false
+  // before the period ends.
+  cancelAtPeriodEnd             Boolean             @default(false)
+  // Usage-warning email dedup (lib/usage-warnings.ts): compared against the current
+  // billing period's start on each cron run rather than explicitly reset, so a
+  // null/stale timestamp just means "eligible to send again this period."
+  usageWarning75SentAt          DateTime?
+  usageWarning90SentAt          DateTime?
+  // Explicit dismissal of the guided-onboarding checklist (Dashboard Overview) --
+  // completion itself is computed live from existing counts (websites/widgets/
+  // resources/conversations), not stored. Null just means "not dismissed yet"; the
+  // checklist also auto-hides once every step is complete, dismissed or not.
+  onboardingChecklistDismissedAt DateTime?
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @updatedAt
 
   members                 OrganizationMember[]
   websites                Website[]
@@ -127,11 +232,23 @@ model Website {
   allowedDomains String[]      @default([])
   stagingDomains String[]      @default([])
   status         WebsiteStatus @default(ACTIVE)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  // Campus-specific prayer wall (Multi-Site+ only, campusScopedPrayerWalls feature).
+  // Mirrors Organization's 5 prayer-wall fields exactly -- the org-level wall stays
+  // the default/fallback for every org unchanged; these are an additive per-campus
+  // option, not a replacement. publicPrayerWallId is nullable+unique (not every
+  // website has its own wall) unlike Organization's always-present version.
+  prayerWallEnabled             Boolean  @default(false)
+  publicPrayerWallId            String?  @unique
+  prayerRequestForwardingEmails String[] @default([])
+  prayerWallBrandColor          String?
+  prayerWallLogoUrl             String?
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 
-  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  widgets      WidgetConfiguration[]
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  widgets        WidgetConfiguration[]
+  resources      Resource[]
+  prayerRequests PrayerRequest[]
 
   @@index([organizationId])
 }
@@ -226,6 +343,13 @@ enum TranscriptSource {
 model Resource {
   id             String         @id @default(cuid())
   organizationId String
+  // null = org-wide, available to every campus's widgets (the default for every org
+  // today). Set = scoped to one campus/website's content library only -- Multi-Site+
+  // only (campusScopedContentLibraries feature); see the retrieval provider's
+  // candidate-resource filtering. onDelete: SetNull, not Cascade -- deleting a
+  // website should never delete the org's resources, just unscope them back to
+  // org-wide.
+  websiteId      String?
   resourceType   ResourceType
   status         ResourceStatus @default(DRAFT)
 
@@ -267,6 +391,7 @@ model Resource {
   updatedAt DateTime @updatedAt
 
   organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  website         Website?                    @relation(fields: [websiteId], references: [id], onDelete: SetNull)
   sourceDocuments ResourceSourceDocument[]
   evidence        GeneratedMetadataEvidence[]
   collections     ResourceCollection[]
@@ -274,6 +399,7 @@ model Resource {
 
   @@unique([organizationId, sourceProvider, externalId])
   @@index([organizationId, status])
+  @@index([websiteId])
 }
 
 enum SourceDocumentType {
@@ -451,6 +577,16 @@ model BulkJob {
   processedCount  Int           @default(0)
   successCount    Int           @default(0)
   failureCount    Int           @default(0)
+  // Exactly which of resourceIds are done so far -- not derivable from processedCount
+  // alone once work resumes across multiple chunked invocations (see
+  // resource-pipeline.ts's runBulkJob), since concurrent workers can finish items out
+  // of resourceIds' original order.
+  processedResourceIds String[] @default([])
+  // FIND_LINKS/INCLUDE_LINKS-specific running total (links discovered / links
+  // included) folded into resultSummary once the job fully completes -- generic
+  // rather than two separate fields since only one job type's summary needs it at a
+  // time.
+  extraCount      Int           @default(0)
   resultSummary   String?
   errorMessage    String?
   createdByUserId String?
@@ -640,24 +776,48 @@ enum PrayerRequestStatus {
   ANSWERED
 }
 
+// Fixed set for v1, not per-org customizable -- see the plan doc's explicit
+// non-goal. Only offered on the public submit form when the org's plan has the
+// prayerCategories feature; otherwise the field stays null.
+enum PrayerRequestCategory {
+  HEALTH
+  FAMILY
+  FINANCIAL
+  SPIRITUAL_GROWTH
+  GRIEF_LOSS
+  GUIDANCE
+  OTHER
+}
+
 model PrayerRequest {
-  id             String              @id @default(cuid())
+  id             String                 @id @default(cuid())
   organizationId String
   accountId      String
+  // null = submitted via the org-level default wall. Set = submitted via a specific
+  // campus's wall (Website.prayerWallEnabled) -- determines which campus's forwarding
+  // emails fire and which public wall page lists it. onDelete: SetNull, not Cascade --
+  // deleting a website's wall config should never delete the requests made through it.
+  websiteId      String?
   message        String
-  isPublic       Boolean             @default(false)
-  isAnonymous    Boolean             @default(false)
+  isPublic       Boolean                @default(false)
+  isAnonymous    Boolean                @default(false)
   publicizedAt   DateTime?
-  status         PrayerRequestStatus @default(SUBMITTED)
-  prayerCount    Int                 @default(0)
+  status         PrayerRequestStatus    @default(SUBMITTED)
+  category       PrayerRequestCategory?
+  // Staff-only, never rendered on any public/submitter-facing page -- set via the
+  // prayer moderation page (requires internalPrayerNotes entitlement).
+  internalNotes  String?
+  prayerCount    Int                    @default(0)
   answeredAt     DateTime?
   forwardedAt    DateTime?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
 
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   account      PrayerWallAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  website      Website?          @relation(fields: [websiteId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([accountId])
+  @@index([websiteId])
 }

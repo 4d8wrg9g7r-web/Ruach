@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { actionLinkService, widgetService } from "@ruach/database";
+import { actionLinkService, billingService, widgetService } from "@ruach/database";
 import { ActionLinkList } from "../../../../components/ActionLinkList";
 import { CopySnippetButton } from "../../../../components/CopySnippetButton";
 import { WidgetCustomizePanel } from "../../../../components/WidgetCustomizePanel";
@@ -18,10 +18,18 @@ async function updateWidgetAction(widgetId: string, formData: FormData) {
   if (!organization) throw new Error("No organization");
   await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
 
-  const suggestedPrompts = String(formData.get("suggestedPrompts") ?? "")
-    .split("\n")
-    .map((p) => p.trim())
-    .filter(Boolean);
+  const plan = billingService.getPlan(organization.planKey);
+
+  // Disabled form fields never submit, so a disabled checkbox/textarea in the UI
+  // already degrades to "unset" here -- these checks are the real enforcement
+  // (defense in depth against a raw POST that skips the UI entirely), not merely
+  // mirroring what the disabled inputs already do.
+  const suggestedPrompts = billingService.planHasFeature(organization.planKey, "advancedWidgetCustomization")
+    ? String(formData.get("suggestedPrompts") ?? "")
+        .split("\n")
+        .map((p) => p.trim())
+        .filter(Boolean)
+    : [];
 
   const existingWidget = await widgetService.getWidget(organization.id, widgetId);
   if (!existingWidget) throw new Error("Widget not found");
@@ -45,11 +53,16 @@ async function updateWidgetAction(widgetId: string, formData: FormData) {
     suggestedPrompts,
     privacyNotice: String(formData.get("privacyNotice") ?? ""),
     noResultMessage: String(formData.get("noResultMessage") ?? ""),
-    showPlatformBranding: formData.get("showPlatformBranding") === "on",
+    showPlatformBranding: plan.features.includes("removeBranding") ? formData.get("showPlatformBranding") === "on" : true,
     allowInlinePlayback: formData.get("allowInlinePlayback") === "on",
   });
   revalidatePath(`/widgets/${widgetId}`);
-  revalidatePath(`/widget/embed/${widgetId}`);
+  // Bug: this must be the *public* id -- the real embed page (what the preview
+  // iframe and every installed widget-loader.js actually hit) lives at
+  // /widget/embed/<publicWidgetId>, not /widget/embed/<internal widgetId>.
+  // Revalidating the wrong path left the real page serving stale cached data
+  // after every Publish Changes.
+  revalidatePath(`/widget/embed/${existingWidget.publicWidgetId}`);
 }
 
 async function createActionLinkAction(widgetId: string, formData: FormData) {
@@ -103,6 +116,11 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
   if (!widget) notFound();
 
   const actionLinks = await actionLinkService.listActionLinks(organization.id);
+  const plan = billingService.getPlan(organization.planKey);
+  const entitlements = {
+    removeBranding: plan.features.includes("removeBranding"),
+    advancedWidgetCustomization: plan.features.includes("advancedWidgetCustomization"),
+  };
 
   const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const snippet = `<script src="${appOrigin}/widget-loader.js" data-widget-id="${widget.publicWidgetId}" defer></script>`;
@@ -131,7 +149,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
         </a>
       </div>
 
-      <WidgetCustomizePanel widget={widget} updateAction={boundUpdateAction}>
+      <WidgetCustomizePanel widget={widget} updateAction={boundUpdateAction} entitlements={entitlements}>
         <Card padding="none">
           <div className="border-b border-border p-5">
             <h2 className="mb-1 text-sm font-semibold text-ink">Standard Links</h2>
