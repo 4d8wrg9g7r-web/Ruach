@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import * as Sentry from "@sentry/nextjs";
-import { auditService, organizationService } from "@ruach/database";
+import { auditService, organizationService, userService } from "@ruach/database";
 import { stripe } from "../../../../lib/stripe";
 import { subscriptionBillingFields } from "../../../../lib/stripe-subscription";
 import { slugify } from "../../../../lib/slug";
+import { sendWelcomeEmail } from "../../../../lib/welcome-email";
 
 export const runtime = "nodejs";
 
@@ -56,6 +57,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       targetId: organization.id,
       metadata: { plan: billing.planKey, viaStripeCheckout: true },
     });
+    const owner = await userService.getUser(userId);
+    if (owner) await sendWelcomeEmail({ to: owner.email, organizationName: organization.name });
     return;
   }
 

@@ -10,6 +10,7 @@ import { SubmitButton } from "../../components/SubmitButton";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { slugify } from "../../lib/slug";
+import { sendWelcomeEmail } from "../../lib/welcome-email";
 
 async function signupAction(formData: FormData) {
   "use server";
@@ -56,6 +57,7 @@ async function signupAction(formData: FormData) {
       targetId: organization.id,
       metadata: { plan: "free", viaAccessCode: true },
     });
+    await sendWelcomeEmail({ to: email, organizationName: organization.name });
     await signIn("credentials", { email, password, redirect: false });
     redirect("/dashboard");
   }
