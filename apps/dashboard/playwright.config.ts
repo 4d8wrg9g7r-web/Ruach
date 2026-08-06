@@ -19,10 +19,15 @@ export default defineConfig({
   // files hitting an uncompiled Next.js dev server at once caused first-navigation
   // flakiness (route compilation on first hit adds latency under concurrent load).
   workers: 1,
-  reporter: [["list"]],
+  // "html" (never auto-opened) alongside "list" so a CI failure has something to
+  // actually attach and download -- a plain list report only exists in the log.
+  reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: `http://localhost:${E2E_PORT}`,
+    trace: "on-first-retry",
+    screenshot: "only-on-failure",
   },
+  retries: process.env.CI ? 1 : 0,
   webServer: {
     command: `pnpm exec next dev --port ${E2E_PORT}`,
     url: `http://localhost:${E2E_PORT}`,
