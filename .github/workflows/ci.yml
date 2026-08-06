@@ -31,7 +31,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # pnpm 11 (pinned via package.json's packageManager field) requires
+          # Node >=22.13 -- the app's own engines field only floors at >=20, but
+          # that's not enough to satisfy pnpm itself.
+          node-version: 22
           cache: pnpm
 
       - name: Install dependencies
