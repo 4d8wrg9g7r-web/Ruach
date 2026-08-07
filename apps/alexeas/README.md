@@ -61,8 +61,34 @@ lib/
   an instrument that can't be made.
 - **Pricing & build time** — estimates only, always shown under the reminder that
   specifications and pricing are confirmed personally before construction begins.
-- **Shareable builds** — a configuration is packed into a short, reversible code
-  (`/build/OM-3A7Q`), so a build can be reopened, refreshed, or shared with no server state.
+- **Shareable builds** — a configuration is packed into a short, reversible code carried
+  in the URL query (`/build/?c=OM-3A7Q`) and decoded on the client, so a build can be
+  reopened, refreshed, or shared with no server state — and the whole site stays static.
+
+## Fonts
+
+- **Fraunces** — editorial display serif (with true italics), warm and high-contrast.
+- **Manrope** — the UI / body voice.
+- **Spline Sans Mono** — archival micro-labels, spec numerals, buttons, and edition marks.
+
+## Deploy (static)
+
+The app is a **fully static export** (`output: "export"` → `out/`), so it can be hosted
+anywhere with no server runtime.
+
+```bash
+pnpm --filter @ruach/alexeas build     # emits apps/alexeas/out/
+```
+
+**Cloudflare Pages** — either connect the repo (recommended) or upload the build:
+
+- Git integration: New Project → pick this repo/branch → **Root directory** `apps/alexeas`,
+  **Build command** `pnpm --filter @ruach/alexeas build` (or `npx next build` from the app
+  dir), **Build output directory** `out`. (In a monorepo, set the root/output accordingly.)
+- Direct upload with Wrangler: `npx wrangler pages deploy apps/alexeas/out`.
+
+Any static host works the same way (Netlify, GitHub Pages, S3/CloudFront, nginx). Because of
+`trailingSlash: true`, each route is a folder with its own `index.html`.
 
 The visual preview (`components/visuals/instrument-preview.tsx`) composes one SVG layer per
 choice — soundboard grain, binding, rosette, fret inlay, arm bevel — the layered engine the

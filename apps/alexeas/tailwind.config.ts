@@ -10,8 +10,14 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        serif: ["var(--font-serif)", "Cormorant Garamond", "Georgia", "serif"],
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        serif: ["var(--font-serif)", "Fraunces", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "Manrope", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+      },
+      boxShadow: {
+        atelier: "0 40px 80px -48px rgba(36, 28, 23, 0.5)",
+        "atelier-sm": "0 24px 48px -30px rgba(36, 28, 23, 0.4)",
+        lift: "0 20px 40px -28px rgba(36, 28, 23, 0.45)",
       },
       colors: {
         // Warm grounds

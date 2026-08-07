@@ -42,16 +42,17 @@ export function Configurator({
 
   const model = getModel(config.model)!;
   const shareCode = useMemo(() => encodeConfig(config), [config]);
-  const shareUrl = `${origin || "https://alexeasguitars.com"}/build/${shareCode}`;
+  const shareUrl = `${origin || "https://alexeasguitars.com"}/build/?c=${shareCode}`;
 
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
 
   // Keep the address bar in sync so a refresh or copied URL preserves the build.
+  // Query-based (?c=) so the whole site can stay statically hosted.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.history.replaceState(null, "", `/build/${shareCode}`);
+    window.history.replaceState(null, "", `/build/?c=${shareCode}`);
   }, [shareCode]);
 
   const setSlot = (slotId: SlotId, slug: string) =>

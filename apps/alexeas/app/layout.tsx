@@ -1,23 +1,32 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Fraunces, Manrope, Spline_Sans_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { GrainOverlay } from "@/components/grain-overlay";
+import { AtelierFrame } from "@/components/atelier-frame";
 import { RevealProvider } from "@/components/reveal-provider";
 import { SITE } from "@/lib/site";
 
-const serif = Cormorant_Garamond({
+// Fraunces (variable, with italics) is the editorial display voice; Manrope the
+// UI voice; Spline Sans Mono the archival micro-label / numeral voice.
+const serif = Fraunces({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
   variable: "--font-serif",
   display: "swap",
 });
 
-const sans = Inter({
+const sans = Manrope({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
   variable: "--font-sans",
+  display: "swap",
+});
+
+const mono = Spline_Sans_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -66,7 +75,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable}`}>
+    <html lang="en" className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
       <body className="font-sans antialiased">
         {/* Mark JS as active before paint so scroll-reveal content is only ever
             hidden when it can actually be revealed (no-JS/crawlers see it all). */}
@@ -82,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <GrainOverlay />
+        <AtelierFrame />
         <RevealProvider>
           <SiteHeader />
           <main id="main">{children}</main>

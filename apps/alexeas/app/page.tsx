@@ -5,6 +5,8 @@ import { ModelExplorer } from "@/components/model-explorer";
 import { WoodExplorer } from "@/components/wood-explorer";
 import { Container, Overline, BrassRule, ArrowLink, ButtonLink, SectionIndex } from "@/components/ui";
 import { InstrumentSilhouette } from "@/components/visuals/silhouettes";
+import { InstrumentPreview } from "@/components/visuals/instrument-preview";
+import { defaultConfig } from "@/lib/config/engine";
 import { FAMILIES } from "@/lib/data/models";
 import { PROCESS, TESTIMONIALS, PHILOSOPHY } from "@/lib/data/content";
 import { SITE } from "@/lib/site";
@@ -20,18 +22,19 @@ export default function HomePage() {
           <div className="grid gap-14 lg:grid-cols-[1.3fr_1fr] lg:gap-24">
             <div className="reveal">
               <SectionIndex n="02" label="Philosophy" />
-              <h2 className="mt-8 font-serif text-5xl leading-[1.05] text-espresso sm:text-6xl lg:text-7xl">
+              <h2 className="mt-8 font-serif text-5xl font-light leading-[1.03] tracking-[-0.02em] text-espresso sm:text-6xl lg:text-7xl">
                 {PHILOSOPHY.hook}
-                <span className="mt-2 block text-wood">{PHILOSOPHY.turn}</span>
+                <span className="mt-2 block italic text-wood">{PHILOSOPHY.turn}</span>
               </h2>
-              <p className="mt-10 max-w-prose2 font-sans text-lg leading-relaxed text-ink-soft">
+              <p className="drop-cap mt-10 max-w-prose2 text-lg leading-relaxed text-ink-soft">
                 {PHILOSOPHY.body}
               </p>
             </div>
             <div className="reveal flex items-center justify-center">
-              <div className="w-full max-w-sm border border-brass/20 bg-plaster p-12 text-wood">
-                <InstrumentSilhouette silhouette="grand-concert" stroke="#8A6245" strokeWidth={1} className="h-80 w-full" />
-                <p className="mt-6 text-center font-serif text-xl italic text-wood">
+              <div className="relative w-full max-w-sm border border-brass/20 bg-plaster px-10 py-14 shadow-atelier">
+                <span className="mono-label absolute left-6 top-6 text-brass/70">Fig. 01 — Grand Concert</span>
+                <InstrumentPreview config={defaultConfig("grand-concert-12")} uid="phil" className="mx-auto h-80 w-auto drop-shadow-[0_30px_44px_rgba(36,28,23,0.24)]" />
+                <p className="mt-8 text-center font-serif text-xl italic text-wood">
                   One player. One craftsman. One detail at a time.
                 </p>
               </div>
@@ -160,7 +163,10 @@ export default function HomePage() {
               </div>
             </div>
             <div className="reveal flex justify-center">
-              <InstrumentSilhouette silhouette="om" stroke="#C4A876" strokeWidth={1} className="h-96 w-auto opacity-90" />
+              <div className="relative">
+                <span aria-hidden className="absolute inset-0 -z-10 blur-3xl" style={{ background: "radial-gradient(circle, rgba(196,168,118,0.35), transparent 68%)" }} />
+                <InstrumentPreview config={defaultConfig("dreadnought")} uid="cta" className="h-96 w-auto drop-shadow-[0_40px_60px_rgba(0,0,0,0.5)]" />
+              </div>
             </div>
           </div>
         </Container>

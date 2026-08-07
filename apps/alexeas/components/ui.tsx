@@ -42,7 +42,7 @@ export function ArrowLink({
   return (
     <Link
       href={href}
-      className={`link-underline font-sans text-sm uppercase tracking-wider2 text-espresso ${className}`}
+      className={`link-underline font-mono text-[0.72rem] uppercase tracking-[0.2em] text-espresso ${className}`}
     >
       <span>{children}</span>
       <span className="arrow" aria-hidden="true">
@@ -74,8 +74,9 @@ export function ButtonLink({
 export function SectionIndex({ n, label }: { n: string; label: string }) {
   return (
     <div className="flex items-center gap-4">
-      <span className="font-serif text-2xl text-brass">{n}</span>
-      <span className="overline">{label}</span>
+      <span className="font-serif text-4xl font-light leading-none text-brass">{n}</span>
+      <span className="h-px w-10 bg-brass/45" />
+      <span className="mono-label">{label}</span>
     </div>
   );
 }

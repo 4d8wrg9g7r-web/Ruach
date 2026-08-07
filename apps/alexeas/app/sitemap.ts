@@ -3,6 +3,8 @@ import { SITE } from "@/lib/site";
 import { MODELS } from "@/lib/data/models";
 import { COMPLETED } from "@/lib/data/content";
 
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = SITE.url;
   const staticRoutes = [
