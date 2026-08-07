@@ -1,6 +1,7 @@
 import { HouseholdRole, MembershipStatus, Prisma, PersonRelationshipType } from "@prisma/client";
-import { tenantDb } from "../client";
+import { rawDb, tenantDb } from "../client";
 import { inverseRelationshipType } from "../people/helpers";
+import { emit } from "./outbox-service";
 
 /**
  * People & Households service (BLUEPRINT §5). Every query is tenant-scoped: the
@@ -88,22 +89,39 @@ export async function getPerson(organizationId: string, personId: string) {
 }
 
 export async function createPerson(organizationId: string, input: PersonInput) {
-  return tenantDb.person.create({
-    data: {
+  // rawDb.$transaction (not tenantDb) so the PersonCreated outbox event commits
+  // atomically with the person row (BLUEPRINT §38) -- organizationId is set explicitly on
+  // both writes, preserving the scoping invariant the guard would otherwise enforce.
+  return rawDb.$transaction(async (tx) => {
+    const person = await tx.person.create({
+      data: {
+        organizationId,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        preferredName: input.preferredName?.trim() || null,
+        email: input.email?.trim() || null,
+        phone: input.phone?.trim() || null,
+        membershipStatus: input.membershipStatus ?? MembershipStatus.VISITOR,
+        birthdate: input.birthdate ?? null,
+        tags: input.tags ?? [],
+        notes: input.notes?.trim() || null,
+        householdId: input.householdId ?? null,
+        householdRole: input.householdRole ?? null,
+        campusWebsiteId: input.campusWebsiteId ?? null,
+      },
+    });
+    await emit(tx, {
       organizationId,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      preferredName: input.preferredName?.trim() || null,
-      email: input.email?.trim() || null,
-      phone: input.phone?.trim() || null,
-      membershipStatus: input.membershipStatus ?? MembershipStatus.VISITOR,
-      birthdate: input.birthdate ?? null,
-      tags: input.tags ?? [],
-      notes: input.notes?.trim() || null,
-      householdId: input.householdId ?? null,
-      householdRole: input.householdRole ?? null,
-      campusWebsiteId: input.campusWebsiteId ?? null,
-    },
+      type: "PersonCreated",
+      payload: {
+        personId: person.id,
+        firstName: person.firstName,
+        lastName: person.lastName,
+        email: person.email,
+        membershipStatus: person.membershipStatus,
+      },
+    });
+    return person;
   });
 }
 

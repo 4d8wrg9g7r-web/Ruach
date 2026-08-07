@@ -198,6 +198,9 @@ model Organization {
   formSubmissions         FormSubmission[]
   outboxEvents            OutboxEvent[]
   processedEvents         ProcessedEvent[]
+  workflows               WorkflowDefinition[]
+  workflowVersions        WorkflowVersion[]
+  workflowRuns            WorkflowRun[]
 }
 
 enum CategorizationMode {
@@ -929,6 +932,7 @@ model Person {
   relationshipsTo   PersonRelationship[] @relation("PersonRelationshipTo")
   groupMemberships  GroupMembership[]
   formSubmissions   FormSubmission[]
+  workflowRuns      WorkflowRun[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -1182,4 +1186,107 @@ model ProcessedEvent {
   // At-most-once per (event, handler) even under duplicate delivery.
   @@unique([eventId, handler])
   @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Workflow engine
+//
+// User-configurable trigger → condition → action automation (BLUEPRINT §39), running on
+// the transactional outbox. Definitions are VERSIONED like forms: publishing snapshots an
+// immutable WorkflowVersion, and every run pins the version it started with — re-
+// publishing never changes an in-flight run. Config JSON (conditions + steps) is
+// interpreted solely by the pure workflows/config.ts. Runs keep a step-by-step timeline
+// in `log` so every automated action is explainable (§27). See docs/domain/workflows.md.
+// ---------------------------------------------------------------------------
+
+enum WorkflowStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+}
+
+enum WorkflowRunStatus {
+  PENDING
+  RUNNING
+  WAITING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model WorkflowDefinition {
+  id             String         @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  status         WorkflowStatus @default(DRAFT)
+  // Trigger event type, e.g. "FormSubmitted" | "PersonCreated".
+  trigger        String
+  // Narrows FormSubmitted to one form (null = any form). Deliberately NOT a foreign key:
+  // an FK with SetNull would silently broaden a deleted form's workflows to "any form".
+  // A dangling id simply never matches again, which is the safe failure mode.
+  triggerFormId  String?
+  // Working conditions+steps being edited; goes live only on publish.
+  draftConfig    Json           @default("{}")
+  publishedVersion Int?
+  archivedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  versions     WorkflowVersion[]
+  runs         WorkflowRun[]
+
+  @@index([organizationId])
+  @@index([organizationId, status, trigger])
+}
+
+model WorkflowVersion {
+  id             String   @id @default(cuid())
+  organizationId String
+  workflowId     String
+  version        Int
+  // Immutable snapshot of {conditions, steps} at publish time.
+  config         Json
+  createdAt      DateTime @default(now())
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workflow     WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, version])
+  @@index([organizationId])
+}
+
+model WorkflowRun {
+  id             String            @id @default(cuid())
+  organizationId String
+  workflowId     String
+  // The WorkflowVersion.version this run executes — pinned at creation (§39 Versioning).
+  version        Int
+  status         WorkflowRunStatus @default(PENDING)
+  // Index of the next step to execute.
+  currentStep    Int               @default(0)
+  // Attempts at the CURRENT step; reset to 0 when a step completes.
+  attempts       Int               @default(0)
+  // When this run is next due (WAIT target or retry backoff).
+  nextStepAt     DateTime          @default(now())
+  // Trigger context the conditions/steps evaluate over (event payload + derived fields).
+  context        Json
+  // Step-by-step timeline: [{step, type, status, at, detail?}] (§39 Observability).
+  log            Json              @default("[]")
+  personId       String?
+  triggeredByEventId String?
+  lastError      String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  completedAt    DateTime?
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workflow     WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  person       Person?            @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([workflowId])
+  @@index([status, nextStepAt])
+  @@index([personId])
 }

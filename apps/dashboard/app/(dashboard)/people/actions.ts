@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import {
   auditService,
   peopleService,
@@ -11,6 +12,7 @@ import {
 } from "@ruach/database";
 import { getCurrentOrganization, getCurrentUser } from "../../../lib/session";
 import { requirePeople } from "../../../lib/people-access";
+import { drainOutbox } from "../../../lib/outbox-worker";
 
 /**
  * People & Households server actions. Every action resolves the current organization,
@@ -79,6 +81,16 @@ export async function createPersonAction(formData: FormData) {
     targetType: "Person",
     targetId: person.id,
     metadata: { name: `${firstName} ${lastName}` },
+  });
+
+  // Low-latency drain of the PersonCreated outbox event (workflow triggers); the cron
+  // route remains the durable backstop.
+  after(async () => {
+    try {
+      await drainOutbox();
+    } catch (err) {
+      console.error("Opportunistic outbox drain failed (cron will retry):", err);
+    }
   });
 
   redirect(`/people/${person.id}`);

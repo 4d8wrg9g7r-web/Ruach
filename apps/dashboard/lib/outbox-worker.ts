@@ -1,5 +1,6 @@
 import { formService, outboxService, type ClaimedEvent, type HandlerRegistry } from "@ruach/database";
 import { getEmailProvider } from "@ruach/email";
+import { workflowTriggerHandler } from "./workflow-runner";
 
 /**
  * The outbox handler registry lives in the app (not the database package) because
@@ -45,7 +46,8 @@ const notifyFormSubmission = {
 };
 
 export const HANDLERS: HandlerRegistry = {
-  FormSubmitted: [notifyFormSubmission],
+  FormSubmitted: [notifyFormSubmission, workflowTriggerHandler],
+  PersonCreated: [workflowTriggerHandler],
 };
 
 /** Drain due outbox events once, using the app's handler registry. */

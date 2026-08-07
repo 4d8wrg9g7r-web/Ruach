@@ -28,6 +28,28 @@ export * as outboxService from "./services/outbox-service";
 export type { OutboxHandler, HandlerRegistry, ClaimedEvent } from "./services/outbox-service";
 export { computeBackoff } from "./outbox/backoff";
 
+export * as workflowService from "./services/workflow-service";
+export type { StepExecutor, ExecutorMap } from "./services/workflow-service";
+export * as workflowPermissions from "./authz/workflow-permissions";
+export type { WorkflowAction } from "./authz/workflow-permissions";
+export {
+  parseWorkflowConfig,
+  evaluateConditions,
+  interpolate,
+  getPath,
+  WORKFLOW_TRIGGERS,
+  WORKFLOW_STEP_TYPES,
+  CONDITION_OPS,
+} from "./workflows/config";
+export type {
+  WorkflowConfig,
+  WorkflowCondition,
+  WorkflowStep,
+  WorkflowStepType,
+  WorkflowTrigger,
+  ConditionOp,
+} from "./workflows/config";
+
 export * as peoplePermissions from "./authz/people-permissions";
 export type { PeopleAction } from "./authz/people-permissions";
 export { personDisplayName, inverseRelationshipType } from "./people/helpers";

@@ -15,6 +15,7 @@ import {
   Users,
   Users2,
   Wind,
+  Workflow,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -77,6 +78,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNavItem href="/people" label="People" icon={<Contact size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/groups" label="Groups" icon={<Users2 size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/forms" label="Forms" icon={<ClipboardList size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem href="/workflows" label="Workflows" icon={<Workflow size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/resources" label="Resources" icon={<Library size={17} strokeWidth={1.75} />} />
         <SidebarNavItem
           href="/resources?status=REVIEW_REQUIRED"

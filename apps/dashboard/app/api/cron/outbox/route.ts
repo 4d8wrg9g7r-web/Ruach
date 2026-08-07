@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { drainOutbox } from "../../../../lib/outbox-worker";
+import { drainWorkflowRuns } from "../../../../lib/workflow-runner";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 /**
- * Durable backstop for the transactional outbox (BLUEPRINT §38). Form submissions drain
- * opportunistically via after() for low latency, but after() is best-effort -- an external
- * scheduler (Vercel Cron, cron(1), etc.) is expected to call this on an interval so no
- * event is ever stranded. Same shared-secret gate as the other /api/cron/* routes (no
- * dashboard session exists in a cron context).
+ * Durable backstop for the transactional outbox (BLUEPRINT §38) AND the workflow engine's
+ * due runs (elapsed WAIT timers, retry backoffs -- §39 "durable timer, not in-memory
+ * sleep"). Form submissions drain opportunistically via after() for low latency, but
+ * after() is best-effort -- an external scheduler (Vercel Cron, cron(1), etc.) is expected
+ * to call this on an interval so no event or parked run is ever stranded. One endpoint on
+ * purpose: a single scheduled job keeps ops simple. Same shared-secret gate as the other
+ * /api/cron/* routes (no dashboard session exists in a cron context).
  */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -33,5 +36,8 @@ export async function GET(req: NextRequest) {
     if (result.processed + result.failed + result.retried === 0) break;
   }
 
-  return NextResponse.json({ processed, failed, retried });
+  // Then advance workflow runs whose WAIT timers or retry backoffs are due.
+  const advancedRuns = await drainWorkflowRuns();
+
+  return NextResponse.json({ processed, failed, retried, advancedRuns });
 }
