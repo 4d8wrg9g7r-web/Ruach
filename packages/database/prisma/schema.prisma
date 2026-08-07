@@ -188,6 +188,9 @@ model Organization {
   prayerWallAccounts      PrayerWallAccount[]
   prayerRequests          PrayerRequest[]
   prayerWallResetTokens   PrayerWallPasswordResetToken[]
+  people                  Person[]
+  households              Household[]
+  personRelationships     PersonRelationship[]
 }
 
 enum CategorizationMode {
@@ -249,6 +252,7 @@ model Website {
   widgets        WidgetConfiguration[]
   resources      Resource[]
   prayerRequests PrayerRequest[]
+  people         Person[]
 
   @@index([organizationId])
 }
@@ -820,4 +824,124 @@ model PrayerRequest {
   @@index([organizationId])
   @@index([accountId])
   @@index([websiteId])
+}
+
+// ---------------------------------------------------------------------------
+// People & Households
+//
+// The canonical Person primitive (BLUEPRINT §5, non-negotiable principle #1 "One
+// Person model"). Every future ministry module -- Giving, Groups, Check-In,
+// Communications, HR, Services -- references this same Person rather than creating
+// its own people records. A Person is a ministry record and is deliberately separate
+// from User (the authentication identity): most people a church tracks never log in.
+// See docs/domain/people.md.
+// ---------------------------------------------------------------------------
+
+enum MembershipStatus {
+  VISITOR
+  ATTENDER
+  MEMBER
+  INACTIVE
+}
+
+// A member's structural role within a household, distinct from any ministry role.
+// Drives child-vs-adult treatment (relevant later to Check-In / child safety).
+enum HouseholdRole {
+  ADULT
+  CHILD
+  OTHER
+}
+
+// The type of `relatedPerson` relative to `person`: a row (person=Alice,
+// related=Bob, type=CHILD) reads "Bob is Alice's child." Relationships are stored
+// bidirectionally (see people-service.addRelationship / inverseRelationshipType).
+enum PersonRelationshipType {
+  SPOUSE
+  PARENT
+  CHILD
+  SIBLING
+  GUARDIAN
+  OTHER
+}
+
+model Household {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  region         String?
+  postalCode     String?
+  country        String?
+  // Soft archival, not delete -- ministry records keep history (BLUEPRINT §36).
+  archivedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      Person[]
+
+  @@index([organizationId])
+}
+
+model Person {
+  id             String  @id @default(cuid())
+  organizationId String
+  // Household membership is optional -- a Person can exist unattached. onDelete:
+  // SetNull so removing a household never deletes its people, just unlinks them.
+  householdId    String?
+  householdRole  HouseholdRole?
+  // Home campus. Reuses the existing Website-as-campus convention rather than
+  // introducing a duplicate Campus primitive (Constitution rule #1; see
+  // docs/domain/people.md "Unresolved risks"). Mirrors Resource.websiteId exactly:
+  // null = org-wide, onDelete: SetNull.
+  campusWebsiteId String?
+
+  firstName     String
+  lastName      String
+  preferredName String?
+  // Contact email is distinct from any linked User's login email (BLUEPRINT §33).
+  email         String?
+  phone         String?
+
+  membershipStatus MembershipStatus @default(VISITOR)
+  birthdate        DateTime?
+  tags             String[]         @default([])
+  notes            String?
+
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  household         Household?           @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  campus            Website?             @relation(fields: [campusWebsiteId], references: [id], onDelete: SetNull)
+  relationshipsFrom PersonRelationship[] @relation("PersonRelationshipFrom")
+  relationshipsTo   PersonRelationship[] @relation("PersonRelationshipTo")
+
+  @@index([organizationId])
+  @@index([organizationId, lastName])
+  @@index([householdId])
+  @@index([campusWebsiteId])
+}
+
+model PersonRelationship {
+  id              String                 @id @default(cuid())
+  organizationId  String
+  personId        String
+  relatedPersonId String
+  type            PersonRelationshipType
+  createdAt       DateTime               @default(now())
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  person        Person       @relation("PersonRelationshipFrom", fields: [personId], references: [id], onDelete: Cascade)
+  relatedPerson Person       @relation("PersonRelationshipTo", fields: [relatedPersonId], references: [id], onDelete: Cascade)
+
+  // One row per directed (person, related, type) triple -- addRelationship writes the
+  // inverse row separately so both people see the tie.
+  @@unique([personId, relatedPersonId, type])
+  @@index([organizationId])
+  @@index([personId])
+  @@index([relatedPersonId])
 }

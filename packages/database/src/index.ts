@@ -20,3 +20,8 @@ export * as billingService from "./services/billing-service";
 export * as bulkJobService from "./services/bulk-job-service";
 export * as accessCodeService from "./services/access-code-service";
 export * as demoRequestService from "./services/demo-request-service";
+export * as peopleService from "./services/people-service";
+
+export * as peoplePermissions from "./authz/people-permissions";
+export type { PeopleAction } from "./authz/people-permissions";
+export { personDisplayName, inverseRelationshipType } from "./people/helpers";
