@@ -48,6 +48,7 @@ const notifyFormSubmission = {
 export const HANDLERS: HandlerRegistry = {
   FormSubmitted: [notifyFormSubmission, workflowTriggerHandler],
   PersonCreated: [workflowTriggerHandler],
+  EventRegistered: [workflowTriggerHandler],
 };
 
 /** Drain due outbox events once, using the app's handler registry. */

@@ -43,6 +43,8 @@ export const TENANT_SCOPED_MODELS = new Set([
   "JourneyMilestone",
   "JourneyEnrollment",
   "JourneyMilestoneCompletion",
+  "Event",
+  "EventRegistration",
 ]);
 
 const FIND_UNIQUE_OPS = new Set(["findUnique", "findUniqueOrThrow"]);

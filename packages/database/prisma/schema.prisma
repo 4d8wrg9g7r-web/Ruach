@@ -210,6 +210,8 @@ model Organization {
   journeyMilestones       JourneyMilestone[]
   journeyEnrollments      JourneyEnrollment[]
   journeyMilestoneCompletions JourneyMilestoneCompletion[]
+  events                  Event[]
+  eventRegistrations      EventRegistration[]
 }
 
 enum CategorizationMode {
@@ -273,6 +275,7 @@ model Website {
   prayerRequests PrayerRequest[]
   people         Person[]
   groups         Group[]
+  events         Event[]
 
   @@index([organizationId])
 }
@@ -944,6 +947,7 @@ model Person {
   workflowRuns      WorkflowRun[]
   tasks             Task[]
   journeyEnrollments JourneyEnrollment[]
+  eventRegistrations EventRegistration[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -1462,4 +1466,84 @@ model JourneyMilestoneCompletion {
   @@unique([enrollmentId, milestoneId])
   @@index([organizationId])
   @@index([enrollmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Events & Registrations
+//
+// The canonical Event primitive (BLUEPRINT §13; Foundation checklist "canonical event
+// primitive and recurrence strategy"). One event object drives the staff calendar, the
+// public /e/<publicId> page, and registrations. Recurrence strategy: compute-on-read --
+// the rule lives on the Event (recurrence/interval/until) and the pure expandOccurrences
+// helper derives occurrence dates; occurrence ROWS materialize later when Check-In needs
+// per-occurrence attendance. Registrations compose Person (match-or-create, like Forms)
+// and emit EventRegistered atomically for workflow triggers. See docs/domain/events.md.
+// ---------------------------------------------------------------------------
+
+enum EventRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum EventRegistrationStatus {
+  REGISTERED
+  CANCELLED
+}
+
+model Event {
+  id             String          @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  location       String?
+  startAt        DateTime
+  endAt          DateTime?
+  allDay         Boolean         @default(false)
+  recurrence     EventRecurrence @default(NONE)
+  recurrenceInterval Int         @default(1)
+  recurrenceUntil    DateTime?
+  // null = unlimited. Counted over REGISTERED registrations only.
+  capacity       Int?
+  isPublished    Boolean         @default(false)
+  // Public URL key -- same bootstrapping boundary as forms/widgets/prayer walls.
+  publicId       String          @unique @default(cuid())
+  // Home campus -- reuses the Website-as-campus convention.
+  campusWebsiteId String?
+  archivedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campus        Website?            @relation(fields: [campusWebsiteId], references: [id], onDelete: SetNull)
+  registrations EventRegistration[]
+
+  @@index([organizationId, startAt])
+  @@index([organizationId])
+  @@index([campusWebsiteId])
+}
+
+model EventRegistration {
+  id             String                  @id @default(cuid())
+  organizationId String
+  eventId        String
+  // Matched/created Person. SetNull: registration history survives person deletion; the
+  // denormalized name/email keep the row meaningful on its own.
+  personId       String?
+  name           String
+  email          String?
+  status         EventRegistrationStatus @default(REGISTERED)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  person       Person?      @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  // Idempotent per person per event (enforced when a person is linked).
+  @@unique([eventId, personId])
+  @@index([organizationId])
+  @@index([eventId])
+  @@index([personId])
 }

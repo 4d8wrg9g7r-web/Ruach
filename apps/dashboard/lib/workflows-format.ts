@@ -3,6 +3,7 @@ type BadgeTone = "success" | "warning" | "danger" | "neutral" | "info";
 export const TRIGGER_OPTIONS: { value: string; label: string }[] = [
   { value: "FormSubmitted", label: "Form submitted" },
   { value: "PersonCreated", label: "Person created" },
+  { value: "EventRegistered", label: "Event registration received" },
 ];
 
 export function triggerLabel(trigger: string): string {

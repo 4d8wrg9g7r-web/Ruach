@@ -50,6 +50,9 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
   // Build a context hint so condition paths / {{placeholders}} are discoverable. When the
   // trigger is narrowed to one form, list its actual field ids.
   let contextHint = "Available paths: firstName, lastName, email, membershipStatus";
+  if (workflow.trigger === "EventRegistered") {
+    contextHint = "Available paths: eventId, eventTitle, registrantName, registrantEmail — narrow to one event with a condition on eventId";
+  }
   if (workflow.trigger === "FormSubmitted") {
     contextHint = "Available paths: submitterName, submitterEmail, formTitle, answers.<fieldId>";
     if (workflow.triggerFormId) {

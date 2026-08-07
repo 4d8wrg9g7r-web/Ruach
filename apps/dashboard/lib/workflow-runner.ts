@@ -142,6 +142,33 @@ export const workflowTriggerHandler = {
       return;
     }
 
+    if (event.type === "EventRegistered") {
+      const payload = event.payload as {
+        eventId: string;
+        eventTitle: string;
+        registrationId: string;
+        registrantName: string;
+        registrantEmail: string | null;
+        personId: string | null;
+      };
+      await workflowService.processTrigger(
+        {
+          organizationId: event.organizationId,
+          trigger: "EventRegistered",
+          eventId: event.id,
+          personId: payload.personId,
+          context: {
+            eventId: payload.eventId,
+            eventTitle: payload.eventTitle,
+            registrantName: payload.registrantName,
+            registrantEmail: payload.registrantEmail ?? "",
+          },
+        },
+        EXECUTORS,
+      );
+      return;
+    }
+
     if (event.type === "PersonCreated") {
       const payload = event.payload as PersonCreatedPayload;
       await workflowService.processTrigger(
