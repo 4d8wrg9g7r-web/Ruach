@@ -50,8 +50,8 @@ export default function LocationsPage() {
                     sizes="(max-width: 640px) 100vw, 50vw"
                     className="transition-transform duration-[1400ms] ease-aperture group-hover:scale-[1.05]"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink/50 to-transparent" />
-                  <h2 className="absolute bottom-5 left-5 font-serif text-3xl text-paper">{loc.city}</h2>
+                  <div className="absolute inset-0 bg-gradient-to-t from-shade/50 to-transparent" />
+                  <h2 className="absolute bottom-5 left-5 font-serif text-3xl text-chalk">{loc.city}</h2>
                 </div>
                 <p className="mt-4 max-w-md text-[0.92rem] leading-relaxed text-charcoal/70">{loc.intro}</p>
               </Link>

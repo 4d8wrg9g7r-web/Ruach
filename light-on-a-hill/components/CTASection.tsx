@@ -25,10 +25,10 @@ export function CTASection({
   secondaryLabel?: string;
 }) {
   return (
-    <section className="grain relative flex min-h-[85vh] items-center overflow-hidden bg-ink text-paper">
+    <section className="grain relative flex min-h-[85vh] items-center overflow-hidden bg-shade text-chalk">
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[120vmin] w-[120vmin] -translate-x-1/2 -translate-y-1/2 text-paper/[0.05]"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[120vmin] w-[120vmin] -translate-x-1/2 -translate-y-1/2 text-chalk/[0.05]"
         initial={{ rotate: 0, opacity: 0 }}
         whileInView={{ rotate: 20, opacity: 1 }}
         viewport={{ once: true }}
@@ -50,14 +50,14 @@ export function CTASection({
             href={primaryHref}
             onClick={() => track("availability_click", { cta: primaryLabel })}
             data-cursor="explore"
-            className="group inline-flex items-center gap-3 rounded-full bg-paper px-8 py-4 font-sans text-[0.72rem] uppercase tracking-label text-ink transition-transform duration-500 ease-aperture hover:scale-[1.03]"
+            className="group inline-flex items-center gap-3 rounded-full bg-chalk px-8 py-4 font-sans text-[0.72rem] uppercase tracking-label text-shade transition-transform duration-500 ease-aperture hover:scale-[1.03]"
           >
             {primaryLabel}
             <span className="transition-transform duration-500 ease-aperture group-hover:translate-x-1">&rarr;</span>
           </Link>
           <Link
             href={secondaryHref}
-            className="inline-flex items-center gap-2 border-b border-paper/40 pb-1 font-sans text-[0.72rem] uppercase tracking-label text-paper/85 transition-colors hover:border-paper hover:text-paper"
+            className="inline-flex items-center gap-2 border-b border-chalk/40 pb-1 font-sans text-[0.72rem] uppercase tracking-label text-chalk/85 transition-colors hover:border-chalk hover:text-chalk"
           >
             {secondaryLabel}
           </Link>

@@ -15,12 +15,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        paper: "#F4F2ED", // warm white — primary light surface
-        surface: "#ECE9E2", // soft raised surface
-        ink: "#111111", // near black — primary text / dark sections
-        charcoal: "#252525",
-        mist: "#A7A39B", // warm muted gray — secondary text
-        champagne: "#BDA77C", // accent — use sparingly
+        // Themed tokens (Day / Night / Sepia) — RGB triplets live in globals.css
+        paper: "rgb(var(--t-ground) / <alpha-value>)", // page ground
+        surface: "rgb(var(--t-surface) / <alpha-value>)", // raised surface
+        ink: "rgb(var(--t-strong) / <alpha-value>)", // primary text
+        charcoal: "rgb(var(--t-strong2) / <alpha-value>)",
+        mist: "rgb(var(--t-muted) / <alpha-value>)", // secondary text
+        champagne: "rgb(var(--t-accent) / <alpha-value>)", // accent — sparingly
+        // Constants for cinematic dark sections + photography overlays,
+        // deliberately unaffected by the theme toggle.
+        shade: "#111111",
+        chalk: "#F4F2ED",
       },
       fontFamily: {
         serif: ["var(--font-serif)", "Cormorant Garamond", "Georgia", "serif"],

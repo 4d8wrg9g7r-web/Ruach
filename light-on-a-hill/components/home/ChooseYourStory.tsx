@@ -78,8 +78,8 @@ function StoryBlock({ story, variant }: { story: Story; variant: "wide" | "tall"
             sizes={variant === "wide" ? "100vw" : "50vw"}
             className="transition-transform duration-[1400ms] ease-aperture group-hover:scale-[1.05]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink/40 to-transparent" />
-          <span className="absolute left-5 top-5 font-sans text-[0.62rem] uppercase tracking-label text-paper mix-blend-difference">
+          <div className="absolute inset-0 bg-gradient-to-t from-shade/40 to-transparent" />
+          <span className="absolute left-5 top-5 font-sans text-[0.62rem] uppercase tracking-label text-chalk mix-blend-difference">
             {story.label}
           </span>
         </div>

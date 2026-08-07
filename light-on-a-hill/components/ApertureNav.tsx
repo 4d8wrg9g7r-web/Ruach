@@ -9,6 +9,7 @@ import { PRIMARY_NAV } from "@/content/navigation";
 import { IMAGES, objectPosition, src } from "@/content/images";
 import { SITE } from "@/content/site";
 import { track } from "@/lib/analytics";
+import { ThemeToggle } from "./ThemeToggle";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -85,6 +86,18 @@ export function ApertureNav() {
     };
   }, []);
 
+  // Scrolling inside the open menu stops the iris down; it relaxes back open.
+  // Wheel on desktop, list scroll on mobile — both feed the same pulse.
+  const [scrollPulse, setScrollPulse] = useState(0);
+  const pulseTimer = useRef<number>(0);
+  const pulse = useCallback((delta: number) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setScrollPulse((p) => Math.min(1, Math.max(p * 0.7, Math.abs(delta) / 260)));
+    window.clearTimeout(pulseTimer.current);
+    pulseTimer.current = window.setTimeout(() => setScrollPulse(0), 240);
+  }, []);
+  useEffect(() => () => window.clearTimeout(pulseTimer.current), []);
+
   // Scroll lock + focus management + Escape + focus trap while open.
   useEffect(() => {
     if (!open) return;
@@ -151,7 +164,7 @@ export function ApertureNav() {
       <header className="pointer-events-none fixed inset-x-0 top-0 z-[120] flex items-start justify-between px-5 py-5 sm:px-8 sm:py-6 mix-blend-difference">
         <Link
           href="/"
-          className="pointer-events-auto font-sans text-[0.72rem] font-medium uppercase tracking-label text-paper transition-opacity hover:opacity-70"
+          className="pointer-events-auto font-sans text-[0.72rem] font-medium uppercase tracking-label text-chalk transition-opacity hover:opacity-70"
         >
           {SITE.wordmark}
         </Link>
@@ -165,10 +178,10 @@ export function ApertureNav() {
           aria-expanded={open}
           aria-haspopup="dialog"
           data-cursor-ring="lg"
-          className="pointer-events-auto -m-2 flex items-center gap-3 p-2 text-paper"
+          className="pointer-events-auto -m-2 flex items-center gap-3 p-2 text-chalk"
         >
           <motion.span
-            className="hidden font-sans text-[0.6rem] uppercase tracking-label text-paper/80 sm:inline"
+            className="hidden font-sans text-[0.6rem] uppercase tracking-label text-chalk/80 sm:inline"
             animate={{ opacity: hovered || open ? 1 : 0, x: hovered || open ? 0 : 6 }}
             transition={{ duration: 0.45, ease: EASE }}
           >
@@ -203,6 +216,7 @@ export function ApertureNav() {
               backdropFilter: "blur(14px) saturate(0.6)",
               WebkitBackdropFilter: "blur(14px) saturate(0.6)",
             }}
+            onWheel={(e) => pulse(e.deltaY)}
           >
             {/* vignette over the defocused page beneath */}
             <div
@@ -225,11 +239,13 @@ export function ApertureNav() {
                 exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.3, ease: EASE } }}
               >
                 <ApertureLens
-                  angle={phase === "exiting" ? SEALED : OPEN + (active % 3) * 2.5}
-                  ringRotate={24 + active * 4}
+                  angle={
+                    phase === "exiting" ? SEALED : OPEN + (active % 3) * 2.5 - scrollPulse * 26
+                  }
+                  ringRotate={24 + active * 4 + scrollPulse * 6}
                   arcs
                   progress={{ index: active, total: PRIMARY_NAV.length }}
-                  duration={phase === "exiting" ? 0.42 : 0.8}
+                  duration={phase === "exiting" ? 0.42 : scrollPulse > 0 ? 0.3 : 0.8}
                   image={{
                     src: src(activeImg, 1000),
                     alt: activeImg.alt,
@@ -247,7 +263,7 @@ export function ApertureNav() {
                   transition={{ duration: 0.8, ease: EASE, times: [0, 0.45, 1] }}
                 />
                 {/* index numeral above the lens */}
-                <div className="absolute -top-9 left-1/2 -translate-x-1/2 font-sans text-[0.62rem] tabular-nums tracking-micro text-paper/60">
+                <div className="absolute -top-9 left-1/2 -translate-x-1/2 font-sans text-[0.62rem] tabular-nums tracking-micro text-chalk/60">
                   <AnimatePresence mode="popLayout">
                     <motion.span
                       key={activeItem.index}
@@ -260,7 +276,7 @@ export function ApertureNav() {
                       {activeItem.index}
                     </motion.span>
                   </AnimatePresence>
-                  <span className="text-paper/30"> / {String(PRIMARY_NAV.length).padStart(2, "0")}</span>
+                  <span className="text-chalk/30"> / {String(PRIMARY_NAV.length).padStart(2, "0")}</span>
                 </div>
               </motion.div>
               </div>
@@ -298,7 +314,7 @@ export function ApertureNav() {
                         >
                           <span
                             className={`font-sans text-[0.62rem] tabular-nums tracking-micro transition-colors duration-500 ${
-                              isActive ? "text-champagne" : "text-paper/35"
+                              isActive ? "text-champagne" : "text-chalk/35"
                             }`}
                           >
                             {item.index}
@@ -323,7 +339,7 @@ export function ApertureNav() {
                               animate={{ opacity: 1, height: "auto" }}
                               exit={{ opacity: 0, height: 0 }}
                               transition={{ duration: 0.4, ease: EASE }}
-                              className="overflow-hidden pl-[2.1rem] font-sans text-[0.6rem] uppercase tracking-micro text-paper/45"
+                              className="overflow-hidden pl-[2.1rem] font-sans text-[0.6rem] uppercase tracking-micro text-chalk/45"
                             >
                               {item.index} — {item.hint}
                             </motion.p>
@@ -346,17 +362,18 @@ export function ApertureNav() {
 
               {/* footer strip */}
               <motion.div
-                className="absolute inset-x-[7vw] bottom-8 flex items-center justify-between font-sans text-[0.62rem] uppercase tracking-label text-paper/40"
+                className="absolute inset-x-[7vw] bottom-8 flex items-center justify-between font-sans text-[0.62rem] uppercase tracking-label text-chalk/40"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: phase === "exiting" ? 0 : 1 }}
                 transition={{ delay: 0.55, duration: 0.5 }}
               >
-                <a href={`mailto:${SITE.email}`} onClick={() => track("email_click")} className="hover:text-paper/80">
+                <a href={`mailto:${SITE.email}`} onClick={() => track("email_click")} className="hover:text-chalk/80">
                   {SITE.email}
                 </a>
+                <ThemeToggle className="text-chalk/70" />
                 <span>{SITE.region} + Beyond</span>
                 {SITE.social.instagram ? (
-                  <a href={SITE.social.instagram} target="_blank" rel="noreferrer" className="hover:text-paper/80">
+                  <a href={SITE.social.instagram} target="_blank" rel="noreferrer" className="hover:text-chalk/80">
                     Instagram
                   </a>
                 ) : (
@@ -375,21 +392,30 @@ export function ApertureNav() {
                 style={{ width: "min(64vw, 38vh)", aspectRatio: "1" }}
               >
                 <ApertureLens
-                  angle={phase === "exiting" ? SEALED : OPEN}
-                  ringRotate={20 + active * 4}
+                  angle={phase === "exiting" ? SEALED : OPEN - scrollPulse * 26}
+                  ringRotate={20 + active * 4 + scrollPulse * 6}
                   progress={{ index: active, total: PRIMARY_NAV.length }}
-                  duration={phase === "exiting" ? 0.42 : 0.8}
+                  duration={phase === "exiting" ? 0.42 : scrollPulse > 0 ? 0.3 : 0.8}
                   image={{ src: src(activeImg, 700), alt: activeImg.alt, position: objectPosition(activeImg) }}
                   className="h-full w-full"
                 />
               </motion.div>
 
-              <nav className="no-scrollbar mt-6 flex-1 overflow-y-auto px-8 pb-10" aria-label="Primary">
+              <nav
+                className="no-scrollbar mt-6 flex-1 overflow-y-auto px-8 pb-6"
+                aria-label="Primary"
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  const last = Number(el.dataset.lastScroll ?? el.scrollTop);
+                  pulse((el.scrollTop - last) * 2.2);
+                  el.dataset.lastScroll = String(el.scrollTop);
+                }}
+              >
                 <ul>
                   {PRIMARY_NAV.map((item, i) => (
                     <motion.li
                       key={item.href}
-                      className="border-b border-paper/10"
+                      className="border-b border-chalk/10"
                       initial={{ opacity: 0, y: 14 }}
                       animate={{
                         opacity: phase === "exiting" ? 0 : 1,
@@ -410,13 +436,13 @@ export function ApertureNav() {
                       >
                         <span
                           className={`font-sans text-[0.6rem] tabular-nums tracking-micro ${
-                            i === active ? "text-champagne" : "text-paper/35"
+                            i === active ? "text-champagne" : "text-chalk/35"
                           }`}
                         >
                           {item.index}
                         </span>
                         <span
-                          className="font-serif text-paper"
+                          className="font-serif text-chalk"
                           style={{ fontSize: "clamp(26px, 6.4vw, 34px)", opacity: i === active ? 1 : 0.62 }}
                         >
                           {item.label}
@@ -426,6 +452,9 @@ export function ApertureNav() {
                   ))}
                 </ul>
               </nav>
+              <div className="flex justify-center pb-8 pt-2">
+                <ThemeToggle className="text-chalk/70" />
+              </div>
             </div>
           </motion.div>
         )}

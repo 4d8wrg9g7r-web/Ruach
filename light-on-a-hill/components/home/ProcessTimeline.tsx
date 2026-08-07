@@ -16,7 +16,7 @@ const STEPS = [
  */
 export function ProcessTimeline() {
   return (
-    <section className="bg-ink px-5 py-28 text-paper sm:px-8 sm:py-36">
+    <section className="bg-shade px-5 py-28 text-chalk sm:px-8 sm:py-36">
       <div className="mx-auto max-w-editorial">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -27,15 +27,15 @@ export function ProcessTimeline() {
           </div>
           <Link
             href="/the-experience"
-            className="inline-flex items-center gap-2 border-b border-paper/30 pb-1 font-sans text-[0.72rem] uppercase tracking-label transition-colors hover:border-paper"
+            className="inline-flex items-center gap-2 border-b border-chalk/30 pb-1 font-sans text-[0.72rem] uppercase tracking-label transition-colors hover:border-chalk"
           >
             See the experience &rarr;
           </Link>
         </div>
 
-        <ol className="mt-16 border-t border-paper/10">
+        <ol className="mt-16 border-t border-chalk/10">
           {STEPS.map((step) => (
-            <li key={step.n} className="border-b border-paper/10">
+            <li key={step.n} className="border-b border-chalk/10">
               <motion.div
                 className="grid grid-cols-[auto_1fr] items-start gap-6 py-9 sm:grid-cols-[6rem_1fr_2fr] sm:gap-10"
                 initial="rest"
@@ -62,7 +62,7 @@ export function ProcessTimeline() {
                   ))}
                 </div>
                 <h3 className="self-center font-serif text-2xl sm:text-3xl">{step.title}</h3>
-                <p className="max-w-md text-[0.95rem] leading-relaxed text-paper/70 sm:self-center">
+                <p className="max-w-md text-[0.95rem] leading-relaxed text-chalk/70 sm:self-center">
                   {step.body}
                 </p>
               </motion.div>

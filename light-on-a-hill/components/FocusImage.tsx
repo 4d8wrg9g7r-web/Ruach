@@ -66,7 +66,7 @@ export function FocusImage({
       )}
 
       {meta && (
-        <div className="pointer-events-none absolute bottom-4 left-4 flex items-center gap-3 font-sans text-[0.62rem] uppercase tracking-label text-paper mix-blend-difference">
+        <div className="pointer-events-none absolute bottom-4 left-4 flex items-center gap-3 font-sans text-[0.62rem] uppercase tracking-label text-chalk mix-blend-difference">
           {meta.index && <span className="tabular-nums text-champagne">{meta.index}</span>}
           {meta.label && <span>{meta.label}</span>}
         </div>

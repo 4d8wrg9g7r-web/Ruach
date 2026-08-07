@@ -2,11 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme tokens — Day (default) / Night / Sepia, RGB triplets for Tailwind
+   alpha modifiers. Cinematic dark sections use the constant `shade`/`chalk`
+   colors and are intentionally NOT themed. */
 :root {
+  --t-ground: 244 242 237;
+  --t-surface: 236 233 226;
+  --t-strong: 17 17 17;
+  --t-strong2: 37 37 37;
+  --t-muted: 167 163 155;
+  --t-accent: 189 167 124;
+
   --paper: #f4f2ed;
   --ink: #111111;
   --champagne: #bda77c;
   --ease-aperture: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-theme="night"] {
+  --t-ground: 19 18 16;
+  --t-surface: 28 26 24;
+  --t-strong: 236 233 226;
+  --t-strong2: 213 209 199;
+  --t-muted: 139 134 124;
+  --t-accent: 189 167 124;
+}
+
+:root[data-theme="sepia"] {
+  --t-ground: 236 224 200;
+  --t-surface: 227 211 181;
+  --t-strong: 45 31 17;
+  --t-strong2: 76 57 35;
+  --t-muted: 141 118 86;
+  --t-accent: 158 117 72;
+}
+
+/* Sepia tones the photography itself — a gentle print-like warmth. */
+:root[data-theme="sepia"] img {
+  filter: sepia(0.34) saturate(0.92) contrast(0.98);
+}
+
+html {
+  transition: background-color 0.5s var(--ease-aperture);
 }
 
 @layer base {
@@ -17,15 +54,16 @@
   }
 
   body {
-    background-color: var(--paper);
-    color: var(--ink);
+    background-color: rgb(var(--t-ground));
+    color: rgb(var(--t-strong));
     font-family: var(--font-sans), system-ui, sans-serif;
     overflow-x: hidden;
+    transition: background-color 0.5s var(--ease-aperture), color 0.5s var(--ease-aperture);
   }
 
   ::selection {
-    background: var(--ink);
-    color: var(--paper);
+    background: rgb(var(--t-strong));
+    color: rgb(var(--t-ground));
   }
 
   /* Hide the native cursor on fine-pointer devices; the custom cursor takes over. */
@@ -37,7 +75,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--champagne);
+    outline: 2px solid rgb(var(--t-accent));
     outline-offset: 3px;
   }
 }

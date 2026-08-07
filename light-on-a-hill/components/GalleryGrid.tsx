@@ -80,7 +80,7 @@ export function GalleryGrid({ images }: { images: ImageKey[] }) {
             role="dialog"
             aria-modal="true"
             aria-label="Image viewer"
-            className="fixed inset-0 z-[150] flex items-center justify-center bg-ink/95 p-4 backdrop-blur-md sm:p-10"
+            className="fixed inset-0 z-[150] flex items-center justify-center bg-shade/95 p-4 backdrop-blur-md sm:p-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -90,7 +90,7 @@ export function GalleryGrid({ images }: { images: ImageKey[] }) {
               type="button"
               onClick={close}
               aria-label="Close viewer"
-              className="absolute right-5 top-5 font-sans text-[0.66rem] uppercase tracking-label text-paper/80 hover:text-paper"
+              className="absolute right-5 top-5 font-sans text-[0.66rem] uppercase tracking-label text-chalk/80 hover:text-chalk"
             >
               Close &times;
             </button>
@@ -101,7 +101,7 @@ export function GalleryGrid({ images }: { images: ImageKey[] }) {
                 move(-1);
               }}
               aria-label="Previous image"
-              className="absolute left-3 flex h-12 w-12 items-center justify-center rounded-full border border-paper/30 text-paper hover:bg-paper hover:text-ink sm:left-8"
+              className="absolute left-3 flex h-12 w-12 items-center justify-center rounded-full border border-chalk/30 text-chalk hover:bg-chalk hover:text-shade sm:left-8"
             >
               &larr;
             </button>
@@ -122,11 +122,11 @@ export function GalleryGrid({ images }: { images: ImageKey[] }) {
                 move(1);
               }}
               aria-label="Next image"
-              className="absolute right-3 flex h-12 w-12 items-center justify-center rounded-full border border-paper/30 text-paper hover:bg-paper hover:text-ink sm:right-8"
+              className="absolute right-3 flex h-12 w-12 items-center justify-center rounded-full border border-chalk/30 text-chalk hover:bg-chalk hover:text-shade sm:right-8"
             >
               &rarr;
             </button>
-            <span className="absolute bottom-6 font-sans text-[0.66rem] tabular-nums tracking-label text-paper/70">
+            <span className="absolute bottom-6 font-sans text-[0.66rem] tabular-nums tracking-label text-chalk/70">
               {String(open + 1).padStart(2, "0")} / {String(images.length).padStart(2, "0")}
             </span>
           </motion.div>

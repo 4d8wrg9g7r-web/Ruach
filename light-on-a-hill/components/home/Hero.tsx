@@ -13,11 +13,11 @@ export function Hero() {
   const fade = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
-    <section ref={ref} className="relative h-[100svh] w-full overflow-hidden bg-ink" data-cursor="explore">
+    <section ref={ref} className="relative h-[100svh] w-full overflow-hidden bg-shade" data-cursor="explore">
       <motion.div style={{ y }} className="absolute inset-0 h-[118%]">
         <StudioImage image="heroWedding" priority sizes="100vw" widthHint={2000} />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/50 via-ink/10 to-ink/70" />
-        <div className="absolute inset-0 bg-ink/10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-shade/50 via-shade/10 to-shade/70" />
+        <div className="absolute inset-0 bg-shade/10" />
       </motion.div>
 
       <motion.div
@@ -26,7 +26,7 @@ export function Hero() {
       >
         <div className="max-w-editorial">
           <motion.p
-            className="eyebrow text-paper/80"
+            className="eyebrow text-chalk/80"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
@@ -34,7 +34,7 @@ export function Hero() {
             {SITE.region} &middot; Wedding, Portrait &amp; Lifestyle
           </motion.p>
 
-          <h1 className="mt-5 max-w-5xl text-balance font-serif text-display-xl text-paper">
+          <h1 className="mt-5 max-w-5xl text-balance font-serif text-display-xl text-chalk">
             {["Your story deserves", "to feel this alive."].map((line, i) => (
               <span key={line} className="block overflow-hidden">
                 <motion.span
@@ -50,7 +50,7 @@ export function Hero() {
           </h1>
 
           <motion.p
-            className="mt-7 max-w-md text-[0.95rem] leading-relaxed text-paper/85"
+            className="mt-7 max-w-md text-[0.95rem] leading-relaxed text-chalk/85"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.8 }}
@@ -63,7 +63,7 @@ export function Hero() {
       {/* exploration cue + frame counter micro-detail */}
       <motion.div
         style={{ opacity: fade }}
-        className="absolute bottom-7 right-5 z-10 flex items-center gap-3 font-sans text-[0.62rem] uppercase tracking-label text-paper/80 sm:right-8"
+        className="absolute bottom-7 right-5 z-10 flex items-center gap-3 font-sans text-[0.62rem] uppercase tracking-label text-chalk/80 sm:right-8"
       >
         <span className="tabular-nums text-champagne">01 / 08</span>
         <span className="hidden sm:inline">Explore the work</span>

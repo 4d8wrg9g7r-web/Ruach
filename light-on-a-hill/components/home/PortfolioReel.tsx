@@ -32,7 +32,7 @@ export function PortfolioReel() {
       {/* Desktop: scroll-driven horizontal reel */}
       <section
         ref={ref}
-        className="relative hidden bg-ink text-paper lg:block"
+        className="relative hidden bg-shade text-chalk lg:block"
         style={{ height: `${FRAMES.length * 55}vh` }}
         aria-label="Portfolio reel"
       >
@@ -49,7 +49,7 @@ export function PortfolioReel() {
       </section>
 
       {/* Touch: native snap-scroll strip */}
-      <section className="bg-ink py-14 text-paper lg:hidden" aria-label="Portfolio reel">
+      <section className="bg-shade py-14 text-chalk lg:hidden" aria-label="Portfolio reel">
         <div className="mb-5 px-5 font-sans text-[0.62rem] uppercase tracking-label text-mist">Selected Work</div>
         <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2">
           {FRAMES.map((f) => (
@@ -65,7 +65,7 @@ function ReelFrame({ frame, className }: { frame: Frame; className?: string }) {
   const img = IMAGES[frame.image];
   return (
     <figure
-      className={`crop-frame group relative overflow-hidden text-paper ${className ?? ""}`}
+      className={`crop-frame group relative overflow-hidden text-chalk ${className ?? ""}`}
       data-cursor="view"
       onClick={() => track("portfolio_view", { frame: frame.type })}
     >
@@ -80,7 +80,7 @@ function ReelFrame({ frame, className }: { frame: Frame; className?: string }) {
       <figcaption className="absolute bottom-4 left-4 flex items-center gap-3 font-sans text-[0.62rem] uppercase tracking-label mix-blend-difference">
         <span className="tabular-nums text-champagne">{frame.index}</span>
         <span>{frame.type}</span>
-        <span className="text-paper/70">{frame.place}</span>
+        <span className="text-chalk/70">{frame.place}</span>
       </figcaption>
     </figure>
   );

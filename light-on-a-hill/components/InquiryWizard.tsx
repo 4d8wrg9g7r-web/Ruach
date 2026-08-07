@@ -120,7 +120,7 @@ export function InquiryWizard() {
   return (
     <div className="grid min-h-[80vh] grid-cols-1 lg:grid-cols-[0.85fr_1.15fr]">
       {/* Left: aperture progress rail */}
-      <aside className="grain relative flex flex-col justify-between overflow-hidden bg-ink px-5 py-14 text-paper sm:px-10 lg:py-20">
+      <aside className="grain relative flex flex-col justify-between overflow-hidden bg-shade px-5 py-14 text-chalk sm:px-10 lg:py-20">
         <div className="flex items-center gap-4">
           <ApertureIcon progress={progress} className="h-12 w-12" />
           <div>
@@ -153,7 +153,7 @@ export function InquiryWizard() {
             <span
               key={i}
               className={`h-[2px] flex-1 rounded-full transition-colors duration-500 ${
-                i <= step ? "bg-champagne" : "bg-paper/20"
+                i <= step ? "bg-champagne" : "bg-chalk/20"
               }`}
             />
           ))}
@@ -357,7 +357,7 @@ function Field({ id, label, children }: { id: string; label: string; children: R
 
 function Confirmation({ form }: { form: Form }) {
   return (
-    <section className="grain relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden bg-ink px-5 py-24 text-center text-paper">
+    <section className="grain relative flex min-h-[80vh] flex-col items-center justify-center overflow-hidden bg-shade px-5 py-24 text-center text-chalk">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -370,20 +370,20 @@ function Confirmation({ form }: { form: Form }) {
       <h1 className="mt-6 max-w-2xl text-balance font-serif text-display-md">
         Thank you, {form.name.split(" ")[0] || "friend"}. Your inquiry is in.
       </h1>
-      <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-paper/80">
+      <p className="mt-6 max-w-md text-[0.98rem] leading-relaxed text-chalk/80">
         I&rsquo;ll be in touch personally about your {form.shootType.toLowerCase()} — {SITE.responseTime.toLowerCase()}{" "}
         In the meantime, feel free to keep exploring the work.
       </p>
       <div className="mt-12 flex flex-wrap items-center justify-center gap-5">
         <Link
           href="/weddings"
-          className="rounded-full bg-paper px-7 py-3.5 font-sans text-[0.72rem] uppercase tracking-label text-ink transition-transform duration-500 ease-aperture hover:scale-[1.03]"
+          className="rounded-full bg-chalk px-7 py-3.5 font-sans text-[0.72rem] uppercase tracking-label text-shade transition-transform duration-500 ease-aperture hover:scale-[1.03]"
         >
           View the work
         </Link>
         <Link
           href="/journal"
-          className="border-b border-paper/40 pb-1 font-sans text-[0.72rem] uppercase tracking-label text-paper/85 hover:border-paper"
+          className="border-b border-chalk/40 pb-1 font-sans text-[0.72rem] uppercase tracking-label text-chalk/85 hover:border-chalk"
         >
           Read the journal
         </Link>

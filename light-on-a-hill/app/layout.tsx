@@ -46,6 +46,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>
       <head>
+        <script
+          // Apply the persisted theme before first paint — no flash of Day mode.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("loah-theme");if(t==="night"||t==="sepia")document.documentElement.dataset.theme=t;}catch(e){}})();`,
+          }}
+        />
         <JsonLd data={localBusinessJsonLd()} />
         {GTM_ID && (
           <script

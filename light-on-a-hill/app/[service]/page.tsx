@@ -89,13 +89,13 @@ export default async function ServicePage({ params }: { params: Promise<{ servic
       </section>
 
       {/* What's included + add-ons */}
-      <section className="bg-ink px-5 py-24 text-paper sm:px-8 sm:py-32">
+      <section className="bg-shade px-5 py-24 text-chalk sm:px-8 sm:py-32">
         <div className="mx-auto grid max-w-editorial gap-14 lg:grid-cols-2">
           <div>
             <p className="eyebrow mb-8 text-champagne">What&rsquo;s included</p>
             <ul className="space-y-4">
               {svc.includes.map((inc) => (
-                <li key={inc} className="flex gap-4 border-b border-paper/10 pb-4 text-[0.98rem] text-paper/85">
+                <li key={inc} className="flex gap-4 border-b border-chalk/10 pb-4 text-[0.98rem] text-chalk/85">
                   <span className="mt-1 text-champagne" aria-hidden>
                     &mdash;
                   </span>
@@ -109,7 +109,7 @@ export default async function ServicePage({ params }: { params: Promise<{ servic
               <p className="eyebrow mb-8 text-champagne">Thoughtful add-ons</p>
               <ul className="space-y-4">
                 {svc.addOns.map((a) => (
-                  <li key={a} className="flex gap-4 border-b border-paper/10 pb-4 text-[0.98rem] text-paper/70">
+                  <li key={a} className="flex gap-4 border-b border-chalk/10 pb-4 text-[0.98rem] text-chalk/70">
                     <span className="mt-1 text-champagne" aria-hidden>
                       +
                     </span>
