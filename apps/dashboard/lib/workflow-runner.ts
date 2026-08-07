@@ -1,0 +1,138 @@
+import {
+  formService,
+  formSubmissionService,
+  groupService,
+  interpolate,
+  peopleService,
+  workflowService,
+  type ClaimedEvent,
+  type ExecutorMap,
+} from "@ruach/database";
+import { getEmailProvider } from "@ruach/email";
+
+/**
+ * Workflow executors + trigger wiring live in the app (like outbox-worker.ts) because
+ * they perform external effects the data layer must not depend on. The engine — claiming,
+ * sequencing, waits, retries, version pinning, timeline — lives in workflowService; this
+ * file only supplies what each step type actually DOES and how trigger events map to a
+ * run context.
+ */
+
+export const EXECUTORS: ExecutorMap = {
+  // Interpolated so bodies can reference the trigger context: "Hi {{submitterName}}".
+  SEND_EMAIL: async (step, run) => {
+    if (step.type !== "SEND_EMAIL") throw new Error("wrong step type");
+    const provider = getEmailProvider();
+    await Promise.all(
+      step.to.map((to) =>
+        provider.sendEmail({
+          to,
+          subject: interpolate(step.subject, run.context),
+          text: interpolate(step.body, run.context),
+        }),
+      ),
+    );
+    return `Emailed ${step.to.join(", ")}`;
+  },
+
+  ADD_TO_GROUP: async (step, run) => {
+    if (step.type !== "ADD_TO_GROUP") throw new Error("wrong step type");
+    if (!run.personId) return "Skipped: run has no linked person";
+    const result = await groupService.addMember(run.organizationId, step.groupId, run.personId, step.role ?? "MEMBER");
+    if (!result.ok && result.reason !== "already_member") {
+      // at_capacity / not_found are real failures the timeline should surface (and retry
+      // may resolve at_capacity if someone leaves).
+      throw new Error(`Could not add person to group: ${result.reason}`);
+    }
+    return result.ok ? "Added to group" : "Already in group";
+  },
+
+  ADD_TAG: async (step, run) => {
+    if (step.type !== "ADD_TAG") throw new Error("wrong step type");
+    if (!run.personId) return "Skipped: run has no linked person";
+    const person = await peopleService.getPerson(run.organizationId, run.personId);
+    if (!person) throw new Error("Person not found");
+    if (person.tags.includes(step.tag)) return "Tag already present";
+    await peopleService.updatePerson(run.organizationId, run.personId, { tags: [...person.tags, step.tag] });
+    return `Tagged "${step.tag}"`;
+  },
+};
+
+interface FormSubmittedPayload {
+  formId: string;
+  submissionId: string;
+  version: number;
+  submitterEmail: string | null;
+  submitterName: string | null;
+}
+
+interface PersonCreatedPayload {
+  personId: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  membershipStatus: string;
+}
+
+/**
+ * Outbox handler that fans trigger events out to matching published workflows. Runs
+ * exactly once per event (outbox ProcessedEvent ledger). Context building happens here:
+ * FormSubmitted re-reads the submission for answers + the matched person (linked after
+ * the event's transaction), PersonCreated carries everything in its payload.
+ */
+export const workflowTriggerHandler = {
+  name: "workflow-trigger",
+  async run(event: ClaimedEvent) {
+    if (event.type === "FormSubmitted") {
+      const payload = event.payload as FormSubmittedPayload;
+      const [form, submission] = await Promise.all([
+        formService.getForm(event.organizationId, payload.formId),
+        formSubmissionService.getSubmission(event.organizationId, payload.submissionId),
+      ]);
+      if (!submission) return; // deleted before processing — nothing to trigger on
+      await workflowService.processTrigger(
+        {
+          organizationId: event.organizationId,
+          trigger: "FormSubmitted",
+          formId: payload.formId,
+          eventId: event.id,
+          personId: submission.personId,
+          context: {
+            formId: payload.formId,
+            formTitle: form?.title ?? "",
+            submitterName: payload.submitterName ?? "",
+            submitterEmail: payload.submitterEmail ?? "",
+            answers: submission.data ?? {},
+          },
+        },
+        EXECUTORS,
+      );
+      return;
+    }
+
+    if (event.type === "PersonCreated") {
+      const payload = event.payload as PersonCreatedPayload;
+      await workflowService.processTrigger(
+        {
+          organizationId: event.organizationId,
+          trigger: "PersonCreated",
+          eventId: event.id,
+          personId: payload.personId,
+          context: {
+            personId: payload.personId,
+            firstName: payload.firstName,
+            lastName: payload.lastName,
+            email: payload.email ?? "",
+            membershipStatus: payload.membershipStatus,
+          },
+        },
+        EXECUTORS,
+      );
+    }
+  },
+};
+
+/** Advance every due run (elapsed WAITs, due retries). The cron backstop. */
+export function drainWorkflowRuns(limit?: number) {
+  return workflowService.drainDueRuns(EXECUTORS, limit);
+}
