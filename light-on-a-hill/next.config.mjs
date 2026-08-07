@@ -8,6 +8,10 @@ const nextConfig = {
   // root to this directory so Next doesn't infer the outer pnpm workspace.
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
   images: {
+    // ARTIFACT_BUILD produces a build whose <img> tags carry their original src
+    // (no /_next/image indirection) so pages can be inlined into a single
+    // self-contained HTML file for preview artifacts.
+    unoptimized: process.env.ARTIFACT_BUILD === "1",
     formats: ["image/avif", "image/webp"],
     // Placeholder photography is served from Unsplash while the studio's real
     // galleries are wired into the CMS. Swap these remotePatterns for the final
