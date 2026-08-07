@@ -1,0 +1,215 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: system-ui, sans-serif;
+  --ease-atelier: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: #fbf8f3;
+    color: #272521;
+    font-feature-settings: "kern", "liga";
+  }
+
+  /* Editorial serif display, tuned for large sizes */
+  .font-serif {
+    font-feature-settings: "kern", "liga", "dlig";
+  }
+
+  ::selection {
+    background: rgba(168, 138, 90, 0.28);
+    color: #241c17;
+  }
+
+  :focus-visible {
+    outline: 2px solid #556b70;
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  /* Thin brass hairline used as a signature rule throughout the site */
+  .brass-rule {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(168, 138, 90, 0.75) 12%,
+      rgba(168, 138, 90, 0.75) 88%,
+      transparent
+    );
+  }
+
+  /* Small overline label */
+  .overline {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #7a6e60;
+  }
+
+  /* Editorial link with an animated brass underline */
+  .link-underline {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .link-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    height: 1px;
+    width: 100%;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s var(--ease-atelier);
+  }
+  .link-underline:hover::after {
+    transform: scaleX(1);
+  }
+  .link-underline .arrow {
+    transition: transform 0.4s var(--ease-atelier);
+  }
+  .link-underline:hover .arrow {
+    transform: translateX(4px);
+  }
+
+  /* Primary solid button (espresso) */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.95rem 1.9rem;
+    background: #241c17;
+    color: #f2eadf;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border: 1px solid #241c17;
+    transition: all 0.5s var(--ease-atelier);
+  }
+  .btn-primary:hover {
+    background: #3a2a21;
+    border-color: #3a2a21;
+    transform: translateY(-1px);
+  }
+
+  /* Ghost button (hairline) */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.95rem 1.9rem;
+    background: transparent;
+    color: #241c17;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    border: 1px solid rgba(58, 42, 33, 0.35);
+    transition: all 0.5s var(--ease-atelier);
+  }
+  .btn-ghost:hover {
+    border-color: #241c17;
+    background: rgba(168, 138, 90, 0.08);
+  }
+}
+
+@layer utilities {
+  /* Plaster / paper grounds built from layered radial washes */
+  .bg-plaster {
+    background-color: #f2eadf;
+    background-image: radial-gradient(
+        1200px 800px at 15% -10%,
+        rgba(255, 255, 255, 0.6),
+        transparent 60%
+      ),
+      radial-gradient(900px 700px at 100% 0%, rgba(219, 207, 187, 0.55), transparent 55%),
+      radial-gradient(1000px 900px at 50% 120%, rgba(219, 207, 187, 0.4), transparent 60%);
+  }
+  .bg-plaster-deep {
+    background-color: #e7ddce;
+    background-image: radial-gradient(
+        1000px 700px at 80% -10%,
+        rgba(251, 248, 243, 0.7),
+        transparent 55%
+      ),
+      radial-gradient(900px 800px at 0% 100%, rgba(203, 189, 165, 0.5), transparent 55%);
+  }
+  .bg-espresso-wash {
+    background-color: #241c17;
+    background-image: radial-gradient(
+        900px 600px at 20% 0%,
+        rgba(58, 42, 33, 0.9),
+        transparent 60%
+      ),
+      radial-gradient(800px 700px at 100% 100%, rgba(58, 42, 33, 0.7), transparent 55%);
+  }
+
+  /* Reveal-on-scroll. Only hidden when JS is active (html.js), so a no-JS or
+     crawler render shows all content immediately. The .is-visible class (added
+     by the IntersectionObserver) plays it in. */
+  .js .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 1s var(--ease-atelier), transform 1s var(--ease-atelier);
+    will-change: opacity, transform;
+  }
+  .js .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* Respect reduced-motion across every animated affordance */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
