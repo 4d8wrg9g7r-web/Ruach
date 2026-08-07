@@ -1,0 +1,31 @@
+{
+  "name": "light-on-a-hill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Light on a Hill Photography — bespoke editorial photography website. Standalone project, independent of the Ruach monorepo.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "framer-motion": "^12.23.0",
+    "next": "15.5.22",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "15.5.22",
+    "postcss": "^8.4.47",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.6.3"
+  }
+}
