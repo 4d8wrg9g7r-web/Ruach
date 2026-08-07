@@ -1,11 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { CheckCircle2 } from "lucide-react";
 import { auditService, formService, formSubmissionService, type FormField } from "@ruach/database";
 import { Card } from "../../../components/ui/Card";
 import { Input, Select, Textarea } from "../../../components/ui/Input";
 import { SubmitButton } from "../../../components/SubmitButton";
 import { checkRateLimit, getClientIp } from "../../../lib/rate-limit";
+import { drainOutbox } from "../../../lib/outbox-worker";
 
 /**
  * Public, unauthenticated form submission surface. Resolved entirely by the form's
@@ -40,6 +42,16 @@ async function submitFormAction(publicFormId: string, formData: FormData) {
     targetType: "FormDefinition",
     targetId: form.id,
     metadata: { version: form.version, personId: result.personId },
+  });
+
+  // Low-latency drain of the FormSubmitted event after the response is sent. The
+  // /api/cron/outbox route is the durable backstop if this best-effort pass is skipped.
+  after(async () => {
+    try {
+      await drainOutbox();
+    } catch (err) {
+      console.error("Opportunistic outbox drain failed (cron will retry):", err);
+    }
   });
 
   redirect(`/f/${publicFormId}?submitted=1`);

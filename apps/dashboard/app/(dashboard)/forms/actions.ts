@@ -56,11 +56,17 @@ export async function updateFormSettingsAction(formId: string, formData: FormDat
   const title = str(formData, "title");
   if (!title) throw new Error("Form title is required.");
 
+  const notificationEmails = str(formData, "notificationEmails")
+    .split(/[\n,]/)
+    .map((e) => e.trim())
+    .filter(Boolean);
+
   const updated = await formService.updateFormSettings(organization.id, formId, {
     title,
     description: str(formData, "description") || null,
     confirmationMessage: str(formData, "confirmationMessage") || undefined,
     createPeople: formData.get("createPeople") === "on",
+    notificationEmails,
   });
   if (!updated) throw new Error("Form not found.");
   await audit(organization.id, "form.updated", formId);

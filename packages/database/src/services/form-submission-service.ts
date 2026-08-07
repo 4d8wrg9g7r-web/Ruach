@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
-import { tenantDb } from "../client";
+import { rawDb, tenantDb } from "../client";
 import { extractPersonInput, validateSubmission } from "../forms/schema";
 import { personDisplayName } from "../people/helpers";
+import { emit } from "./outbox-service";
 import { createPerson, findByEmail } from "./people-service";
 import type { PublicForm } from "./form-service";
 
@@ -24,15 +25,32 @@ export async function submitForm(form: PublicForm, rawData: Record<string, unkno
   const personInput = extractPersonInput(form.fields, values);
   const submitterName = personDisplayName({ firstName: personInput.firstName, lastName: personInput.lastName }) || null;
 
-  const submission = await tenantDb.formSubmission.create({
-    data: {
+  // Store the submission and record the FormSubmitted domain event in the SAME
+  // transaction (BLUEPRINT §38) -- external side effects (staff notification) are then
+  // performed after commit by the outbox worker, never inline here.
+  const submission = await rawDb.$transaction(async (tx) => {
+    const created = await tx.formSubmission.create({
+      data: {
+        organizationId: form.organizationId,
+        formId: form.id,
+        version: form.version,
+        data: values as unknown as Prisma.InputJsonValue,
+        submitterEmail: personInput.email ?? null,
+        submitterName,
+      },
+    });
+    await emit(tx, {
       organizationId: form.organizationId,
-      formId: form.id,
-      version: form.version,
-      data: values as unknown as Prisma.InputJsonValue,
-      submitterEmail: personInput.email ?? null,
-      submitterName,
-    },
+      type: "FormSubmitted",
+      payload: {
+        formId: form.id,
+        submissionId: created.id,
+        version: form.version,
+        submitterEmail: personInput.email ?? null,
+        submitterName,
+      },
+    });
+    return created;
   });
 
   let personId: string | null = null;

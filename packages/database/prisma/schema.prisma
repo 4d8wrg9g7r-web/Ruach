@@ -196,6 +196,8 @@ model Organization {
   forms                   FormDefinition[]
   formVersions            FormVersion[]
   formSubmissions         FormSubmission[]
+  outboxEvents            OutboxEvent[]
+  processedEvents         ProcessedEvent[]
 }
 
 enum CategorizationMode {
@@ -1070,6 +1072,9 @@ model FormDefinition {
   // When true, a submission with mapped name/email fields matches an existing Person by
   // email (case-insensitive, within org) or creates a new one.
   createPeople   Boolean    @default(true)
+  // Staff addresses notified on each submission. Notification is delivered by the outbox
+  // worker (FormSubmitted handler), not inline -- an empty list means no notification.
+  notificationEmails String[] @default([])
   archivedAt     DateTime?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -1122,4 +1127,59 @@ model FormSubmission {
   @@index([organizationId])
   @@index([formId])
   @@index([personId])
+}
+
+// ---------------------------------------------------------------------------
+// Transactional outbox
+//
+// Domain facts recorded in the SAME transaction as the state change that produced them
+// (BLUEPRINT §38), then processed after commit by a durable worker with retries and
+// per-handler idempotency. This is the foundation the workflow engine (§39) will run on.
+// These are infrastructure tables, touched only by outbox-service (via rawDb, with
+// explicit organization context) -- deliberately NOT in the app-facing tenant guard, the
+// same treatment as PrayerWallSession. See docs/domain/outbox.md.
+// ---------------------------------------------------------------------------
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model OutboxEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  type           String
+  payload        Json
+  status         OutboxStatus @default(PENDING)
+  attempts       Int          @default(0)
+  maxAttempts    Int          @default(5)
+  nextAttemptAt  DateTime     @default(now())
+  lastError      String?
+  // Optional caller-supplied key to make emission idempotent (unique per org).
+  dedupeKey      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  processedAt    DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, dedupeKey])
+  @@index([status, nextAttemptAt])
+  @@index([organizationId])
+}
+
+model ProcessedEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  eventId        String
+  handler        String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // At-most-once per (event, handler) even under duplicate delivery.
+  @@unique([eventId, handler])
+  @@index([organizationId])
 }

@@ -115,6 +115,19 @@ export default async function FormDetailPage({ params }: { params: Promise<{ for
                   />
                   Match or create a Person from submissions
                 </label>
+                <label className="block text-sm text-ink-secondary">
+                  Notify these emails on each submission
+                  <span className="block text-xs font-normal text-ink-muted">
+                    Comma- or line-separated. Sent asynchronously via the outbox worker.
+                  </span>
+                  <Textarea
+                    name="notificationEmails"
+                    rows={2}
+                    defaultValue={form.notificationEmails.join(", ")}
+                    placeholder="pastor@church.org, office@church.org"
+                    className="mt-1"
+                  />
+                </label>
                 <button type="submit" className={buttonClasses("primary", "md")}>
                   Save settings
                 </button>

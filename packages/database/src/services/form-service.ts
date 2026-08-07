@@ -14,6 +14,7 @@ export interface FormSettingsInput {
   description?: string | null;
   confirmationMessage?: string;
   createPeople?: boolean;
+  notificationEmails?: string[];
 }
 
 export interface ListFormsOptions {
@@ -58,6 +59,7 @@ export async function updateFormSettings(organizationId: string, formId: string,
   if (input.description !== undefined) data.description = input.description?.trim() || null;
   if (input.confirmationMessage !== undefined) data.confirmationMessage = input.confirmationMessage.trim() || undefined;
   if (input.createPeople !== undefined) data.createPeople = input.createPeople;
+  if (input.notificationEmails !== undefined) data.notificationEmails = input.notificationEmails;
 
   const result = await tenantDb.formDefinition.updateMany({ where: { id: formId, organizationId }, data });
   if (result.count === 0) return null;

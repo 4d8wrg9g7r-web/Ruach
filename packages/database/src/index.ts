@@ -24,6 +24,9 @@ export * as peopleService from "./services/people-service";
 export * as groupService from "./services/group-service";
 export * as formService from "./services/form-service";
 export * as formSubmissionService from "./services/form-submission-service";
+export * as outboxService from "./services/outbox-service";
+export type { OutboxHandler, HandlerRegistry, ClaimedEvent } from "./services/outbox-service";
+export { computeBackoff } from "./outbox/backoff";
 
 export * as peoplePermissions from "./authz/people-permissions";
 export type { PeopleAction } from "./authz/people-permissions";
