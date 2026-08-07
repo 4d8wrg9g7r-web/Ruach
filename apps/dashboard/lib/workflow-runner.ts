@@ -3,7 +3,9 @@ import {
   formSubmissionService,
   groupService,
   interpolate,
+  journeyService,
   peopleService,
+  taskService,
   workflowService,
   type ClaimedEvent,
   type ExecutorMap,
@@ -55,6 +57,36 @@ export const EXECUTORS: ExecutorMap = {
     if (person.tags.includes(step.tag)) return "Tag already present";
     await peopleService.updatePerson(run.organizationId, run.personId, { tags: [...person.tags, step.tag] });
     return `Tagged "${step.tag}"`;
+  },
+
+  // Title/description are interpolated so tasks read naturally ("Follow up with
+  // {{submitterName}}"); the task carries workflowRunId provenance (§40) and links the
+  // run's person when there is one.
+  CREATE_TASK: async (step, run) => {
+    if (step.type !== "CREATE_TASK") throw new Error("wrong step type");
+    const task = await taskService.createTask(run.organizationId, {
+      title: interpolate(step.title, run.context),
+      description: step.description ? interpolate(step.description, run.context) : null,
+      priority: step.priority,
+      dueAt: step.dueInDays ? new Date(Date.now() + step.dueInDays * 24 * 60 * 60 * 1000) : null,
+      assigneeUserId: step.assigneeUserId ?? null,
+      relatedPersonId: run.personId,
+      workflowRunId: run.runId,
+    });
+    return `Created task "${task.title}"`;
+  },
+
+  // Enrollment is idempotent at the service layer, so re-triggering never duplicates;
+  // an inactive/archived journey or person-less run skips gracefully rather than failing
+  // the run (docs/domain/journeys.md).
+  ENROLL_IN_JOURNEY: async (step, run) => {
+    if (step.type !== "ENROLL_IN_JOURNEY") throw new Error("wrong step type");
+    if (!run.personId) return "Skipped: run has no linked person";
+    const result = await journeyService.enroll(run.organizationId, step.journeyId, run.personId, {
+      workflowRunId: run.runId,
+    });
+    if (!result.ok) return `Skipped: journey ${result.reason}`;
+    return result.alreadyEnrolled ? "Already enrolled" : "Enrolled in journey";
   },
 };
 

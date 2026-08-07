@@ -193,7 +193,7 @@ export async function retryRun(organizationId: string, runId: string) {
 /** Executes one non-WAIT step. Returns an optional human-readable detail for the timeline. */
 export type StepExecutor = (
   step: WorkflowStep,
-  run: { organizationId: string; personId: string | null; context: unknown },
+  run: { runId: string; organizationId: string; personId: string | null; context: unknown },
 ) => Promise<string | void>;
 
 export type ExecutorMap = Partial<Record<WorkflowStep["type"], StepExecutor>>;
@@ -329,6 +329,7 @@ export async function advanceRun(runId: string, executors: ExecutorMap): Promise
     try {
       if (!executor) throw new Error(`No executor registered for step type ${step.type}`);
       const detail = await executor(step, {
+        runId: run.id,
         organizationId: run.organizationId,
         personId: run.personId,
         context: run.context,

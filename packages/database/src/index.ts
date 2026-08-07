@@ -30,6 +30,16 @@ export { computeBackoff } from "./outbox/backoff";
 
 export * as workflowService from "./services/workflow-service";
 export type { StepExecutor, ExecutorMap } from "./services/workflow-service";
+export * as taskService from "./services/task-service";
+export * as taskPermissions from "./authz/task-permissions";
+export type { TaskAction } from "./authz/task-permissions";
+export { isOverdue } from "./tasks/helpers";
+
+export * as journeyService from "./services/journey-service";
+export * as journeyPermissions from "./authz/journey-permissions";
+export type { JourneyAction } from "./authz/journey-permissions";
+export { journeyProgress } from "./journeys/helpers";
+export type { JourneyProgress } from "./journeys/helpers";
 export * as workflowPermissions from "./authz/workflow-permissions";
 export type { WorkflowAction } from "./authz/workflow-permissions";
 export {
