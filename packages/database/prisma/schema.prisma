@@ -193,6 +193,9 @@ model Organization {
   personRelationships     PersonRelationship[]
   groups                  Group[]
   groupMemberships        GroupMembership[]
+  forms                   FormDefinition[]
+  formVersions            FormVersion[]
+  formSubmissions         FormSubmission[]
 }
 
 enum CategorizationMode {
@@ -923,6 +926,7 @@ model Person {
   relationshipsFrom PersonRelationship[] @relation("PersonRelationshipFrom")
   relationshipsTo   PersonRelationship[] @relation("PersonRelationshipTo")
   groupMemberships  GroupMembership[]
+  formSubmissions   FormSubmission[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -1027,5 +1031,95 @@ model GroupMembership {
   @@unique([groupId, personId])
   @@index([organizationId])
   @@index([groupId])
+  @@index([personId])
+}
+
+// ---------------------------------------------------------------------------
+// Forms
+//
+// A church-aware form builder (BLUEPRINT §7). Built as a shared primitive so other
+// modules reuse it instead of inventing bespoke intake forms. Schemas are VERSIONED:
+// each publish snapshots an immutable FormVersion, and every FormSubmission records the
+// version it was answered against, so historical submissions stay interpretable after a
+// form changes. Submissions can match or create a Person. Field definitions live in JSON
+// (genuinely flexible data, BLUEPRINT §36), validated by the pure forms/schema.ts.
+// See docs/domain/forms.md.
+// ---------------------------------------------------------------------------
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+model FormDefinition {
+  id             String     @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  // Public URL key -- resolves a form without tenant context, the same bootstrapping
+  // boundary as WidgetConfiguration.publicWidgetId / Organization.publicPrayerWallId.
+  publicId       String     @unique @default(cuid())
+  status         FormStatus @default(DRAFT)
+  // The working field list being edited. Goes live to submitters only on publish, which
+  // snapshots it into a FormVersion.
+  draftSchema    Json       @default("[]")
+  // The FormVersion.version currently served to submitters (null until first publish).
+  publishedVersion Int?
+  confirmationMessage String @default("Thanks! Your response has been received.")
+  // When true, a submission with mapped name/email fields matches an existing Person by
+  // email (case-insensitive, within org) or creates a new one.
+  createPeople   Boolean    @default(true)
+  archivedAt     DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  versions     FormVersion[]
+  submissions  FormSubmission[]
+
+  @@index([organizationId])
+}
+
+model FormVersion {
+  id             String   @id @default(cuid())
+  organizationId String
+  formId         String
+  version        Int
+  // Immutable snapshot of the field list at publish time.
+  schema         Json
+  createdAt      DateTime @default(now())
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  form         FormDefinition @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, version])
+  @@index([organizationId])
+  @@index([formId])
+}
+
+model FormSubmission {
+  id             String   @id @default(cuid())
+  organizationId String
+  formId         String
+  // Which FormVersion.version this was answered against -- render it back against that
+  // exact schema, never the current draft.
+  version        Int
+  // Answers keyed by field id.
+  data           Json
+  // Person matched or created from mapped fields (null if createPeople is off or no
+  // mappable fields were present). SetNull so deleting a Person never deletes the
+  // historical submission.
+  personId       String?
+  submitterEmail String?
+  submitterName  String?
+  createdAt      DateTime @default(now())
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  form         FormDefinition @relation(fields: [formId], references: [id], onDelete: Cascade)
+  person       Person?        @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([formId])
   @@index([personId])
 }

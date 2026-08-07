@@ -22,6 +22,8 @@ export * as accessCodeService from "./services/access-code-service";
 export * as demoRequestService from "./services/demo-request-service";
 export * as peopleService from "./services/people-service";
 export * as groupService from "./services/group-service";
+export * as formService from "./services/form-service";
+export * as formSubmissionService from "./services/form-submission-service";
 
 export * as peoplePermissions from "./authz/people-permissions";
 export type { PeopleAction } from "./authz/people-permissions";
@@ -30,3 +32,15 @@ export { personDisplayName, inverseRelationshipType } from "./people/helpers";
 export * as groupPermissions from "./authz/group-permissions";
 export type { GroupAction } from "./authz/group-permissions";
 export { hasCapacity } from "./groups/helpers";
+
+export * as formPermissions from "./authz/form-permissions";
+export type { FormAction } from "./authz/form-permissions";
+export {
+  parseSchema,
+  validateSubmission,
+  extractPersonInput,
+  FORM_FIELD_TYPES,
+  FORM_FIELD_MAPPINGS,
+} from "./forms/schema";
+export type { FormField, FormFieldType, FormFieldMapping, ValidationResult } from "./forms/schema";
+export type { PublicForm } from "./services/form-service";

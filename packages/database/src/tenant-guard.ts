@@ -32,6 +32,9 @@ export const TENANT_SCOPED_MODELS = new Set([
   "PersonRelationship",
   "Group",
   "GroupMembership",
+  "FormDefinition",
+  "FormVersion",
+  "FormSubmission",
 ]);
 
 const FIND_UNIQUE_OPS = new Set(["findUnique", "findUniqueOrThrow"]);

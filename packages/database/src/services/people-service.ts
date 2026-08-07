@@ -68,6 +68,14 @@ export async function countPeople(organizationId: string, opts: ListPeopleOption
   return tenantDb.person.count({ where: peopleWhere(organizationId, opts) });
 }
 
+/** Find a non-archived person by exact, case-insensitive email within the org. Used by
+ * form submissions to match an existing Person before creating a new one. */
+export async function findByEmail(organizationId: string, email: string) {
+  return tenantDb.person.findFirst({
+    where: { organizationId, archivedAt: null, email: { equals: email, mode: "insensitive" } },
+  });
+}
+
 export async function getPerson(organizationId: string, personId: string) {
   return tenantDb.person.findFirst({
     where: { id: personId, organizationId },
