@@ -16,8 +16,8 @@ export function Hero() {
     <section ref={ref} className="relative h-[100svh] w-full overflow-hidden bg-shade" data-cursor="explore">
       <motion.div style={{ y }} className="absolute inset-0 h-[118%]">
         <StudioImage image="heroWedding" priority sizes="100vw" widthHint={2000} />
-        <div className="absolute inset-0 bg-gradient-to-b from-shade/50 via-shade/10 to-shade/70" />
-        <div className="absolute inset-0 bg-shade/10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-shade/35 via-shade/5 to-shade/60" />
+        <div className="absolute inset-0 bg-shade/5" />
       </motion.div>
 
       <motion.div

@@ -20,7 +20,7 @@ export function PageHero({
     <section className="relative flex h-[82svh] min-h-[560px] items-end overflow-hidden bg-shade">
       <div className="absolute inset-0">
         <StudioImage image={image} priority sizes="100vw" widthHint={2000} />
-        <div className="absolute inset-0 bg-gradient-to-b from-shade/40 via-shade/10 to-shade/75" />
+        <div className="absolute inset-0 bg-gradient-to-b from-shade/30 via-shade/5 to-shade/65" />
       </div>
 
       <div className="relative z-10 w-full px-5 pb-16 sm:px-8 sm:pb-20">

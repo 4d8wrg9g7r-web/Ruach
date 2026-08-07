@@ -32,7 +32,7 @@ export function PortfolioReel() {
       {/* Desktop: scroll-driven horizontal reel */}
       <section
         ref={ref}
-        className="relative hidden bg-shade text-chalk lg:block"
+        className="relative hidden bg-paper text-ink lg:block"
         style={{ height: `${FRAMES.length * 55}vh` }}
         aria-label="Portfolio reel"
       >
@@ -49,7 +49,7 @@ export function PortfolioReel() {
       </section>
 
       {/* Touch: native snap-scroll strip */}
-      <section className="bg-shade py-14 text-chalk lg:hidden" aria-label="Portfolio reel">
+      <section className="bg-paper py-14 text-ink lg:hidden" aria-label="Portfolio reel">
         <div className="mb-5 px-5 font-sans text-[0.62rem] uppercase tracking-label text-mist">Selected Work</div>
         <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2">
           {FRAMES.map((f) => (
