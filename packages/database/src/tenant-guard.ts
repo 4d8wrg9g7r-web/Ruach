@@ -38,6 +38,7 @@ export const TENANT_SCOPED_MODELS = new Set([
   "WorkflowDefinition",
   "WorkflowVersion",
   "WorkflowRun",
+  "Task",
 ]);
 
 const FIND_UNIQUE_OPS = new Set(["findUnique", "findUniqueOrThrow"]);

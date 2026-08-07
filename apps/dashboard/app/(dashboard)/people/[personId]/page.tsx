@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Home, Link2, Trash2, Undo2, Users2, X } from "lucide-react";
-import { groupService, peopleService, personDisplayName } from "@ruach/database";
+import { ArrowLeft, CheckSquare, Home, Link2, Trash2, Undo2, Users2, X, Zap } from "lucide-react";
+import { groupService, isOverdue, peopleService, personDisplayName, taskService } from "@ruach/database";
 import { websiteService } from "@ruach/database";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
@@ -18,6 +18,7 @@ import {
 } from "../../../../lib/people-format";
 import { canPeople, requirePeople } from "../../../../lib/people-access";
 import { canGroups } from "../../../../lib/groups-access";
+import { canTasks } from "../../../../lib/tasks-access";
 import { groupTypeLabel } from "../../../../lib/groups-format";
 import { getCurrentOrganization } from "../../../../lib/session";
 import {
@@ -54,6 +55,10 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
   const groupMemberships = canViewGroups
     ? await groupService.listGroupsForPerson(organization.id, person.id)
     : [];
+
+  // Open follow-up tasks about this person -- same read-only-panel pattern as Groups.
+  const canViewTasks = await canTasks(organization.id, "task.view");
+  const personTasks = canViewTasks ? await taskService.listTasksForPerson(organization.id, person.id) : [];
 
   const boundUpdate = updatePersonAction.bind(null, person.id);
   const boundSetHousehold = setHouseholdAction.bind(null, person.id);
@@ -178,6 +183,39 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
                   ))}
                 </ul>
               )}
+            </Card>
+          )}
+
+          {/* Follow-up tasks -- read-only; management lives on /tasks. */}
+          {canViewTasks && (
+            <Card padding="md">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                <CheckSquare size={15} /> Follow-ups
+              </h2>
+              {personTasks.length === 0 ? (
+                <p className="mb-2 text-sm text-ink-muted">No open tasks for this person.</p>
+              ) : (
+                <ul className="mb-2 space-y-2">
+                  {personTasks.map((task) => (
+                    <li key={task.id} className="text-sm">
+                      <span className="text-ink">{task.title}</span>
+                      {task.workflowRunId && <Zap size={11} className="ml-1.5 inline text-accent-dark" />}
+                      <span className="block text-xs text-ink-muted">
+                        {task.dueAt && (
+                          <span className={isOverdue(task) ? "font-medium text-danger" : undefined}>
+                            Due {new Date(task.dueAt).toLocaleDateString()}
+                          </span>
+                        )}
+                        {task.dueAt && task.assignee && " · "}
+                        {task.assignee && (task.assignee.name || task.assignee.email)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Link href={`/tasks?person=${person.id}`} className="text-xs text-accent hover:underline">
+                View in Tasks →
+              </Link>
             </Card>
           )}
 

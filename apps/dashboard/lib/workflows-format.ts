@@ -19,6 +19,7 @@ export const STEP_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "SEND_EMAIL", label: "Send email" },
   { value: "ADD_TO_GROUP", label: "Add person to group" },
   { value: "ADD_TAG", label: "Tag person" },
+  { value: "CREATE_TASK", label: "Create task" },
   { value: "WAIT", label: "Wait" },
 ];
 

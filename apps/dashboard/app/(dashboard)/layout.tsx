@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CheckSquare,
   ClipboardList,
   Compass,
   Contact,
@@ -79,6 +80,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNavItem href="/groups" label="Groups" icon={<Users2 size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/forms" label="Forms" icon={<ClipboardList size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/workflows" label="Workflows" icon={<Workflow size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem href="/tasks" label="Tasks" icon={<CheckSquare size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/resources" label="Resources" icon={<Library size={17} strokeWidth={1.75} />} />
         <SidebarNavItem
           href="/resources?status=REVIEW_REQUIRED"

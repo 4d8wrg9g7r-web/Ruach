@@ -4,6 +4,7 @@ import {
   groupService,
   interpolate,
   peopleService,
+  taskService,
   workflowService,
   type ClaimedEvent,
   type ExecutorMap,
@@ -55,6 +56,23 @@ export const EXECUTORS: ExecutorMap = {
     if (person.tags.includes(step.tag)) return "Tag already present";
     await peopleService.updatePerson(run.organizationId, run.personId, { tags: [...person.tags, step.tag] });
     return `Tagged "${step.tag}"`;
+  },
+
+  // Title/description are interpolated so tasks read naturally ("Follow up with
+  // {{submitterName}}"); the task carries workflowRunId provenance (§40) and links the
+  // run's person when there is one.
+  CREATE_TASK: async (step, run) => {
+    if (step.type !== "CREATE_TASK") throw new Error("wrong step type");
+    const task = await taskService.createTask(run.organizationId, {
+      title: interpolate(step.title, run.context),
+      description: step.description ? interpolate(step.description, run.context) : null,
+      priority: step.priority,
+      dueAt: step.dueInDays ? new Date(Date.now() + step.dueInDays * 24 * 60 * 60 * 1000) : null,
+      assigneeUserId: step.assigneeUserId ?? null,
+      relatedPersonId: run.personId,
+      workflowRunId: run.runId,
+    });
+    return `Created task "${task.title}"`;
   },
 };
 

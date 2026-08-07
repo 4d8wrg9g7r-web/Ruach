@@ -25,6 +25,11 @@ interface EditableStep {
   role: string;
   tag: string; // ADD_TAG
   minutes: string; // WAIT
+  taskTitle: string; // CREATE_TASK
+  taskDescription: string;
+  taskPriority: string;
+  taskDueInDays: string;
+  taskAssigneeUserId: string;
 }
 
 function newStep(): EditableStep {
@@ -38,6 +43,11 @@ function newStep(): EditableStep {
     role: "MEMBER",
     tag: "",
     minutes: "60",
+    taskTitle: "",
+    taskDescription: "",
+    taskPriority: "NORMAL",
+    taskDueInDays: "",
+    taskAssigneeUserId: "",
   };
 }
 
@@ -54,6 +64,11 @@ function toEditable(config: WorkflowConfig): { conditions: WorkflowCondition[]; 
       role: s.type === "ADD_TO_GROUP" ? (s.role ?? "MEMBER") : "MEMBER",
       tag: s.type === "ADD_TAG" ? s.tag : "",
       minutes: s.type === "WAIT" ? String(s.minutes) : "60",
+      taskTitle: s.type === "CREATE_TASK" ? s.title : "",
+      taskDescription: s.type === "CREATE_TASK" ? (s.description ?? "") : "",
+      taskPriority: s.type === "CREATE_TASK" ? (s.priority ?? "NORMAL") : "NORMAL",
+      taskDueInDays: s.type === "CREATE_TASK" && s.dueInDays ? String(s.dueInDays) : "",
+      taskAssigneeUserId: s.type === "CREATE_TASK" ? (s.assigneeUserId ?? "") : "",
     })),
   };
 }
@@ -62,11 +77,13 @@ export function WorkflowBuilder({
   action,
   initialConfig,
   groups,
+  members,
   contextHint,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initialConfig: WorkflowConfig;
   groups: { id: string; name: string }[];
+  members: { userId: string; label: string }[];
   contextHint: string;
 }) {
   const initial = toEditable(initialConfig);
@@ -104,6 +121,15 @@ export function WorkflowBuilder({
           return { type: "ADD_TO_GROUP", groupId: s.groupId, role: s.role };
         case "ADD_TAG":
           return { type: "ADD_TAG", tag: s.tag };
+        case "CREATE_TASK":
+          return {
+            type: "CREATE_TASK",
+            title: s.taskTitle,
+            description: s.taskDescription || undefined,
+            priority: s.taskPriority,
+            dueInDays: s.taskDueInDays ? Number(s.taskDueInDays) : undefined,
+            assigneeUserId: s.taskAssigneeUserId || undefined,
+          };
         case "WAIT":
         default:
           return { type: "WAIT", minutes: Number(s.minutes) };
@@ -251,6 +277,59 @@ export function WorkflowBuilder({
                     placeholder="Tag, e.g. first-visit"
                     className="w-64 text-sm"
                   />
+                )}
+
+                {step.type === "CREATE_TASK" && (
+                  <div className="grid gap-2">
+                    <Input
+                      value={step.taskTitle}
+                      onChange={(e) => updateStep(index, { taskTitle: e.target.value })}
+                      placeholder="Task title — supports {{submitterName}} etc."
+                      className="text-sm"
+                    />
+                    <Textarea
+                      value={step.taskDescription}
+                      onChange={(e) => updateStep(index, { taskDescription: e.target.value })}
+                      rows={2}
+                      placeholder="Details (optional, supports {{placeholders}})"
+                      className="text-sm"
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Select
+                        value={step.taskPriority}
+                        onChange={(e) => updateStep(index, { taskPriority: e.target.value })}
+                        className="w-32 text-sm"
+                      >
+                        <option value="LOW">Low</option>
+                        <option value="NORMAL">Normal</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                      </Select>
+                      <Select
+                        value={step.taskAssigneeUserId}
+                        onChange={(e) => updateStep(index, { taskAssigneeUserId: e.target.value })}
+                        className="w-52 text-sm"
+                      >
+                        <option value="">Unassigned</option>
+                        {members.map((m) => (
+                          <option key={m.userId} value={m.userId}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <label className="flex items-center gap-1.5 text-xs text-ink-secondary">
+                        Due in
+                        <Input
+                          type="number"
+                          min={1}
+                          value={step.taskDueInDays}
+                          onChange={(e) => updateStep(index, { taskDueInDays: e.target.value })}
+                          className="w-20 text-sm"
+                        />
+                        days
+                      </label>
+                    </div>
+                  </div>
                 )}
 
                 {step.type === "WAIT" && (

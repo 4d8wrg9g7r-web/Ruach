@@ -22,10 +22,25 @@ export type WorkflowStep =
   | { type: "SEND_EMAIL"; to: string[]; subject: string; body: string }
   | { type: "ADD_TO_GROUP"; groupId: string; role?: "LEADER" | "CO_LEADER" | "MEMBER" }
   | { type: "ADD_TAG"; tag: string }
+  | {
+      type: "CREATE_TASK";
+      title: string;
+      description?: string;
+      assigneeUserId?: string;
+      priority?: "LOW" | "NORMAL" | "HIGH" | "URGENT";
+      /** Due this many days after the step runs (omitted = no due date). */
+      dueInDays?: number;
+    }
   | { type: "WAIT"; minutes: number };
 
 export type WorkflowStepType = WorkflowStep["type"];
-export const WORKFLOW_STEP_TYPES: WorkflowStepType[] = ["SEND_EMAIL", "ADD_TO_GROUP", "ADD_TAG", "WAIT"];
+export const WORKFLOW_STEP_TYPES: WorkflowStepType[] = [
+  "SEND_EMAIL",
+  "ADD_TO_GROUP",
+  "ADD_TAG",
+  "CREATE_TASK",
+  "WAIT",
+];
 
 export interface WorkflowConfig {
   conditions: WorkflowCondition[];
@@ -75,6 +90,24 @@ export function parseWorkflowConfig(raw: unknown): WorkflowConfig {
         case "ADD_TAG": {
           if (typeof s.tag !== "string" || !s.tag.trim()) continue;
           steps.push({ type: "ADD_TAG", tag: s.tag.trim() });
+          break;
+        }
+        case "CREATE_TASK": {
+          if (typeof s.title !== "string" || !s.title.trim()) continue;
+          const priority =
+            s.priority === "LOW" || s.priority === "NORMAL" || s.priority === "HIGH" || s.priority === "URGENT"
+              ? s.priority
+              : undefined;
+          const dueInDays = Number(s.dueInDays);
+          steps.push({
+            type: "CREATE_TASK",
+            title: s.title,
+            description: typeof s.description === "string" && s.description.trim() ? s.description : undefined,
+            assigneeUserId:
+              typeof s.assigneeUserId === "string" && s.assigneeUserId.trim() ? s.assigneeUserId : undefined,
+            priority,
+            dueInDays: Number.isFinite(dueInDays) && dueInDays > 0 ? Math.min(dueInDays, 365) : undefined,
+          });
           break;
         }
         case "WAIT": {
