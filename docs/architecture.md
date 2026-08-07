@@ -1,12 +1,19 @@
 # Architecture
 
+> **Scope of this document.** This describes the **current milestone-1 system** as built.
+> The full source-of-truth product and architecture specification — the "full build brief"
+> referenced below — now lives in [`architecture/BLUEPRINT.md`](architecture/BLUEPRINT.md),
+> with its enforceable invariants in [`architecture/CONSTITUTION.md`](architecture/CONSTITUTION.md).
+> Read those before planning new platform work; read this for how the code is shaped today.
+
 ## Context
 
 Ruach's full build brief describes a ~10-phase, multi-tenant SaaS platform (subscriber
 dashboard, embeddable widget, content processing, AI retrieval/conversation, platform
-administration -- see the original brief for the complete scope). That brief explicitly
-calls out that it's too large to build in one pass, and asks for a first runnable
-milestone rather than the full MVP. This repository implements that milestone.
+administration -- see [`architecture/BLUEPRINT.md`](architecture/BLUEPRINT.md) for the
+complete scope). That brief explicitly calls out that it's too large to build in one pass,
+and asks for a first runnable milestone rather than the full MVP. This repository
+implements that milestone.
 
 **Milestone 1 scope**: a developer can locally create an organization, add a website,
 create a widget, import a mock YouTube resource, add a transcript, generate AI
