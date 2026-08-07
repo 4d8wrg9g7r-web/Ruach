@@ -30,6 +30,8 @@ export const TENANT_SCOPED_MODELS = new Set([
   "Person",
   "Household",
   "PersonRelationship",
+  "Group",
+  "GroupMembership",
 ]);
 
 const FIND_UNIQUE_OPS = new Set(["findUnique", "findUniqueOrThrow"]);

@@ -191,6 +191,8 @@ model Organization {
   people                  Person[]
   households              Household[]
   personRelationships     PersonRelationship[]
+  groups                  Group[]
+  groupMemberships        GroupMembership[]
 }
 
 enum CategorizationMode {
@@ -253,6 +255,7 @@ model Website {
   resources      Resource[]
   prayerRequests PrayerRequest[]
   people         Person[]
+  groups         Group[]
 
   @@index([organizationId])
 }
@@ -919,6 +922,7 @@ model Person {
   campus            Website?             @relation(fields: [campusWebsiteId], references: [id], onDelete: SetNull)
   relationshipsFrom PersonRelationship[] @relation("PersonRelationshipFrom")
   relationshipsTo   PersonRelationship[] @relation("PersonRelationshipTo")
+  groupMemberships  GroupMembership[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -944,4 +948,84 @@ model PersonRelationship {
   @@index([organizationId])
   @@index([personId])
   @@index([relatedPersonId])
+}
+
+// ---------------------------------------------------------------------------
+// Groups
+//
+// Community, discipleship, and team grouping (BLUEPRINT §8). The first module to
+// compose the Person primitive: a GroupMembership links an existing Person to a Group
+// rather than storing its own copy of contact data. See docs/domain/groups.md.
+// ---------------------------------------------------------------------------
+
+enum GroupType {
+  SMALL_GROUP
+  CLASS
+  MINISTRY_TEAM
+  SERVING_TEAM
+  OTHER
+}
+
+// How people join. Enforcement of REQUEST/INVITE_ONLY flows is deferred (v1 tracks the
+// intent; staff add members directly); OPEN vs CLOSED informs the group finder.
+enum GroupEnrollment {
+  OPEN
+  REQUEST
+  INVITE_ONLY
+  CLOSED
+}
+
+enum GroupMembershipRole {
+  LEADER
+  CO_LEADER
+  MEMBER
+}
+
+model Group {
+  id              String          @id @default(cuid())
+  organizationId  String
+  name            String
+  type            GroupType       @default(SMALL_GROUP)
+  description     String?
+  enrollment      GroupEnrollment @default(OPEN)
+  meetingSchedule String?
+  meetingLocation String?
+  // null = unlimited. Enforced in group-service.addMember (see hasCapacity).
+  capacity        Int?
+  // Group-finder visibility. Publishing a group makes it eligible for public/member
+  // surfaces without duplicate entry (BLUEPRINT §8 "group finder publishing").
+  isPublished     Boolean         @default(false)
+  // Home campus -- reuses the Website-as-campus convention, mirroring Person/Resource.
+  campusWebsiteId String?
+  archivedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campus       Website?          @relation(fields: [campusWebsiteId], references: [id], onDelete: SetNull)
+  memberships  GroupMembership[]
+
+  @@index([organizationId])
+  @@index([organizationId, type])
+  @@index([campusWebsiteId])
+}
+
+model GroupMembership {
+  id             String              @id @default(cuid())
+  organizationId String
+  groupId        String
+  personId       String
+  role           GroupMembershipRole @default(MEMBER)
+  joinedAt       DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group        Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  person       Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // One membership per person per group.
+  @@unique([groupId, personId])
+  @@index([organizationId])
+  @@index([groupId])
+  @@index([personId])
 }

@@ -12,6 +12,7 @@ import {
   Settings as SettingsIcon,
   Sparkles,
   Users,
+  Users2,
   Wind,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -73,6 +74,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNavItem href="/dashboard" label="Overview" icon={<LayoutDashboard size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/getting-started" label="Getting Started" icon={<Compass size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/people" label="People" icon={<Contact size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem href="/groups" label="Groups" icon={<Users2 size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/resources" label="Resources" icon={<Library size={17} strokeWidth={1.75} />} />
         <SidebarNavItem
           href="/resources?status=REVIEW_REQUIRED"

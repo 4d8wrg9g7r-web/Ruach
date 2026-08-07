@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Home, Link2, Trash2, Undo2, X } from "lucide-react";
-import { peopleService, personDisplayName } from "@ruach/database";
+import { ArrowLeft, Home, Link2, Trash2, Undo2, Users2, X } from "lucide-react";
+import { groupService, peopleService, personDisplayName } from "@ruach/database";
 import { websiteService } from "@ruach/database";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
@@ -17,6 +17,8 @@ import {
   relationshipTypeLabel,
 } from "../../../../lib/people-format";
 import { canPeople, requirePeople } from "../../../../lib/people-access";
+import { canGroups } from "../../../../lib/groups-access";
+import { groupTypeLabel } from "../../../../lib/groups-format";
 import { getCurrentOrganization } from "../../../../lib/session";
 import {
   addRelationshipAction,
@@ -45,6 +47,13 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
     peopleService.listPeople(organization.id, { take: 200 }),
   ]);
   const otherPeople = allPeople.filter((p) => p.id !== person.id);
+
+  // Groups this person belongs to -- only surfaced if the viewer can also view Groups.
+  // A read-only panel; management lives on the group's own page.
+  const canViewGroups = await canGroups(organization.id, "group.view");
+  const groupMemberships = canViewGroups
+    ? await groupService.listGroupsForPerson(organization.id, person.id)
+    : [];
 
   const boundUpdate = updatePersonAction.bind(null, person.id);
   const boundSetHousehold = setHouseholdAction.bind(null, person.id);
@@ -148,6 +157,29 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
               </form>
             )}
           </Card>
+
+          {/* Groups -- read-only; composes the Group module via GroupMembership. */}
+          {canViewGroups && (
+            <Card padding="md">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                <Users2 size={15} /> Groups
+              </h2>
+              {groupMemberships.length === 0 ? (
+                <p className="text-sm text-ink-muted">Not in any groups.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {groupMemberships.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between gap-2 text-sm">
+                      <Link href={`/groups/${m.group.id}`} className="text-ink hover:text-accent">
+                        {m.group.name}
+                      </Link>
+                      <span className="text-xs text-ink-muted">{groupTypeLabel(m.group.type)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
 
           {/* Relationships */}
           <Card padding="md">
