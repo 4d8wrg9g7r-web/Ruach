@@ -30,6 +30,7 @@ interface EditableStep {
   taskPriority: string;
   taskDueInDays: string;
   taskAssigneeUserId: string;
+  journeyId: string; // ENROLL_IN_JOURNEY
 }
 
 function newStep(): EditableStep {
@@ -48,6 +49,7 @@ function newStep(): EditableStep {
     taskPriority: "NORMAL",
     taskDueInDays: "",
     taskAssigneeUserId: "",
+    journeyId: "",
   };
 }
 
@@ -69,6 +71,7 @@ function toEditable(config: WorkflowConfig): { conditions: WorkflowCondition[]; 
       taskPriority: s.type === "CREATE_TASK" ? (s.priority ?? "NORMAL") : "NORMAL",
       taskDueInDays: s.type === "CREATE_TASK" && s.dueInDays ? String(s.dueInDays) : "",
       taskAssigneeUserId: s.type === "CREATE_TASK" ? (s.assigneeUserId ?? "") : "",
+      journeyId: s.type === "ENROLL_IN_JOURNEY" ? s.journeyId : "",
     })),
   };
 }
@@ -78,12 +81,14 @@ export function WorkflowBuilder({
   initialConfig,
   groups,
   members,
+  journeys,
   contextHint,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initialConfig: WorkflowConfig;
   groups: { id: string; name: string }[];
   members: { userId: string; label: string }[];
+  journeys: { id: string; name: string }[];
   contextHint: string;
 }) {
   const initial = toEditable(initialConfig);
@@ -130,6 +135,8 @@ export function WorkflowBuilder({
             dueInDays: s.taskDueInDays ? Number(s.taskDueInDays) : undefined,
             assigneeUserId: s.taskAssigneeUserId || undefined,
           };
+        case "ENROLL_IN_JOURNEY":
+          return { type: "ENROLL_IN_JOURNEY", journeyId: s.journeyId };
         case "WAIT":
         default:
           return { type: "WAIT", minutes: Number(s.minutes) };
@@ -330,6 +337,21 @@ export function WorkflowBuilder({
                       </label>
                     </div>
                   </div>
+                )}
+
+                {step.type === "ENROLL_IN_JOURNEY" && (
+                  <Select
+                    value={step.journeyId}
+                    onChange={(e) => updateStep(index, { journeyId: e.target.value })}
+                    className="w-64 text-sm"
+                  >
+                    <option value="">Choose a journey…</option>
+                    {journeys.map((j) => (
+                      <option key={j.id} value={j.id}>
+                        {j.name}
+                      </option>
+                    ))}
+                  </Select>
                 )}
 
                 {step.type === "WAIT" && (

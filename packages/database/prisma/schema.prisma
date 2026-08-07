@@ -43,6 +43,8 @@ model User {
   usedAccessCode      FreeTierAccessCode?  @relation("AccessCodeUsedBy")
   assignedTasks       Task[]               @relation("TaskAssignee")
   createdTasks        Task[]               @relation("TaskCreatedBy")
+  journeyEnrollments  JourneyEnrollment[]  @relation("EnrollmentEnrolledBy")
+  milestoneCompletions JourneyMilestoneCompletion[] @relation("CompletionCompletedBy")
 }
 
 enum SubscriptionStatus {
@@ -204,6 +206,10 @@ model Organization {
   workflowVersions        WorkflowVersion[]
   workflowRuns            WorkflowRun[]
   tasks                   Task[]
+  journeys                JourneyDefinition[]
+  journeyMilestones       JourneyMilestone[]
+  journeyEnrollments      JourneyEnrollment[]
+  journeyMilestoneCompletions JourneyMilestoneCompletion[]
 }
 
 enum CategorizationMode {
@@ -937,6 +943,7 @@ model Person {
   formSubmissions   FormSubmission[]
   workflowRuns      WorkflowRun[]
   tasks             Task[]
+  journeyEnrollments JourneyEnrollment[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -1289,6 +1296,7 @@ model WorkflowRun {
   workflow     WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   person       Person?            @relation(fields: [personId], references: [id], onDelete: SetNull)
   createdTasks Task[]
+  journeyEnrollments JourneyEnrollment[]
 
   @@index([organizationId])
   @@index([workflowId])
@@ -1350,4 +1358,108 @@ model Task {
   @@index([organizationId, assigneeUserId])
   @@index([relatedPersonId])
   @@index([workflowRunId])
+}
+
+// ---------------------------------------------------------------------------
+// Journeys & Discipleship
+//
+// Church-configurable next-step pathways (BLUEPRINT §6). Milestones are a relational
+// child table (not JSON) because completion records reference them -- core domain
+// relationships per §36. Journey automation composes the shared workflow engine
+// (ENROLL_IN_JOURNEY step) per §6's explicit rule. Unlike form schemas, journeys are
+// living pathways: editing milestones affects in-flight enrollments by design.
+// See docs/domain/journeys.md.
+// ---------------------------------------------------------------------------
+
+enum JourneyEnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  EXITED
+}
+
+model JourneyDefinition {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  // Inactive = closed to NEW enrollment; existing enrollments continue.
+  isActive       Boolean   @default(true)
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  milestones   JourneyMilestone[]
+  enrollments  JourneyEnrollment[]
+
+  @@index([organizationId])
+}
+
+model JourneyMilestone {
+  id             String  @id @default(cuid())
+  organizationId String
+  journeyId      String
+  name           String
+  description    String?
+  order          Int
+  // Soft expectation in days from enrollment -- informational in v1.
+  targetDays     Int?
+  createdAt      DateTime @default(now())
+
+  organization Organization                 @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  journey      JourneyDefinition            @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  completions  JourneyMilestoneCompletion[]
+
+  @@unique([journeyId, order])
+  @@index([organizationId])
+  @@index([journeyId])
+}
+
+model JourneyEnrollment {
+  id             String                  @id @default(cuid())
+  organizationId String
+  journeyId      String
+  personId       String
+  status         JourneyEnrollmentStatus @default(ACTIVE)
+  enrolledByUserId String?
+  // Set when a workflow ENROLL_IN_JOURNEY step created this -- same provenance pattern
+  // as Task.workflowRunId (§40).
+  workflowRunId  String?
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+  exitedAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  journey      JourneyDefinition @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  person       Person            @relation(fields: [personId], references: [id], onDelete: Cascade)
+  enrolledBy   User?             @relation("EnrollmentEnrolledBy", fields: [enrolledByUserId], references: [id], onDelete: SetNull)
+  workflowRun  WorkflowRun?      @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+  completions  JourneyMilestoneCompletion[]
+
+  // One enrollment per person per journey (re-enrollment after completion is a
+  // documented v1 non-goal).
+  @@unique([journeyId, personId])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([personId])
+}
+
+model JourneyMilestoneCompletion {
+  id                String   @id @default(cuid())
+  organizationId    String
+  enrollmentId      String
+  milestoneId       String
+  completedByUserId String?
+  completedAt       DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  enrollment   JourneyEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  milestone    JourneyMilestone  @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  completedBy  User?             @relation("CompletionCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([enrollmentId, milestoneId])
+  @@index([organizationId])
+  @@index([enrollmentId])
 }

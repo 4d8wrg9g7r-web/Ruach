@@ -31,6 +31,7 @@ export type WorkflowStep =
       /** Due this many days after the step runs (omitted = no due date). */
       dueInDays?: number;
     }
+  | { type: "ENROLL_IN_JOURNEY"; journeyId: string }
   | { type: "WAIT"; minutes: number };
 
 export type WorkflowStepType = WorkflowStep["type"];
@@ -39,6 +40,7 @@ export const WORKFLOW_STEP_TYPES: WorkflowStepType[] = [
   "ADD_TO_GROUP",
   "ADD_TAG",
   "CREATE_TASK",
+  "ENROLL_IN_JOURNEY",
   "WAIT",
 ];
 
@@ -108,6 +110,11 @@ export function parseWorkflowConfig(raw: unknown): WorkflowConfig {
             priority,
             dueInDays: Number.isFinite(dueInDays) && dueInDays > 0 ? Math.min(dueInDays, 365) : undefined,
           });
+          break;
+        }
+        case "ENROLL_IN_JOURNEY": {
+          if (typeof s.journeyId !== "string" || !s.journeyId.trim()) continue;
+          steps.push({ type: "ENROLL_IN_JOURNEY", journeyId: s.journeyId });
           break;
         }
         case "WAIT": {

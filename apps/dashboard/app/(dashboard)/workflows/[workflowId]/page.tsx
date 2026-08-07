@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Pause, Play, Trash2, Undo2 } from "lucide-react";
-import { formService, groupService, parseSchema, parseWorkflowConfig, personDisplayName, teamService, workflowService } from "@ruach/database";
+import { formService, groupService, journeyService, parseSchema, parseWorkflowConfig, personDisplayName, teamService, workflowService } from "@ruach/database";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
@@ -37,11 +37,12 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
   const workflow = await workflowService.getWorkflow(organization.id, workflowId);
   if (!workflow) notFound();
 
-  const [groups, forms, runs, members] = await Promise.all([
+  const [groups, forms, runs, members, journeys] = await Promise.all([
     groupService.listGroups(organization.id),
     formService.listForms(organization.id),
     workflowService.listRuns(organization.id, workflow.id, { take: 20 }),
     teamService.listMembers(organization.id),
+    journeyService.listJourneys(organization.id),
   ]);
 
   const draftConfig = parseWorkflowConfig(workflow.draftConfig);
@@ -93,6 +94,7 @@ export default async function WorkflowDetailPage({ params }: { params: Promise<{
                   initialConfig={draftConfig}
                   groups={groups.map((g) => ({ id: g.id, name: g.name }))}
                   members={members.map((m) => ({ userId: m.userId, label: m.user.name || m.user.email }))}
+                  journeys={journeys.map((j) => ({ id: j.id, name: j.name }))}
                   contextHint={contextHint}
                 />
                 <p className="mt-3 text-xs text-ink-muted">

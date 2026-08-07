@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckSquare, Home, Link2, Trash2, Undo2, Users2, X, Zap } from "lucide-react";
-import { groupService, isOverdue, peopleService, personDisplayName, taskService } from "@ruach/database";
+import { ArrowLeft, CheckSquare, Home, Link2, Map, Trash2, Undo2, Users2, X, Zap } from "lucide-react";
+import { groupService, isOverdue, journeyService, peopleService, personDisplayName, taskService } from "@ruach/database";
 import { websiteService } from "@ruach/database";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
@@ -19,6 +19,7 @@ import {
 import { canPeople, requirePeople } from "../../../../lib/people-access";
 import { canGroups } from "../../../../lib/groups-access";
 import { canTasks } from "../../../../lib/tasks-access";
+import { canJourneys } from "../../../../lib/journeys-access";
 import { groupTypeLabel } from "../../../../lib/groups-format";
 import { getCurrentOrganization } from "../../../../lib/session";
 import {
@@ -59,6 +60,12 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
   // Open follow-up tasks about this person -- same read-only-panel pattern as Groups.
   const canViewTasks = await canTasks(organization.id, "task.view");
   const personTasks = canViewTasks ? await taskService.listTasksForPerson(organization.id, person.id) : [];
+
+  // Journey enrollments with progress -- same read-only-panel pattern.
+  const canViewJourneys = await canJourneys(organization.id, "journey.view");
+  const personJourneys = canViewJourneys
+    ? await journeyService.listEnrollmentsForPerson(organization.id, person.id)
+    : [];
 
   const boundUpdate = updatePersonAction.bind(null, person.id);
   const boundSetHousehold = setHouseholdAction.bind(null, person.id);
@@ -183,6 +190,38 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
                   ))}
                 </ul>
               )}
+            </Card>
+          )}
+
+          {/* Journeys -- read-only progress; management lives on the journey page. */}
+          {canViewJourneys && personJourneys.length > 0 && (
+            <Card padding="md">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                <Map size={15} /> Journeys
+              </h2>
+              <ul className="space-y-3">
+                {personJourneys.map((enrollment) => (
+                  <li key={enrollment.id} className="text-sm">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <Link href={`/journeys/${enrollment.journeyId}`} className="text-ink hover:text-accent">
+                        {enrollment.journey.name}
+                      </Link>
+                      <span className="text-xs text-ink-muted">
+                        {enrollment.status === "COMPLETED"
+                          ? "Completed"
+                          : enrollment.status === "EXITED"
+                            ? "Exited"
+                            : enrollment.progress.nextMilestone
+                              ? `Next: ${enrollment.progress.nextMilestone.name}`
+                              : `${enrollment.progress.percent}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+                      <div className="h-full rounded-full bg-accent" style={{ width: `${enrollment.progress.percent}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </Card>
           )}
 

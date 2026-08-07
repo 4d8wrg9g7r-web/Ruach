@@ -3,6 +3,7 @@ import {
   formSubmissionService,
   groupService,
   interpolate,
+  journeyService,
   peopleService,
   taskService,
   workflowService,
@@ -73,6 +74,19 @@ export const EXECUTORS: ExecutorMap = {
       workflowRunId: run.runId,
     });
     return `Created task "${task.title}"`;
+  },
+
+  // Enrollment is idempotent at the service layer, so re-triggering never duplicates;
+  // an inactive/archived journey or person-less run skips gracefully rather than failing
+  // the run (docs/domain/journeys.md).
+  ENROLL_IN_JOURNEY: async (step, run) => {
+    if (step.type !== "ENROLL_IN_JOURNEY") throw new Error("wrong step type");
+    if (!run.personId) return "Skipped: run has no linked person";
+    const result = await journeyService.enroll(run.organizationId, step.journeyId, run.personId, {
+      workflowRunId: run.runId,
+    });
+    if (!result.ok) return `Skipped: journey ${result.reason}`;
+    return result.alreadyEnrolled ? "Already enrolled" : "Enrolled in journey";
   },
 };
 
