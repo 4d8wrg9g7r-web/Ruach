@@ -86,10 +86,9 @@
   .text-balance {
     text-wrap: balance;
   }
-  .grain {
-    position: relative;
-  }
-  /* Very faint film grain overlay for dark cinematic sections */
+  /* Very faint film grain overlay for dark cinematic sections.
+     NOTE: sets no `position` of its own (it would out-cascade utilities like
+     `.fixed` in this layer) — pair it with an explicitly positioned element. */
   .grain::after {
     content: "";
     position: absolute;
@@ -105,6 +104,16 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+/* Near-imperceptible idle drift for the aperture mechanism. */
+@keyframes lens-breathe {
+  from {
+    transform: rotate(-0.8deg);
+  }
+  to {
+    transform: rotate(0.8deg);
   }
 }
 

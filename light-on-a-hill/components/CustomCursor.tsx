@@ -4,13 +4,23 @@ import { useEffect, useState } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 
 /**
- * Contextual cursor (desktop, fine-pointer only). A small dot by default; over
- * any element carrying `data-cursor="explore|view|drag"` it grows into a label.
- * Disabled entirely on touch devices and when reduced motion is requested.
+ * Contextual cursor (desktop, fine-pointer only).
+ *
+ *   default                     → small dot
+ *   [data-cursor-ring="sm"]     → thin focus ring (menu links)
+ *   [data-cursor-ring="lg"]     → expanded focus ring (the aperture control)
+ *   [data-cursor="explore|view|drag"] → labelled ring over imagery
+ *
+ * Disabled on touch devices and under prefers-reduced-motion.
  */
+type Mode =
+  | { kind: "dot" }
+  | { kind: "ring"; size: number }
+  | { kind: "label"; text: string };
+
 export function CustomCursor() {
   const [enabled, setEnabled] = useState(false);
-  const [label, setLabel] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>({ kind: "dot" });
   const [down, setDown] = useState(false);
 
   const x = useMotionValue(-100);
@@ -30,8 +40,19 @@ export function CustomCursor() {
     const move = (e: MouseEvent) => {
       x.set(e.clientX);
       y.set(e.clientY);
-      const target = (e.target as HTMLElement)?.closest?.("[data-cursor]") as HTMLElement | null;
-      setLabel(target?.dataset.cursor ?? null);
+      const t = e.target as HTMLElement;
+      const labelled = t?.closest?.("[data-cursor]") as HTMLElement | null;
+      const label = labelled?.dataset.cursor;
+      if (label) {
+        setMode({ kind: "label", text: label });
+        return;
+      }
+      const ring = (t?.closest?.("[data-cursor-ring]") as HTMLElement | null)?.dataset.cursorRing;
+      if (ring) {
+        setMode({ kind: "ring", size: ring === "lg" ? 52 : 34 });
+        return;
+      }
+      setMode({ kind: "dot" });
     };
     const onDown = () => setDown(true);
     const onUp = () => setDown(false);
@@ -48,7 +69,10 @@ export function CustomCursor() {
   }, [x, y]);
 
   if (!enabled) return null;
-  const expanded = Boolean(label);
+
+  const size =
+    mode.kind === "label" ? 84 : mode.kind === "ring" ? (down ? mode.size - 6 : mode.size) : down ? 10 : 13;
+  const isDot = mode.kind === "dot";
 
   return (
     <motion.div
@@ -57,15 +81,18 @@ export function CustomCursor() {
       style={{ x: sx, y: sy }}
     >
       <motion.div
-        className="flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-paper/70 bg-paper/10 uppercase tracking-label text-paper backdrop-blur-[1px] mix-blend-difference"
+        className="flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full uppercase tracking-label text-paper mix-blend-difference"
         animate={{
-          width: expanded ? 84 : down ? 10 : 14,
-          height: expanded ? 84 : down ? 10 : 14,
-          fontSize: expanded ? 10 : 0,
+          width: size,
+          height: size,
+          fontSize: mode.kind === "label" ? 10 : 0,
+          backgroundColor: isDot ? "rgba(244,242,237,0.9)" : "rgba(244,242,237,0.04)",
+          borderWidth: isDot ? 0 : 1,
         }}
-        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        style={{ borderStyle: "solid", borderColor: "rgba(244,242,237,0.75)" }}
+        transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
       >
-        {label}
+        {mode.kind === "label" ? mode.text : null}
       </motion.div>
     </motion.div>
   );
