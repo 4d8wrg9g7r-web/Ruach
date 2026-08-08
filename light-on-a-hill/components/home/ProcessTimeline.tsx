@@ -61,8 +61,12 @@ export function ProcessTimeline() {
                     />
                   ))}
                 </div>
-                <h3 className="self-center font-serif text-2xl sm:text-3xl">{step.title}</h3>
-                <p className="max-w-md text-[0.95rem] leading-relaxed text-charcoal/75 sm:self-center">
+                <h3 className="self-center justify-self-start font-serif text-2xl sm:text-3xl">
+                  {step.title}
+                </h3>
+                {/* Mobile: span both columns so the long body can't inflate the
+                    number column and shove the title to the far edge. */}
+                <p className="col-span-2 max-w-md text-[0.95rem] leading-relaxed text-charcoal/75 sm:col-span-1 sm:self-center">
                   {step.body}
                 </p>
               </motion.div>
