@@ -17,18 +17,22 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Palette is driven by CSS variables (see app/globals.css) so the whole
+        // UI adapts to light/dark without any per-component changes. Channels are
+        // stored as space-separated RGB so opacity utilities keep working
+        // (e.g. text-chalk/[0.04], bg-ice/10).
         // Environment
-        void: "#050505", // near black — primary environment
-        graphite: "#0B0C0E", // graphite surface
-        "graphite-raised": "#121417", // raised graphite (cards, rails)
-        "graphite-line": "#1C1F24", // hairline dividers on dark
+        void: "rgb(var(--c-void) / <alpha-value>)", // primary environment
+        graphite: "rgb(var(--c-graphite) / <alpha-value>)", // surface
+        "graphite-raised": "rgb(var(--c-graphite-raised) / <alpha-value>)", // cards, rails
+        "graphite-line": "rgb(var(--c-graphite-line) / <alpha-value>)", // hairline dividers
         // Text
-        chalk: "#F4F5F5", // near-white
-        steel: "#8A8F98", // soft technical grey (secondary text, labels)
-        "steel-dim": "#565b63", // tertiary / disabled
+        chalk: "rgb(var(--c-chalk) / <alpha-value>)", // primary text
+        steel: "rgb(var(--c-steel) / <alpha-value>)", // secondary text, labels
+        "steel-dim": "rgb(var(--c-steel-dim) / <alpha-value>)", // tertiary / disabled
         // Accent — restrained cool ice, never gamer cyan
-        ice: "#7FE9E3",
-        "ice-dim": "#3d6b6a",
+        ice: "rgb(var(--c-ice) / <alpha-value>)",
+        "ice-dim": "rgb(var(--c-ice-dim) / <alpha-value>)",
       },
       fontFamily: {
         display: ["var(--font-display)", "system-ui", "sans-serif"],

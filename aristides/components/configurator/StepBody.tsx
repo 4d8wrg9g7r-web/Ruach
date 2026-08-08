@@ -36,12 +36,20 @@ export function StepBody({
   set,
   finishCategory,
   onFinishCategory,
+  compareMode,
+  compareIds,
+  onToggleCompare,
+  onSetCompareMode,
 }: {
   step: StepId;
   build: Build;
   set: SetFn;
   finishCategory: FinishCategory;
   onFinishCategory: (c: FinishCategory) => void;
+  compareMode: boolean;
+  compareIds: string[];
+  onToggleCompare: (id: string) => void;
+  onSetCompareMode: (on: boolean) => void;
 }) {
   switch (step) {
     case "platform":
@@ -108,6 +116,31 @@ export function StepBody({
       const selected = build.finish ? finishById(build.finish) : undefined;
       return (
         <div>
+          {/* compare toggle */}
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <span className="text-[12px] text-steel">
+              {compareMode
+                ? `Comparing ${compareIds.length}/4 — tap a finish to add, tap a guitar to select`
+                : "Pick a finish, or compare colours side by side."}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={compareMode}
+              onClick={() => onSetCompareMode(!compareMode)}
+              className={
+                "flex shrink-0 items-center gap-2 rounded-sm border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide-tech transition-all duration-ui " +
+                (compareMode ? "border-ice bg-ice/10 text-chalk" : "border-graphite-line text-steel hover:text-chalk")
+              }
+            >
+              <span className={"relative h-3 w-6 rounded-full transition-colors " + (compareMode ? "bg-ice" : "bg-graphite-line")}>
+                <span
+                  className={"absolute top-0.5 h-2 w-2 rounded-full bg-void transition-all " + (compareMode ? "left-3.5" : "left-0.5")}
+                />
+              </span>
+              Compare
+            </button>
+          </div>
           <div className="mb-4 flex flex-wrap gap-1.5">
             {FINISH_CATEGORIES.map((c) => (
               <button
@@ -130,8 +163,8 @@ export function StepBody({
                 key={f.id}
                 finish={f}
                 size="sm"
-                selected={build.finish === f.id}
-                onSelect={() => set({ finish: f.id })}
+                selected={compareMode ? compareIds.includes(f.id) : build.finish === f.id}
+                onSelect={() => (compareMode ? onToggleCompare(f.id) : set({ finish: f.id }))}
               />
             ))}
           </div>

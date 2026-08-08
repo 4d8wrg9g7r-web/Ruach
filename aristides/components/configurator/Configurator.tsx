@@ -36,6 +36,9 @@ export function Configurator() {
   const [build, setBuild] = useState<Build>({});
   const [stepIndex, setStepIndex] = useState(0);
   const [finishCategory, setFinishCategory] = useState<FinishCategory>("SOLID SATIN");
+  // Colour comparison (Finish step): compare the build in up to 4 finishes.
+  const [compareMode, setCompareModeState] = useState(false);
+  const [compareIds, setCompareIds] = useState<string[]>([]);
 
   // Hydrate from a shared link (?b=...) on mount, client-only (avoids Suspense).
   useEffect(() => {
@@ -58,6 +61,23 @@ export function Configurator() {
   function set(patch: Partial<Build>) {
     setBuild((prev) => reconcile({ ...prev, ...patch }));
   }
+
+  function setCompareMode(on: boolean) {
+    setCompareModeState(on);
+    if (on && compareIds.length === 0 && build.finish) setCompareIds([build.finish]);
+  }
+  function toggleCompare(id: string) {
+    if (compareIds.includes(id)) {
+      const next = compareIds.filter((x) => x !== id);
+      setCompareIds(next);
+      if (build.finish === id) set({ finish: next[0] });
+    } else {
+      if (compareIds.length >= 4) return;
+      setCompareIds([...compareIds, id]);
+      set({ finish: id }); // the most recently added finish becomes the active one
+    }
+  }
+  const showComparison = step.id === "finish" && compareMode && compareIds.length > 0;
 
   const canNext = isStepComplete(step.id, build);
   const shareLink = useMemo(() => {
@@ -114,31 +134,75 @@ export function Configurator() {
                 </span>
               </div>
             )}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`${build.platform}-${build.strings}-${build.finish}-${build.hardwareColor}-${build.orientation}`}
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="relative h-[112%]"
+            {showComparison ? (
+              <div
+                className="relative z-10 grid h-full w-full gap-2 p-3"
+                style={{ gridTemplateColumns: compareIds.length === 1 ? "1fr" : "1fr 1fr" }}
               >
-                {build.platform ? (
-                  <GuitarVisual
-                    construction={platform?.construction}
-                    strings={build.strings ?? platform?.stringCounts[0] ?? 6}
-                    orientation={build.orientation}
-                    hardwareColor={build.hardwareColor}
-                    finish={finish}
-                    className="h-full w-auto"
-                  />
-                ) : (
-                  <div className="flex h-full items-center px-8 text-center font-mono text-[12px] uppercase tracking-wide-tech text-steel-dim">
-                    Choose a platform to begin
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
+                {compareIds.map((id) => {
+                  const cf = finishById(id);
+                  const active = build.finish === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => set({ finish: id })}
+                      className={clsx(
+                        "group relative flex items-center justify-center overflow-hidden rounded-sm border transition-all duration-ui",
+                        active ? "border-ice ring-1 ring-ice" : "border-graphite-line hover:border-steel",
+                      )}
+                      style={{ background: `radial-gradient(70% 60% at 50% 35%, rgba(${(cf?.tint ?? [138, 143, 152]).join(",")},0.16), transparent 65%)` }}
+                    >
+                      <GuitarVisual
+                        construction={platform?.construction}
+                        strings={build.strings ?? platform?.stringCounts[0] ?? 6}
+                        orientation={build.orientation}
+                        hardwareColor={build.hardwareColor}
+                        finish={cf}
+                        detail="card"
+                        className="h-[88%] w-auto"
+                      />
+                      <span className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1 bg-void/70 px-1.5 py-0.5">
+                        <span className="truncate text-[10px] text-chalk">{cf?.name}</span>
+                        {cf && cf.priceAdd > 0 && (
+                          <span className="shrink-0 font-mono text-[9px] text-steel">+{formatEUR(cf.priceAdd)}</span>
+                        )}
+                      </span>
+                      {active && (
+                        <span className="absolute right-1 top-1 rounded-full bg-ice px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide-tech text-void">
+                          Selected
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${build.platform}-${build.strings}-${build.finish}-${build.hardwareColor}-${build.orientation}`}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative h-[112%]"
+                >
+                  {build.platform ? (
+                    <GuitarVisual
+                      construction={platform?.construction}
+                      strings={build.strings ?? platform?.stringCounts[0] ?? 6}
+                      orientation={build.orientation}
+                      hardwareColor={build.hardwareColor}
+                      finish={finish}
+                      className="h-full w-auto"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center px-8 text-center font-mono text-[12px] uppercase tracking-wide-tech text-steel-dim">
+                      Choose a platform to begin
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            )}
 
             {des && (
               <div className="absolute bottom-4 left-4 font-mono text-[11px] text-ice">{des}</div>
@@ -172,6 +236,10 @@ export function Configurator() {
                   set={set}
                   finishCategory={finishCategory}
                   onFinishCategory={setFinishCategory}
+                  compareMode={compareMode}
+                  compareIds={compareIds}
+                  onToggleCompare={toggleCompare}
+                  onSetCompareMode={setCompareMode}
                 />
               </motion.div>
             </AnimatePresence>

@@ -12,14 +12,45 @@
     --font-display: "Space Grotesk", system-ui, sans-serif;
     --font-body: "Inter", system-ui, sans-serif;
     --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+    /* Palette channels (space-separated RGB). Dark is the brand default. */
+    --c-void: 5 5 5;
+    --c-graphite: 11 12 14;
+    --c-graphite-raised: 18 20 23;
+    --c-graphite-line: 28 31 36;
+    --c-chalk: 244 245 245;
+    --c-steel: 138 143 152;
+    --c-steel-dim: 86 91 99;
+    --c-ice: 127 233 227;
+    --c-ice-dim: 61 107 106;
+
     /* Ambient instrument light — overridden per-view to tint the UI toward the
        currently featured instrument (see §4 of the creative direction). */
     --instrument-tint: 127, 233, 227; /* ice, by default */
     --instrument-tint-strength: 0.05;
+
+    color-scheme: dark;
+  }
+
+  /* Light mode — the same semantic roles, inverted for a bright environment.
+     Names keep their meaning (chalk = primary text, void = page ground). */
+  :root[data-theme="light"] {
+    --c-void: 245 246 247;
+    --c-graphite: 234 236 239;
+    --c-graphite-raised: 255 255 255;
+    --c-graphite-line: 214 217 222;
+    --c-chalk: 14 16 19;
+    --c-steel: 88 94 102;
+    --c-steel-dim: 138 146 154;
+    --c-ice: 13 148 136;
+    --c-ice-dim: 120 200 194;
+    --instrument-tint-strength: 0.09;
+
+    color-scheme: light;
   }
 
   * {
-    border-color: theme("colors.graphite-line");
+    border-color: rgb(var(--c-graphite-line));
   }
 
   html {
@@ -38,13 +69,13 @@
   }
 
   ::selection {
-    background: rgba(127, 233, 227, 0.22);
-    color: theme("colors.chalk");
+    background: rgb(var(--c-ice) / 0.22);
+    color: rgb(var(--c-chalk));
   }
 
   /* Machined focus ring */
   :focus-visible {
-    outline: 1px solid theme("colors.ice");
+    outline: 1px solid rgb(var(--c-ice));
     outline-offset: 2px;
   }
 
@@ -53,14 +84,14 @@
     height: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: theme("colors.void");
+    background: rgb(var(--c-void));
   }
   ::-webkit-scrollbar-thumb {
-    background: theme("colors.graphite-line");
+    background: rgb(var(--c-graphite-line));
     border-radius: 0;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: theme("colors.steel-dim");
+    background: rgb(var(--c-steel-dim));
   }
 }
 
@@ -88,12 +119,12 @@
         rgba(var(--instrument-tint), calc(var(--instrument-tint-strength) * 3)) 0%,
         transparent 55%
       ),
-      theme("colors.void");
+      rgb(var(--c-void));
   }
 
   /* Frosted rail used by header after scroll */
   .frosted {
-    background: rgba(11, 12, 14, 0.72);
+    background: rgb(var(--c-graphite) / 0.72);
     backdrop-filter: blur(14px) saturate(120%);
     -webkit-backdrop-filter: blur(14px) saturate(120%);
   }
@@ -124,8 +155,8 @@
   }
   .grid-tech {
     background-image:
-      linear-gradient(theme("colors.graphite-line") 1px, transparent 1px),
-      linear-gradient(90deg, theme("colors.graphite-line") 1px, transparent 1px);
+      linear-gradient(rgb(var(--c-graphite-line)) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--c-graphite-line)) 1px, transparent 1px);
     background-size: 64px 64px;
   }
 }

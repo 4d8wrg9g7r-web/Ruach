@@ -8,6 +8,7 @@ import { clsx } from "clsx";
 import { NavLink, CTAButton } from "@/components/ui/primitives";
 import { Wordmark } from "@/components/layout/Wordmark";
 import { ModelMenu } from "@/components/layout/ModelMenu";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 const NAV = [
   { href: "/models", label: "Models", hasMenu: true },
@@ -83,24 +84,28 @@ export function Header() {
             <NavLink href="/in-stock" active={pathname === "/in-stock"}>
               In Stock
             </NavLink>
+            <ThemeToggle />
             <CTAButton href="/build" variant="primary" size="md">
               Build Your Aristides
             </CTAButton>
           </div>
 
-          {/* Mobile trigger */}
-          <button
-            className="flex h-9 w-9 items-center justify-center lg:hidden"
-            aria-label="Menu"
-            aria-expanded={mobile}
-            onClick={() => setMobile((v) => !v)}
-          >
+          {/* Mobile actions */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <ThemeToggle />
+            <button
+              className="flex h-9 w-9 items-center justify-center"
+              aria-label="Menu"
+              aria-expanded={mobile}
+              onClick={() => setMobile((v) => !v)}
+            >
             <div className="flex flex-col gap-1.5">
               <span className={clsx("h-px w-6 bg-chalk transition-transform", mobile && "translate-y-[7px] rotate-45")} />
               <span className={clsx("h-px w-6 bg-chalk transition-opacity", mobile && "opacity-0")} />
               <span className={clsx("h-px w-6 bg-chalk transition-transform", mobile && "-translate-y-[7px] -rotate-45")} />
             </div>
-          </button>
+            </button>
+          </div>
         </div>
       </header>
 

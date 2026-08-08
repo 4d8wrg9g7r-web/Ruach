@@ -179,7 +179,7 @@ function CrossLabel({ layer, index, active }: { layer: (typeof LAYERS)[number]; 
   return (
     <motion.g style={{ opacity }}>
       <line x1="180" y1={y} x2="320" y2={y} stroke="#7FE9E3" strokeWidth="0.75" strokeDasharray="2 3" />
-      <text x="324" y={y + 3} fill="#F4F5F5" fontSize="11" style={{ fontFamily: "var(--font-mono)" }}>
+      <text x="324" y={y + 3} className="fill-chalk" fontSize="11" style={{ fontFamily: "var(--font-mono)" }}>
         {layer.label}
       </text>
     </motion.g>
@@ -236,7 +236,7 @@ function DampingDiagram() {
         transition={{ duration: 1.6, ease: "easeOut", delay: 0.3 }}
       />
       <circle cx="40" cy="70" r="3" fill="#7FE9E3" />
-      <text x="48" y="74" fill="#F4F5F5" fontSize="10" style={{ fontFamily: "var(--font-mono)" }}>ARIUM — EVEN</text>
+      <text x="48" y="74" className="fill-chalk" fontSize="10" style={{ fontFamily: "var(--font-mono)" }}>ARIUM — EVEN</text>
       <circle cx="40" cy="150" r="3" fill="#8A8F98" />
       <text x="48" y="154" fill="#8A8F98" fontSize="10" style={{ fontFamily: "var(--font-mono)" }}>WOOD — UNEVEN</text>
     </svg>
