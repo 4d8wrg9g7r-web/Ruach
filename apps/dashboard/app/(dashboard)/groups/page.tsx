@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Lock, Plus, Users2 } from "lucide-react";
+import { headers } from "next/headers";
+import { ExternalLink, Lock, Plus, Users2 } from "lucide-react";
 import { groupService, type GroupType } from "@ruach/database";
 import { Badge } from "../../../components/ui/Badge";
 import { buttonClasses } from "../../../components/ui/Button";
@@ -65,6 +66,8 @@ export default async function GroupsPage({
           </Link>
         )}
       </div>
+
+      <GroupFinderLink publicSiteId={organization.publicSiteId} />
 
       <Card padding="sm" className="mb-4">
         <form method="get" className="flex flex-wrap items-end gap-3">
@@ -159,6 +162,24 @@ export default async function GroupsPage({
         )}
       </div>
     </div>
+  );
+}
+
+async function GroupFinderLink({ publicSiteId }: { publicSiteId: string }) {
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const finderUrl = `${proto}://${host}/g/${publicSiteId}`;
+  return (
+    <Card padding="sm" className="mb-4">
+      <p className="flex flex-wrap items-center gap-2 text-sm text-ink-secondary">
+        <Users2 size={15} className="text-ink-muted" />
+        Public group finder (published groups only):
+        <a href={finderUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-accent hover:underline">
+          <ExternalLink size={13} /> {finderUrl}
+        </a>
+      </p>
+    </Card>
   );
 }
 

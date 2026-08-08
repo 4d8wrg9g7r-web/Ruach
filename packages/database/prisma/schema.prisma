@@ -139,6 +139,10 @@ model Organization {
   categorizationMode            CategorizationMode  @default(ASSISTED)
   prayerWallEnabled             Boolean             @default(false)
   publicPrayerWallId            String              @unique @default(cuid())
+  // Public URL key for org-level public surfaces: /c/<id> (events calendar) and
+  // /g/<id> (group finder) -- "publish from one source of truth" (BLUEPRINT §13/§8/§20).
+  // Same bootstrapping boundary as publicPrayerWallId.
+  publicSiteId                  String              @unique @default(cuid())
   // A plain list, not a join table -- just a set of addresses with no other
   // attributes. Essential/free are capped at 1 entry (enforced in the Settings
   // Server Action); prayerTeamNotifications entitles more.

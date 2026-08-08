@@ -27,9 +27,16 @@ export interface EventInput {
   campusWebsiteId?: string | null;
 }
 
-export async function listEvents(organizationId: string, opts: { includeArchived?: boolean } = {}) {
+export async function listEvents(
+  organizationId: string,
+  opts: { includeArchived?: boolean; publishedOnly?: boolean } = {},
+) {
   return tenantDb.event.findMany({
-    where: { organizationId, ...(opts.includeArchived ? {} : { archivedAt: null }) },
+    where: {
+      organizationId,
+      ...(opts.includeArchived ? {} : { archivedAt: null }),
+      ...(opts.publishedOnly ? { isPublished: true } : {}),
+    },
     orderBy: { startAt: "asc" },
     include: {
       _count: { select: { registrations: { where: { status: EventRegistrationStatus.REGISTERED } } } },

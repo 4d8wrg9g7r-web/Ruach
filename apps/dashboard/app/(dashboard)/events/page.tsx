@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CalendarDays, Lock, Plus } from "lucide-react";
+import { headers } from "next/headers";
+import { CalendarDays, ExternalLink, Lock, Plus } from "lucide-react";
 import { eventService, nextOccurrence } from "@ruach/database";
 import { Badge } from "../../../components/ui/Badge";
 import { buttonClasses } from "../../../components/ui/Button";
@@ -34,6 +35,10 @@ export default async function EventsPage() {
   }
 
   const events = await eventService.listEvents(organization.id);
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const calendarUrl = `${proto}://${host}/c/${organization.publicSiteId}`;
   const now = new Date();
   const rows = events
     .map((event) => ({ event, next: nextOccurrence(event, now) }))
@@ -60,6 +65,16 @@ export default async function EventsPage() {
           </Link>
         )}
       </div>
+
+      <Card padding="sm" className="mb-4">
+        <p className="flex flex-wrap items-center gap-2 text-sm text-ink-secondary">
+          <CalendarDays size={15} className="text-ink-muted" />
+          Public calendar (published events only):
+          <a href={calendarUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-accent hover:underline">
+            <ExternalLink size={13} /> {calendarUrl}
+          </a>
+        </p>
+      </Card>
 
       {rows.length === 0 ? (
         <Card padding="none">
