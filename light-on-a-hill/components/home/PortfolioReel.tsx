@@ -8,12 +8,12 @@ import { track } from "@/lib/analytics";
 type Frame = { image: ImageKey; index: string; type: string; place: string };
 
 const FRAMES: Frame[] = [
-  { image: "heroWedding", index: "01", type: "Wedding", place: "Raleigh, North Carolina" },
-  { image: "couplesMountains", index: "02", type: "Couples", place: "Blue Ridge Mountains" },
-  { image: "familyOutdoor", index: "03", type: "Family", place: "North Carolina" },
-  { image: "weddingDetails", index: "04", type: "Wedding", place: "The Maxwell" },
-  { image: "seniorPortrait", index: "05", type: "Senior", place: "Chapel Hill" },
-  { image: "couplesField", index: "06", type: "Engagement", place: "Golden hour" },
+  { image: "heroWedding", index: "01", type: "Wedding", place: "The first dance" },
+  { image: "seniorGuitarist", index: "02", type: "Senior", place: "North Carolina" },
+  { image: "familyOutdoor", index: "03", type: "Family", place: "In the studio" },
+  { image: "weddingDetails", index: "04", type: "Details", place: "Rings & florals" },
+  { image: "cheerleader", index: "05", type: "Sport", place: "Studio session" },
+  { image: "singerLive", index: "06", type: "Stage", place: "Live coverage" },
 ];
 
 /**

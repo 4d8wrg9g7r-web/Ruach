@@ -54,7 +54,7 @@ export const LOCATIONS: LocationPage[] = [
       "The Maxwell, The Merrimon-Wynne House, and Market Hall each run differently, and a photographer who's worked them can plan your timeline around their light and their quirks instead of discovering them on the day.",
     venues: ["The Maxwell", "The Merrimon-Wynne House", "Market Hall", "The Stockroom at 230", "All Saints Chapel"],
     heroImage: "weddingAisle",
-    gallery: ["weddingAisle", "weddingDetails", "weddingDance", "heroWedding"],
+    gallery: ["weddingAisle", "weddingDetails", "heroWedding"],
     faqs: [
       { q: "Do you know Raleigh's wedding venues?", a: "Yes — I've photographed across the city's most-loved venues and plan timelines around each one's light and flow." },
       { q: "How far in advance should we book a Raleigh wedding?", a: "Popular dates are often reserved nine to eighteen months out. It's always worth checking your date, even last-minute." },
@@ -146,7 +146,7 @@ export const LOCATIONS: LocationPage[] = [
       "From the mountains to the Carolina coast and beyond, destination coverage is planned end-to-end so the logistics never touch your experience of the day.",
     venues: ["Blue Ridge Mountains", "Asheville & the High Country", "The Carolina coast", "Beyond — by arrangement"],
     heroImage: "couplesMountains",
-    gallery: ["couplesMountains", "heroWedding", "weddingDetails", "couplesField"],
+    gallery: ["couplesMountains", "heroWedding", "weddingDetails"],
     faqs: [
       { q: "Do you travel for weddings and sessions?", a: "Yes — destination weddings and sessions are welcome, whether that's the mountains, the coast, or further afield. Travel is quoted transparently up front." },
       { q: "How does destination pricing work?", a: "Coverage is priced as usual, with travel added simply and transparently once we know the location. No hidden fees." },

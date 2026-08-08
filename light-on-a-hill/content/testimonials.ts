@@ -1,6 +1,10 @@
 import { type ImageKey } from "./images";
 
-/** Testimonials — maps to a `Testimonials` CMS collection. */
+/**
+ * Testimonials — maps to a `Testimonials` CMS collection.
+ * PLACEHOLDER COPY: quotes and attributions are sample content for the owner
+ * to replace with real client words before launch.
+ */
 export type Testimonial = {
   quote: string; // short, editorial — set in large type
   attribution: string;
@@ -10,21 +14,21 @@ export type Testimonial = {
 
 export const TESTIMONIALS: Testimonial[] = [
   {
-    quote: "It somehow felt like she photographed us exactly as we are.",
-    attribution: "Hannah & Will",
-    detail: "Wedding — The Maxwell, Raleigh",
+    quote: "It somehow felt like he photographed us exactly as we are.",
+    attribution: "A recent couple", // PLACEHOLDER — replace with real client
+    detail: "Wedding — North Carolina",
     image: "weddingDance",
   },
   {
-    quote: "We forgot the camera was there, and the photos prove it.",
-    attribution: "The Alvarez Family",
-    detail: "Family session — Umstead State Park",
+    quote: "Five boys, one photo where everyone is actually smiling. Magic.",
+    attribution: "A Raleigh family", // PLACEHOLDER — replace with real client
+    detail: "Family session — Studio",
     image: "familyOutdoor",
   },
   {
-    quote: "Every single frame felt like a memory, not a pose.",
-    attribution: "Maddie & Chris",
-    detail: "Engagement — Blue Ridge Mountains",
-    image: "couplesMountains",
+    quote: "He caught who I actually am — not just what I look like.",
+    attribution: "A graduating senior", // PLACEHOLDER — replace with real client
+    detail: "Senior session — North Carolina",
+    image: "seniorGuitarist",
   },
 ];

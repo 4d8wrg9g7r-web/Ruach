@@ -1,24 +1,25 @@
 /**
- * Centralised image references.
+ * Centralised image references — now pointing at the studio's real photography
+ * in /public/photography (pulled from the owner's portfolio set). Every
+ * component reads from this map, so the whole site re-skins from this file.
+ * This is the seam a Portfolio CMS collection plugs into.
  *
- * These point at Unsplash placeholders so the design reads as photography-first
- * during the build. At launch, replace each `id` with the studio's real gallery
- * asset (or a local /public path) — every component reads from this map, so the
- * whole site re-skins from one file. This is the seam a Portfolio CMS collection
- * plugs into.
+ * NOTE ON COVERAGE: the current set has no couples/engagement or maternity
+ * frames, so those slots temporarily reuse the closest real work (marked
+ * below). Swap them when those sessions are added to the portfolio.
  */
 
 export type StudioImage = {
-  id: string; // Unsplash photo id (placeholder) or absolute URL
+  id: string; // local /public path (or absolute URL / Unsplash id for legacy)
   alt: string;
   focal?: { x: number; y: number }; // object-position hint, 0..1
 };
 
 const UNSPLASH = "https://images.unsplash.com/photo-";
 
-/** Build a responsive Unsplash URL, or pass through an absolute URL. */
+/** Resolve an image reference. Local paths pass through untouched. */
 export function src(image: StudioImage, width = 1600): string {
-  if (image.id.startsWith("http")) return image.id;
+  if (image.id.startsWith("/") || image.id.startsWith("http")) return image.id;
   const q = width > 1400 ? 72 : 74;
   return `${UNSPLASH}${image.id}?auto=format&fit=crop&w=${width}&q=${q}`;
 }
@@ -30,76 +31,118 @@ export function objectPosition(image: StudioImage): string {
 
 export const IMAGES = {
   heroWedding: {
-    id: "1519741497674-611481863552",
-    alt: "A couple embracing at golden hour on their wedding day",
-    focal: { x: 0.5, y: 0.4 },
+    id: "/photography/wedding-first-dance.jpg",
+    alt: "A bride and groom share their first dance under moody violet light",
+    focal: { x: 0.55, y: 0.45 },
   },
   weddingAisle: {
-    id: "1465495976277-4387d4b0b4c6",
-    alt: "Bride and groom during an outdoor wedding ceremony",
-    focal: { x: 0.5, y: 0.45 },
+    id: "/photography/wedding-embrace-bw.jpg",
+    alt: "A black-and-white portrait of a groom kissing his bride's forehead",
+    focal: { x: 0.5, y: 0.4 },
   },
   weddingDance: {
-    id: "1519225421980-715cb0215aed",
-    alt: "Newlyweds sharing a first dance under warm light",
+    id: "/photography/wedding-first-dance.jpg",
+    alt: "Newlyweds during their first dance, wrapped in soft stage light",
+    focal: { x: 0.55, y: 0.45 },
   },
   weddingDetails: {
-    id: "1583939003579-730e3918a45a",
-    alt: "A bride in soft window light before the ceremony",
-    focal: { x: 0.5, y: 0.35 },
+    id: "/photography/wedding-rings-florals.jpg",
+    alt: "Wedding rings resting on pink crepe myrtle blossoms",
   },
+  // TEMPORARY: no couples/engagement frames in the current set — reusing the
+  // strongest couple imagery until an engagement session is added.
   couplesMountains: {
-    id: "1490578474895-699cd4e2cf59",
-    alt: "A couple walking together in the Blue Ridge mountains",
+    id: "/photography/portrait-woman-waterfront.jpg",
+    alt: "A relaxed waterfront portrait session with sunlit bokeh",
+    focal: { x: 0.42, y: 0.35 },
   },
   couplesField: {
-    id: "1522673607200-164d1b6ce486",
-    alt: "A couple laughing together in an open field at dusk",
+    id: "/photography/wedding-embrace-bw.jpg",
+    alt: "A couple held close in a timeless black-and-white frame",
+    focal: { x: 0.5, y: 0.4 },
   },
   familyOutdoor: {
-    id: "1476234251651-f353703a034d",
-    alt: "A family walking together outdoors in autumn",
-    focal: { x: 0.5, y: 0.35 },
+    id: "/photography/family-five-brothers.jpg",
+    alt: "Five brothers laughing together during a studio family session",
+    focal: { x: 0.5, y: 0.45 },
   },
   familyCandid: {
-    id: "1511895426328-dc8714191300",
-    alt: "Parents and children laughing together at home",
+    id: "/photography/family-five-brothers.jpg",
+    alt: "A family session full of easy, genuine smiles",
+    focal: { x: 0.5, y: 0.45 },
   },
   familyField: {
-    id: "1537633552985-df8429e8048b",
-    alt: "A young family in a sunlit field",
+    id: "/photography/family-five-brothers.jpg",
+    alt: "Brothers gathered close for a family portrait",
+    focal: { x: 0.5, y: 0.45 },
   },
   seniorPortrait: {
-    id: "1524504388940-b1c1722653e1",
-    alt: "A senior portrait session in soft afternoon light",
-    focal: { x: 0.5, y: 0.3 },
+    id: "/photography/senior-silhouette.jpg",
+    alt: "A dramatic black-and-white senior silhouette against city architecture",
+    focal: { x: 0.45, y: 0.35 },
   },
+  // TEMPORARY: no maternity frames in the current set.
   maternity: {
-    id: "1518621736915-f3b1c41bfd00",
-    alt: "An expectant mother in a quiet, softly lit portrait",
+    id: "/photography/portrait-woman-waterfront.jpg",
+    alt: "A soft, natural portrait by the water",
+    focal: { x: 0.42, y: 0.35 },
   },
   portraitWoman: {
-    id: "1438761681033-6461ffad8d80",
-    alt: "A natural portrait of a woman in window light",
-    focal: { x: 0.5, y: 0.3 },
+    id: "/photography/portrait-woman-waterfront.jpg",
+    alt: "A joyful waterfront portrait in natural light",
+    focal: { x: 0.42, y: 0.35 },
   },
   portraitMan: {
-    id: "1500648767791-00dcc994a43e",
-    alt: "A candid editorial portrait of a man",
-    focal: { x: 0.5, y: 0.3 },
+    id: "/photography/portrait-man-profile.jpg",
+    alt: "A quiet profile portrait in warm window light",
+    focal: { x: 0.5, y: 0.4 },
   },
   photographer: {
-    id: "1494790108377-be9c29b29330",
+    id: "/photography/photographer-portrait.jpg",
     alt: "Portrait of the photographer behind Light on a Hill",
-    focal: { x: 0.5, y: 0.3 },
+    focal: { x: 0.5, y: 0.4 },
   },
   branding: {
-    id: "1529626455594-4ff0802cfb7e",
-    alt: "A personal branding session for a creative professional",
+    id: "/photography/branding-headshot.jpg",
+    alt: "A clean professional headshot against a deep blue studio backdrop",
+    focal: { x: 0.5, y: 0.35 },
   },
   raleigh: {
-    id: "1570126618953-d437176e8c79",
-    alt: "Downtown Raleigh, North Carolina at dusk",
+    id: "/photography/stage-performer.jpg",
+    alt: "Live event coverage — a performer commanding the stage",
+    focal: { x: 0.5, y: 0.4 },
+  },
+  // Additional real work — events, sports, and creative sessions.
+  seniorGuitarist: {
+    id: "/photography/senior-guitarist.jpg",
+    alt: "A senior session built around his guitar, photographed outdoors",
+    focal: { x: 0.55, y: 0.4 },
+  },
+  cheerleader: {
+    id: "/photography/cheerleader-studio.jpg",
+    alt: "A cheerleader mid-leap through pink and blue studio smoke",
+    focal: { x: 0.5, y: 0.45 },
+  },
+  bandHats: {
+    id: "/photography/band-cowboy-hats.jpg",
+    alt: "A band lined up with cowboy hats in hand before the show",
+  },
+  singerLive: {
+    id: "/photography/singer-live.jpg",
+    alt: "A singer lost in the moment on stage",
+    focal: { x: 0.5, y: 0.4 },
+  },
+  arenaFootball: {
+    id: "/photography/arena-football.jpg",
+    alt: "Arena football action at full speed",
+  },
+  guitarCollage: {
+    id: "/photography/guitar-collage.jpg",
+    alt: "A black-and-white collage study of a guitarist's hands and strings",
+  },
+  creativeComposite: {
+    id: "/photography/creative-composite.jpg",
+    alt: "A dark creative composite portrait",
   },
 } satisfies Record<string, StudioImage>;
 

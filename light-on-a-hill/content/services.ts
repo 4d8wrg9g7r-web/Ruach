@@ -53,7 +53,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["The day disappears.", "The photographs don't."],
     positioning:
       "A wedding is the fastest day of your life. My work is to move through it quietly — reading the room, catching the glance across the aisle, the hand your father won't let go of — so that years from now the photographs still carry the temperature of the day, not just the look of it.",
-    gallery: ["weddingAisle", "weddingDetails", "weddingDance", "couplesField", "heroWedding", "couplesMountains"],
+    gallery: ["weddingAisle", "weddingDetails", "heroWedding"],
     reasons: [
       {
         title: "Unhurried on the fastest day",
@@ -116,7 +116,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["Photographs that feel", "like the two of you."],
     positioning:
       "Not a photoshoot — an hour that feels like a good evening together. We walk, you forget the camera, and the pictures end up looking like the way you actually are with each other.",
-    gallery: ["couplesField", "couplesMountains", "heroWedding", "weddingDance"],
+    gallery: ["couplesField", "couplesMountains", "heroWedding"],
     reasons: [
       { title: "Easy, not posed", body: "Gentle direction that gives you something to do with your hands and lets the real thing happen in between." },
       { title: "Locations with meaning", body: "Golden-hour light in a place that means something to you — where you met, where you live, or the mountains at dusk." },
@@ -156,7 +156,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["The beautifully imperfect", "season you're in now."],
     positioning:
       "Kids don't hold still, and they shouldn't have to. Family sessions are built around real movement and real personalities — the result looks like your actual family, on an actual good day, not a stiff line-up in matching shirts.",
-    gallery: ["familyOutdoor", "familyCandid", "familyField", "seniorPortrait"],
+    gallery: ["familyOutdoor", "seniorGuitarist", "cheerleader", "portraitMan"],
     reasons: [
       { title: "Built for real kids", body: "We keep it moving and playful. The best frames usually happen in the in-between moments, not the say-cheese ones." },
       { title: "No pressure to perform", body: "If a toddler melts down, that's fine — I've photographed enough families to work with it, not against it." },
@@ -198,7 +198,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["The year everything", "is about to change."],
     positioning:
       "Senior portraits should look like who you are right now — not a template. We build the session around your style, your interests, and the light, and end up with images that feel current instead of dated the moment you graduate.",
-    gallery: ["seniorPortrait", "portraitWoman", "portraitMan", "couplesField"],
+    gallery: ["seniorPortrait", "seniorGuitarist", "cheerleader", "portraitMan"],
     reasons: [
       { title: "Your style, not a formula", body: "We plan wardrobe and locations around who you actually are, so the portraits feel like now." },
       { title: "Comfortable in front of the camera", body: "Clear direction that makes it easy, even if you've never loved having your photo taken." },
@@ -237,7 +237,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["A quiet chapter,", "worth keeping."],
     positioning:
       "Maternity sessions are calm, warm, and unhurried — a small pause to hold onto before everything gets louder. Soft light, real tenderness, and none of the awkwardness you might be bracing for.",
-    gallery: ["maternity", "familyField", "portraitWoman", "familyCandid"],
+    gallery: ["maternity", "weddingDetails", "familyOutdoor"],
     reasons: [
       { title: "Calm and comfortable", body: "Gentle direction and flattering light, planned around how you're feeling." },
       { title: "Yours, or the whole family", body: "Solo, with your partner, or with older siblings — however you want to remember this." },
@@ -276,7 +276,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["Your work,", "photographed like it matters."],
     positioning:
       "Personal-brand and business photography for people whose work deserves better than a phone snapshot. We build a small, consistent library of images that actually looks like you and your business — for your site, your press, and everywhere else.",
-    gallery: ["branding", "portraitMan", "portraitWoman", "seniorPortrait"],
+    gallery: ["branding", "bandHats", "singerLive", "guitarCollage", "arenaFootball", "raleigh"],
     reasons: [
       { title: "A usable library, not one headshot", body: "A planned set of images — portraits, at-work, and detail frames — you can draw from all year." },
       { title: "On-brand and consistent", body: "We plan wardrobe, setting, and colour so the whole set feels like one deliberate brand." },
