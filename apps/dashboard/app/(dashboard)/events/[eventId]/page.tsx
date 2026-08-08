@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { ArrowLeft, CalendarClock, ExternalLink, Eye, EyeOff, Trash2, Undo2, X } from "lucide-react";
+import { ArrowLeft, CalendarClock, ExternalLink, Eye, EyeOff, Trash2, Undo2, UserCheck, X } from "lucide-react";
 import { eventService, expandOccurrences, personDisplayName } from "@ruach/database";
 import { websiteService } from "@ruach/database";
 import { Badge } from "../../../../components/ui/Badge";
@@ -123,6 +123,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ ev
         </div>
 
         <div className="flex flex-col gap-6">
+          {canViewRegistrations && (
+            <Link href={`/events/${event.id}/checkin`} className={buttonClasses("secondary", "md") + " w-full"}>
+              <UserCheck size={16} /> Open check-in
+            </Link>
+          )}
+
           <Card padding="md">
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
               <CalendarClock size={15} /> Upcoming

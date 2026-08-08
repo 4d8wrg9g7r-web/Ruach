@@ -50,6 +50,10 @@ export { expandOccurrences, nextOccurrence } from "./events/helpers";
 export * as messageService from "./services/message-service";
 export * as messagePermissions from "./authz/message-permissions";
 export type { MessageAction } from "./authz/message-permissions";
+
+export * as checkinService from "./services/checkin-service";
+export * as checkinPermissions from "./authz/checkin-permissions";
+export type { CheckinAction } from "./authz/checkin-permissions";
 export * as workflowPermissions from "./authz/workflow-permissions";
 export type { WorkflowAction } from "./authz/workflow-permissions";
 export {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CheckSquare, Home, Link2, Mail, MailX, Map, Trash2, Undo2, Users2, X, Zap } from "lucide-react";
-import { groupService, isOverdue, journeyService, messageService, peopleService, personDisplayName, taskService } from "@ruach/database";
+import { checkinService, groupService, isOverdue, journeyService, messageService, peopleService, personDisplayName, taskService } from "@ruach/database";
 import { websiteService } from "@ruach/database";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
@@ -21,6 +21,7 @@ import { canGroups } from "../../../../lib/groups-access";
 import { canTasks } from "../../../../lib/tasks-access";
 import { canJourneys } from "../../../../lib/journeys-access";
 import { canMessages } from "../../../../lib/messages-access";
+import { canCheckin } from "../../../../lib/checkin-access";
 import { groupTypeLabel } from "../../../../lib/groups-format";
 import { getCurrentOrganization } from "../../../../lib/session";
 import {
@@ -73,6 +74,12 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
   const canViewMessages = await canMessages(organization.id, "message.view");
   const personMessages = canViewMessages
     ? await messageService.listMessagesForPerson(organization.id, person.id, 5)
+    : [];
+
+  // Recent attendance -- same read-only-panel pattern.
+  const canViewCheckins = await canCheckin(organization.id, "checkin.view");
+  const personCheckIns = canViewCheckins
+    ? await checkinService.listCheckInsForPerson(organization.id, person.id, 5)
     : [];
 
   const boundUpdate = updatePersonAction.bind(null, person.id);
@@ -324,6 +331,27 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
               </form>
             )}
           </Card>
+
+          {/* Attendance -- recent check-ins, read-only. */}
+          {canViewCheckins && personCheckIns.length > 0 && (
+            <Card padding="md">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                <CheckSquare size={15} /> Attendance
+              </h2>
+              <ul className="space-y-2">
+                {personCheckIns.map((checkIn) => (
+                  <li key={checkIn.id} className="text-sm">
+                    <Link href={`/events/${checkIn.eventId}`} className="text-ink hover:text-accent">
+                      {checkIn.event.title}
+                    </Link>
+                    <span className="block text-xs text-ink-muted">
+                      {new Date(checkIn.occurrenceAt).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           {/* Communications -- recent messages + consent (BLUEPRINT §19). */}
           {canViewMessages && (

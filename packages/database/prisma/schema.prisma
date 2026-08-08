@@ -217,6 +217,7 @@ model Organization {
   events                  Event[]
   eventRegistrations      EventRegistration[]
   messages                Message[]
+  checkIns                CheckIn[]
 }
 
 enum CategorizationMode {
@@ -958,6 +959,7 @@ model Person {
   journeyEnrollments JourneyEnrollment[]
   eventRegistrations EventRegistration[]
   messages          Message[]
+  checkIns          CheckIn[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -1529,6 +1531,7 @@ model Event {
   organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   campus        Website?            @relation(fields: [campusWebsiteId], references: [id], onDelete: SetNull)
   registrations EventRegistration[]
+  checkIns      CheckIn[]
 
   @@index([organizationId, startAt])
   @@index([organizationId])
@@ -1604,4 +1607,36 @@ model Message {
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
   @@index([toPersonId])
+}
+
+// ---------------------------------------------------------------------------
+// Check-In (attendance foundations)
+//
+// Per-occurrence attendance (BLUEPRINT §12 foundations) composing Event + Person. The
+// occurrence's start instant IS the occurrence identity (see docs/domain/events.md
+// "Recurrence strategy" and docs/domain/checkin.md) -- no occurrence table until
+// something else needs one. ADULT/GENERAL attendance only: child-safety features are
+// human-review territory (§66) and explicitly out of scope here.
+// ---------------------------------------------------------------------------
+
+model CheckIn {
+  id             String   @id @default(cuid())
+  organizationId String
+  eventId        String
+  // The occurrence's start instant (from expandOccurrences) -- the occurrence key.
+  occurrenceAt   DateTime
+  personId       String
+  checkedInByUserId String?
+  checkedInAt    DateTime @default(now())
+  checkedOutAt   DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  person       Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // Idempotent per person per occurrence.
+  @@unique([eventId, occurrenceAt, personId])
+  @@index([organizationId])
+  @@index([eventId, occurrenceAt])
+  @@index([personId])
 }
