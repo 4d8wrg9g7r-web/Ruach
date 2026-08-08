@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CalendarDays,
   CheckSquare,
   ClipboardList,
   Compass,
@@ -9,6 +10,7 @@ import {
   Library,
   LayoutDashboard,
   LifeBuoy,
+  Mail,
   Map,
   Monitor,
   Search,
@@ -80,9 +82,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNavItem href="/people" label="People" icon={<Contact size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/groups" label="Groups" icon={<Users2 size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/journeys" label="Journeys" icon={<Map size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem href="/events" label="Events" icon={<CalendarDays size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/forms" label="Forms" icon={<ClipboardList size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/workflows" label="Workflows" icon={<Workflow size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/tasks" label="Tasks" icon={<CheckSquare size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem href="/messages" label="Messages" icon={<Mail size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/resources" label="Resources" icon={<Library size={17} strokeWidth={1.75} />} />
         <SidebarNavItem
           href="/resources?status=REVIEW_REQUIRED"

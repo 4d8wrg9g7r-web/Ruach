@@ -106,6 +106,17 @@ export async function getOrganizationByStripeCustomerId(stripeCustomerId: string
   return rawDb.organization.findUnique({ where: { stripeCustomerId } });
 }
 
+/**
+ * Resolve the org behind a public site id (/c/<id> calendar, /g/<id> group finder) --
+ * the same rawDb bootstrapping boundary as resolvePublicPrayerWall: no tenant context
+ * exists until this lookup provides it.
+ */
+export async function resolvePublicSite(publicSiteId: string) {
+  const organization = await rawDb.organization.findUnique({ where: { publicSiteId } });
+  if (!organization) return null;
+  return { organizationId: organization.id, name: organization.name };
+}
+
 /** Cross-tenant by design -- used by the usage-warning cron (lib/usage-warnings.ts), which has to check every org's usage, not one tenant's. Not exposed to any request path that resolves a single organizationId. */
 export async function listAllOrganizations() {
   return rawDb.organization.findMany();

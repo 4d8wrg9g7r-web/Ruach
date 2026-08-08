@@ -139,6 +139,10 @@ model Organization {
   categorizationMode            CategorizationMode  @default(ASSISTED)
   prayerWallEnabled             Boolean             @default(false)
   publicPrayerWallId            String              @unique @default(cuid())
+  // Public URL key for org-level public surfaces: /c/<id> (events calendar) and
+  // /g/<id> (group finder) -- "publish from one source of truth" (BLUEPRINT §13/§8/§20).
+  // Same bootstrapping boundary as publicPrayerWallId.
+  publicSiteId                  String              @unique @default(cuid())
   // A plain list, not a join table -- just a set of addresses with no other
   // attributes. Essential/free are capped at 1 entry (enforced in the Settings
   // Server Action); prayerTeamNotifications entitles more.
@@ -210,6 +214,10 @@ model Organization {
   journeyMilestones       JourneyMilestone[]
   journeyEnrollments      JourneyEnrollment[]
   journeyMilestoneCompletions JourneyMilestoneCompletion[]
+  events                  Event[]
+  eventRegistrations      EventRegistration[]
+  messages                Message[]
+  checkIns                CheckIn[]
 }
 
 enum CategorizationMode {
@@ -273,6 +281,7 @@ model Website {
   prayerRequests PrayerRequest[]
   people         Person[]
   groups         Group[]
+  events         Event[]
 
   @@index([organizationId])
 }
@@ -929,6 +938,10 @@ model Person {
   birthdate        DateTime?
   tags             String[]         @default([])
   notes            String?
+  // Email consent (BLUEPRINT §19: explicitly modeled, timestamped, auditable). Set =
+  // person-linked sends are suppressed by message-service.queueMessage. Toggled only by
+  // staff; changes audited (person.email_opt_out_set/cleared).
+  emailOptedOutAt DateTime?
 
   archivedAt DateTime?
   createdAt  DateTime @default(now())
@@ -944,6 +957,9 @@ model Person {
   workflowRuns      WorkflowRun[]
   tasks             Task[]
   journeyEnrollments JourneyEnrollment[]
+  eventRegistrations EventRegistration[]
+  messages          Message[]
+  checkIns          CheckIn[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -1297,6 +1313,7 @@ model WorkflowRun {
   person       Person?            @relation(fields: [personId], references: [id], onDelete: SetNull)
   createdTasks Task[]
   journeyEnrollments JourneyEnrollment[]
+  messages     Message[]
 
   @@index([organizationId])
   @@index([workflowId])
@@ -1462,4 +1479,164 @@ model JourneyMilestoneCompletion {
   @@unique([enrollmentId, milestoneId])
   @@index([organizationId])
   @@index([enrollmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Events & Registrations
+//
+// The canonical Event primitive (BLUEPRINT §13; Foundation checklist "canonical event
+// primitive and recurrence strategy"). One event object drives the staff calendar, the
+// public /e/<publicId> page, and registrations. Recurrence strategy: compute-on-read --
+// the rule lives on the Event (recurrence/interval/until) and the pure expandOccurrences
+// helper derives occurrence dates; occurrence ROWS materialize later when Check-In needs
+// per-occurrence attendance. Registrations compose Person (match-or-create, like Forms)
+// and emit EventRegistered atomically for workflow triggers. See docs/domain/events.md.
+// ---------------------------------------------------------------------------
+
+enum EventRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum EventRegistrationStatus {
+  REGISTERED
+  CANCELLED
+}
+
+model Event {
+  id             String          @id @default(cuid())
+  organizationId String
+  title          String
+  description    String?
+  location       String?
+  startAt        DateTime
+  endAt          DateTime?
+  allDay         Boolean         @default(false)
+  recurrence     EventRecurrence @default(NONE)
+  recurrenceInterval Int         @default(1)
+  recurrenceUntil    DateTime?
+  // null = unlimited. Counted over REGISTERED registrations only.
+  capacity       Int?
+  isPublished    Boolean         @default(false)
+  // Public URL key -- same bootstrapping boundary as forms/widgets/prayer walls.
+  publicId       String          @unique @default(cuid())
+  // Home campus -- reuses the Website-as-campus convention.
+  campusWebsiteId String?
+  archivedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campus        Website?            @relation(fields: [campusWebsiteId], references: [id], onDelete: SetNull)
+  registrations EventRegistration[]
+  checkIns      CheckIn[]
+
+  @@index([organizationId, startAt])
+  @@index([organizationId])
+  @@index([campusWebsiteId])
+}
+
+model EventRegistration {
+  id             String                  @id @default(cuid())
+  organizationId String
+  eventId        String
+  // Matched/created Person. SetNull: registration history survives person deletion; the
+  // denormalized name/email keep the row meaningful on its own.
+  personId       String?
+  name           String
+  email          String?
+  status         EventRegistrationStatus @default(REGISTERED)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  person       Person?      @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  // Idempotent per person per event (enforced when a person is linked).
+  @@unique([eventId, personId])
+  @@index([organizationId])
+  @@index([eventId])
+  @@index([personId])
+}
+
+// ---------------------------------------------------------------------------
+// Communications (Message log)
+//
+// The canonical Message primitive (BLUEPRINT §4/§19): every outbound communication the
+// platform sends is a durable, consent-aware record delivered by the outbox worker --
+// never a fire-and-forget provider call. SENT means "provider accepted"; bounce
+// ingestion arrives with provider webhooks. See docs/domain/communications.md.
+// ---------------------------------------------------------------------------
+
+enum MessageChannel {
+  EMAIL
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model Message {
+  id             String         @id @default(cuid())
+  organizationId String
+  channel        MessageChannel @default(EMAIL)
+  toEmail        String
+  // Linked recipient Person when known (consent is enforced for person-linked sends).
+  toPersonId     String?
+  subject        String
+  body           String
+  status         MessageStatus  @default(QUEUED)
+  // Where this message came from: "workflow" | "form_notification" | "manual_resend" | ...
+  source         String
+  // Workflow provenance, mirroring Task/JourneyEnrollment (§40 pattern).
+  workflowRunId  String?
+  error          String?
+  sentAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  toPerson     Person?      @relation(fields: [toPersonId], references: [id], onDelete: SetNull)
+  workflowRun  WorkflowRun? @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@index([toPersonId])
+}
+
+// ---------------------------------------------------------------------------
+// Check-In (attendance foundations)
+//
+// Per-occurrence attendance (BLUEPRINT §12 foundations) composing Event + Person. The
+// occurrence's start instant IS the occurrence identity (see docs/domain/events.md
+// "Recurrence strategy" and docs/domain/checkin.md) -- no occurrence table until
+// something else needs one. ADULT/GENERAL attendance only: child-safety features are
+// human-review territory (§66) and explicitly out of scope here.
+// ---------------------------------------------------------------------------
+
+model CheckIn {
+  id             String   @id @default(cuid())
+  organizationId String
+  eventId        String
+  // The occurrence's start instant (from expandOccurrences) -- the occurrence key.
+  occurrenceAt   DateTime
+  personId       String
+  checkedInByUserId String?
+  checkedInAt    DateTime @default(now())
+  checkedOutAt   DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  person       Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  // Idempotent per person per occurrence.
+  @@unique([eventId, occurrenceAt, personId])
+  @@index([organizationId])
+  @@index([eventId, occurrenceAt])
+  @@index([personId])
 }

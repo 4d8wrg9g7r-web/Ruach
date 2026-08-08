@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckSquare, Home, Link2, Map, Trash2, Undo2, Users2, X, Zap } from "lucide-react";
-import { groupService, isOverdue, journeyService, peopleService, personDisplayName, taskService } from "@ruach/database";
+import { ArrowLeft, CheckSquare, Home, Link2, Mail, MailX, Map, Trash2, Undo2, Users2, X, Zap } from "lucide-react";
+import { checkinService, groupService, isOverdue, journeyService, messageService, peopleService, personDisplayName, taskService } from "@ruach/database";
 import { websiteService } from "@ruach/database";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
@@ -20,6 +20,8 @@ import { canPeople, requirePeople } from "../../../../lib/people-access";
 import { canGroups } from "../../../../lib/groups-access";
 import { canTasks } from "../../../../lib/tasks-access";
 import { canJourneys } from "../../../../lib/journeys-access";
+import { canMessages } from "../../../../lib/messages-access";
+import { canCheckin } from "../../../../lib/checkin-access";
 import { groupTypeLabel } from "../../../../lib/groups-format";
 import { getCurrentOrganization } from "../../../../lib/session";
 import {
@@ -27,6 +29,7 @@ import {
   archivePersonAction,
   removeRelationshipAction,
   restorePersonAction,
+  setEmailOptOutAction,
   setHouseholdAction,
   updatePersonAction,
 } from "../actions";
@@ -65,6 +68,18 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
   const canViewJourneys = await canJourneys(organization.id, "journey.view");
   const personJourneys = canViewJourneys
     ? await journeyService.listEnrollmentsForPerson(organization.id, person.id)
+    : [];
+
+  // Recent messages to this person -- same read-only-panel pattern.
+  const canViewMessages = await canMessages(organization.id, "message.view");
+  const personMessages = canViewMessages
+    ? await messageService.listMessagesForPerson(organization.id, person.id, 5)
+    : [];
+
+  // Recent attendance -- same read-only-panel pattern.
+  const canViewCheckins = await canCheckin(organization.id, "checkin.view");
+  const personCheckIns = canViewCheckins
+    ? await checkinService.listCheckInsForPerson(organization.id, person.id, 5)
     : [];
 
   const boundUpdate = updatePersonAction.bind(null, person.id);
@@ -316,6 +331,70 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ p
               </form>
             )}
           </Card>
+
+          {/* Attendance -- recent check-ins, read-only. */}
+          {canViewCheckins && personCheckIns.length > 0 && (
+            <Card padding="md">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                <CheckSquare size={15} /> Attendance
+              </h2>
+              <ul className="space-y-2">
+                {personCheckIns.map((checkIn) => (
+                  <li key={checkIn.id} className="text-sm">
+                    <Link href={`/events/${checkIn.eventId}`} className="text-ink hover:text-accent">
+                      {checkIn.event.title}
+                    </Link>
+                    <span className="block text-xs text-ink-muted">
+                      {new Date(checkIn.occurrenceAt).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Communications -- recent messages + consent (BLUEPRINT §19). */}
+          {canViewMessages && (
+            <Card padding="md">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                <Mail size={15} /> Communications
+              </h2>
+              {person.emailOptedOutAt && (
+                <p className="mb-3 flex items-center gap-1.5 rounded-md bg-warning-bg px-3 py-2 text-xs text-warning">
+                  <MailX size={13} /> Opted out of email since {new Date(person.emailOptedOutAt).toLocaleDateString()}
+                </p>
+              )}
+              {personMessages.length === 0 ? (
+                <p className="mb-3 text-sm text-ink-muted">No messages sent yet.</p>
+              ) : (
+                <ul className="mb-3 space-y-2">
+                  {personMessages.map((message) => (
+                    <li key={message.id} className="text-sm">
+                      <span className="text-ink">{message.subject}</span>
+                      <span className="block text-xs text-ink-muted">
+                        {message.status.toLowerCase()} · {new Date(message.sentAt ?? message.createdAt).toLocaleDateString()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {canManage && (
+                <form action={setEmailOptOutAction.bind(null, person.id, !person.emailOptedOutAt)}>
+                  <button type="submit" className={buttonClasses("secondary", "sm") + " w-full"}>
+                    {person.emailOptedOutAt ? (
+                      <>
+                        <Mail size={14} /> Clear email opt-out
+                      </>
+                    ) : (
+                      <>
+                        <MailX size={14} /> Opt out of email
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </Card>
+          )}
 
           {/* Archive / restore */}
           {canManage && (
