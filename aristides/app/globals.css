@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Aristides base layer.
+ * Exoskeleton + Core: hard precision on the surface, resonant energy beneath.
+ */
+
+@layer base {
+  :root {
+    --font-display: "Space Grotesk", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    /* Ambient instrument light — overridden per-view to tint the UI toward the
+       currently featured instrument (see §4 of the creative direction). */
+    --instrument-tint: 127, 233, 227; /* ice, by default */
+    --instrument-tint-strength: 0.05;
+  }
+
+  * {
+    border-color: theme("colors.graphite-line");
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: theme("colors.void");
+    color: theme("colors.chalk");
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgba(127, 233, 227, 0.22);
+    color: theme("colors.chalk");
+  }
+
+  /* Machined focus ring */
+  :focus-visible {
+    outline: 1px solid theme("colors.ice");
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: theme("colors.void");
+  }
+  ::-webkit-scrollbar-thumb {
+    background: theme("colors.graphite-line");
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme("colors.steel-dim");
+  }
+}
+
+@layer components {
+  /* Technical label — tiny, tracked, uppercase */
+  .tech-label {
+    @apply font-mono text-[11px] uppercase tracking-wider-tech text-steel;
+  }
+
+  /* Hairline divider */
+  .hairline {
+    @apply h-px w-full bg-graphite-line;
+  }
+
+  /* Standard page gutter */
+  .shell {
+    @apply mx-auto w-full max-w-shell px-5 sm:px-8 lg:px-14;
+  }
+
+  /* Ambient instrument glow surface */
+  .instrument-ambient {
+    background:
+      radial-gradient(
+        120% 90% at 50% 8%,
+        rgba(var(--instrument-tint), calc(var(--instrument-tint-strength) * 3)) 0%,
+        transparent 55%
+      ),
+      theme("colors.void");
+  }
+
+  /* Frosted rail used by header after scroll */
+  .frosted {
+    background: rgba(11, 12, 14, 0.72);
+    backdrop-filter: blur(14px) saturate(120%);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
+  }
+
+  /* Reflective sweep highlight used on hardware / metal finishes */
+  .metal-sweep::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      110deg,
+      transparent 20%,
+      rgba(244, 245, 245, 0.14) 48%,
+      rgba(244, 245, 245, 0.02) 55%,
+      transparent 80%
+    );
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+  .group:hover .metal-sweep::after {
+    animation: sweep 1.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .grid-tech {
+    background-image:
+      linear-gradient(theme("colors.graphite-line") 1px, transparent 1px),
+      linear-gradient(90deg, theme("colors.graphite-line") 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+}
+
+/* Respect reduced motion globally — animation is a garnish, never a gate. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
