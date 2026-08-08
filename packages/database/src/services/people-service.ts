@@ -147,6 +147,19 @@ export async function updatePerson(organizationId: string, personId: string, inp
   return getPerson(organizationId, personId);
 }
 
+/**
+ * Email consent (BLUEPRINT §19: explicit, timestamped, auditable). Callers must record
+ * the person.email_opt_out_set/cleared audit event. Enforced by
+ * message-service.queueMessage for person-linked sends.
+ */
+export async function setEmailOptOut(organizationId: string, personId: string, optedOut: boolean) {
+  const result = await tenantDb.person.updateMany({
+    where: { id: personId, organizationId },
+    data: { emailOptedOutAt: optedOut ? new Date() : null },
+  });
+  return result.count > 0;
+}
+
 export async function archivePerson(organizationId: string, personId: string) {
   const result = await tenantDb.person.updateMany({
     where: { id: personId, organizationId },

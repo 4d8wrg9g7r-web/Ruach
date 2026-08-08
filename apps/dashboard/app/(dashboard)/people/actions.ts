@@ -130,6 +130,25 @@ export async function updatePersonAction(personId: string, formData: FormData) {
   revalidatePath(`/people/${personId}`);
 }
 
+export async function setEmailOptOutAction(personId: string, optedOut: boolean) {
+  const organization = await requireOrg();
+  await requirePeople(organization.id, "person.manage");
+
+  await peopleService.setEmailOptOut(organization.id, personId, optedOut);
+
+  // Consent changes are always audited (BLUEPRINT §19/§49).
+  const actor = await getCurrentUser();
+  await auditService.recordAuditEvent({
+    organizationId: organization.id,
+    actorUserId: actor?.id,
+    action: optedOut ? "person.email_opt_out_set" : "person.email_opt_out_cleared",
+    targetType: "Person",
+    targetId: personId,
+  });
+
+  revalidatePath(`/people/${personId}`);
+}
+
 export async function archivePersonAction(personId: string) {
   const organization = await requireOrg();
   await requirePeople(organization.id, "person.manage");

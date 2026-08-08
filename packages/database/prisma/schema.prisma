@@ -212,6 +212,7 @@ model Organization {
   journeyMilestoneCompletions JourneyMilestoneCompletion[]
   events                  Event[]
   eventRegistrations      EventRegistration[]
+  messages                Message[]
 }
 
 enum CategorizationMode {
@@ -932,6 +933,10 @@ model Person {
   birthdate        DateTime?
   tags             String[]         @default([])
   notes            String?
+  // Email consent (BLUEPRINT §19: explicitly modeled, timestamped, auditable). Set =
+  // person-linked sends are suppressed by message-service.queueMessage. Toggled only by
+  // staff; changes audited (person.email_opt_out_set/cleared).
+  emailOptedOutAt DateTime?
 
   archivedAt DateTime?
   createdAt  DateTime @default(now())
@@ -948,6 +953,7 @@ model Person {
   tasks             Task[]
   journeyEnrollments JourneyEnrollment[]
   eventRegistrations EventRegistration[]
+  messages          Message[]
 
   @@index([organizationId])
   @@index([organizationId, lastName])
@@ -1301,6 +1307,7 @@ model WorkflowRun {
   person       Person?            @relation(fields: [personId], references: [id], onDelete: SetNull)
   createdTasks Task[]
   journeyEnrollments JourneyEnrollment[]
+  messages     Message[]
 
   @@index([organizationId])
   @@index([workflowId])
@@ -1546,4 +1553,51 @@ model EventRegistration {
   @@index([organizationId])
   @@index([eventId])
   @@index([personId])
+}
+
+// ---------------------------------------------------------------------------
+// Communications (Message log)
+//
+// The canonical Message primitive (BLUEPRINT §4/§19): every outbound communication the
+// platform sends is a durable, consent-aware record delivered by the outbox worker --
+// never a fire-and-forget provider call. SENT means "provider accepted"; bounce
+// ingestion arrives with provider webhooks. See docs/domain/communications.md.
+// ---------------------------------------------------------------------------
+
+enum MessageChannel {
+  EMAIL
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model Message {
+  id             String         @id @default(cuid())
+  organizationId String
+  channel        MessageChannel @default(EMAIL)
+  toEmail        String
+  // Linked recipient Person when known (consent is enforced for person-linked sends).
+  toPersonId     String?
+  subject        String
+  body           String
+  status         MessageStatus  @default(QUEUED)
+  // Where this message came from: "workflow" | "form_notification" | "manual_resend" | ...
+  source         String
+  // Workflow provenance, mirroring Task/JourneyEnrollment (§40 pattern).
+  workflowRunId  String?
+  error          String?
+  sentAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  toPerson     Person?      @relation(fields: [toPersonId], references: [id], onDelete: SetNull)
+  workflowRun  WorkflowRun? @relation(fields: [workflowRunId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@index([toPersonId])
 }

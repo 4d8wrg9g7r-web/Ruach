@@ -46,6 +46,10 @@ export type { PublicEvent } from "./services/event-service";
 export * as eventPermissions from "./authz/event-permissions";
 export type { EventAction } from "./authz/event-permissions";
 export { expandOccurrences, nextOccurrence } from "./events/helpers";
+
+export * as messageService from "./services/message-service";
+export * as messagePermissions from "./authz/message-permissions";
+export type { MessageAction } from "./authz/message-permissions";
 export * as workflowPermissions from "./authz/workflow-permissions";
 export type { WorkflowAction } from "./authz/workflow-permissions";
 export {

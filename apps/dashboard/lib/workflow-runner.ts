@@ -4,13 +4,13 @@ import {
   groupService,
   interpolate,
   journeyService,
+  messageService,
   peopleService,
   taskService,
   workflowService,
   type ClaimedEvent,
   type ExecutorMap,
 } from "@ruach/database";
-import { getEmailProvider } from "@ruach/email";
 
 /**
  * Workflow executors + trigger wiring live in the app (like outbox-worker.ts) because
@@ -22,19 +22,31 @@ import { getEmailProvider } from "@ruach/email";
 
 export const EXECUTORS: ExecutorMap = {
   // Interpolated so bodies can reference the trigger context: "Hi {{submitterName}}".
+  // Sends flow through the Message log (BLUEPRINT §19): recorded, consent-aware for
+  // recipients that ARE the run's linked person, delivered by the outbox worker.
   SEND_EMAIL: async (step, run) => {
     if (step.type !== "SEND_EMAIL") throw new Error("wrong step type");
-    const provider = getEmailProvider();
-    await Promise.all(
-      step.to.map((to) =>
-        provider.sendEmail({
-          to,
-          subject: interpolate(step.subject, run.context),
-          text: interpolate(step.body, run.context),
-        }),
-      ),
-    );
-    return `Emailed ${step.to.join(", ")}`;
+    const person = run.personId ? await peopleService.getPerson(run.organizationId, run.personId) : null;
+    let queued = 0;
+    let suppressed = 0;
+    for (const rawTo of step.to) {
+      const to = interpolate(rawTo, run.context).trim();
+      if (!to) continue;
+      // Link the run's person when the recipient IS that person, so their consent applies.
+      const isRunPerson = !!person?.email && person.email.toLowerCase() === to.toLowerCase();
+      const result = await messageService.queueMessage({
+        organizationId: run.organizationId,
+        toEmail: to,
+        toPersonId: isRunPerson ? run.personId : null,
+        subject: interpolate(step.subject, run.context),
+        body: interpolate(step.body, run.context),
+        source: "workflow",
+        workflowRunId: run.runId,
+      });
+      if (result.queued) queued++;
+      else suppressed++;
+    }
+    return suppressed > 0 ? `Queued ${queued}, suppressed ${suppressed} (opted out)` : `Queued ${queued} email(s)`;
   },
 
   ADD_TO_GROUP: async (step, run) => {
