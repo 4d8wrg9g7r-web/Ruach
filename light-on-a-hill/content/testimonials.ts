@@ -17,7 +17,7 @@ export const TESTIMONIALS: Testimonial[] = [
     quote: "It somehow felt like he photographed us exactly as we are.",
     attribution: "A recent couple", // PLACEHOLDER — replace with real client
     detail: "Wedding — North Carolina",
-    image: "weddingDance",
+    image: "weddingDetails",
   },
   {
     quote: "Five boys, one photo where everyone is actually smiling. Magic.",

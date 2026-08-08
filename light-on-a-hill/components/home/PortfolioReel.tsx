@@ -8,12 +8,12 @@ import { track } from "@/lib/analytics";
 type Frame = { image: ImageKey; index: string; type: string; place: string };
 
 const FRAMES: Frame[] = [
-  { image: "heroWedding", index: "01", type: "Wedding", place: "The first dance" },
-  { image: "seniorGuitarist", index: "02", type: "Senior", place: "North Carolina" },
-  { image: "familyOutdoor", index: "03", type: "Family", place: "In the studio" },
-  { image: "weddingDetails", index: "04", type: "Details", place: "Rings & florals" },
-  { image: "cheerleader", index: "05", type: "Sport", place: "Studio session" },
-  { image: "singerLive", index: "06", type: "Stage", place: "Live coverage" },
+  { image: "seniorGuitarist", index: "01", type: "Senior", place: "North Carolina" },
+  { image: "familyOutdoor", index: "02", type: "Family", place: "In the studio" },
+  { image: "weddingDetails", index: "03", type: "Wedding", place: "Rings & florals" },
+  { image: "cheerleader", index: "04", type: "Sport", place: "Studio session" },
+  { image: "singerLive", index: "05", type: "Stage", place: "Live coverage" },
+  { image: "bandHats", index: "06", type: "Event", place: "Before the show" },
 ];
 
 /**

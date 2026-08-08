@@ -53,7 +53,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["The day disappears.", "The photographs don't."],
     positioning:
       "A wedding is the fastest day of your life. My work is to move through it quietly — reading the room, catching the glance across the aisle, the hand your father won't let go of — so that years from now the photographs still carry the temperature of the day, not just the look of it.",
-    gallery: ["weddingAisle", "weddingDetails", "heroWedding"],
+    gallery: ["weddingDetails"],
     reasons: [
       {
         title: "Unhurried on the fastest day",
@@ -116,7 +116,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["Photographs that feel", "like the two of you."],
     positioning:
       "Not a photoshoot — an hour that feels like a good evening together. We walk, you forget the camera, and the pictures end up looking like the way you actually are with each other.",
-    gallery: ["couplesField", "couplesMountains", "heroWedding"],
+    gallery: ["couplesMountains", "portraitMan"],
     reasons: [
       { title: "Easy, not posed", body: "Gentle direction that gives you something to do with your hands and lets the real thing happen in between." },
       { title: "Locations with meaning", body: "Golden-hour light in a place that means something to you — where you met, where you live, or the mountains at dusk." },

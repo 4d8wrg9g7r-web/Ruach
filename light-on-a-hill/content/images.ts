@@ -32,19 +32,17 @@ export function objectPosition(image: StudioImage): string {
 
 export const IMAGES = {
   heroWedding: {
-    id: "/photography/wedding-first-dance.jpg",
-    alt: "A bride and groom share their first dance under moody violet light",
-    focal: { x: 0.55, y: 0.45 },
+    id: "/photography/portrait-woman-waterfront.jpg",
+    alt: "A joyful portrait by the water, full of light",
+    focal: { x: 0.42, y: 0.35 },
   },
   weddingAisle: {
-    id: "/photography/wedding-embrace-bw.jpg",
-    alt: "A black-and-white portrait of a groom kissing his bride's forehead",
-    focal: { x: 0.5, y: 0.4 },
+    id: "/photography/wedding-rings-florals.jpg",
+    alt: "Wedding rings resting on pink crepe myrtle blossoms",
   },
   weddingDance: {
-    id: "/photography/wedding-first-dance.jpg",
-    alt: "Newlyweds during their first dance, wrapped in soft stage light",
-    focal: { x: 0.55, y: 0.45 },
+    id: "/photography/wedding-rings-florals.jpg",
+    alt: "Wedding-day details — rings and florals",
   },
   weddingDetails: {
     id: "/photography/wedding-rings-florals.jpg",
@@ -58,9 +56,9 @@ export const IMAGES = {
     focal: { x: 0.42, y: 0.35 },
   },
   couplesField: {
-    id: "/photography/wedding-embrace-bw.jpg",
-    alt: "A couple held close in a timeless black-and-white frame",
-    focal: { x: 0.5, y: 0.4 },
+    id: "/photography/portrait-woman-waterfront.jpg",
+    alt: "A relaxed natural-light portrait session",
+    focal: { x: 0.42, y: 0.35 },
   },
   familyOutdoor: {
     id: "/photography/family-five-brothers.jpg",
