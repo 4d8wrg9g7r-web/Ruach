@@ -9,7 +9,7 @@ type Frame = { image: ImageKey; index: string; type: string; place: string };
 
 const FRAMES: Frame[] = [
   { image: "seniorGuitarist", index: "01", type: "Senior", place: "North Carolina" },
-  { image: "familyOutdoor", index: "02", type: "Family", place: "In the studio" },
+  { image: "familyKiss", index: "02", type: "Family", place: "A good day" },
   { image: "weddingDetails", index: "03", type: "Wedding", place: "Rings & florals" },
   { image: "cheerleader", index: "04", type: "Sport", place: "Studio session" },
   { image: "singerLive", index: "05", type: "Stage", place: "Live coverage" },

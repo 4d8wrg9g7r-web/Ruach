@@ -224,6 +224,31 @@ export function ApertureNav() {
               style={{ background: "radial-gradient(120% 120% at 50% 50%, transparent 40%, rgba(0,0,0,0.5) 100%)" }}
             />
 
+            {/* Explicit close control — the header's aperture sits beneath this
+                overlay, so the menu carries its own X. First in DOM: it receives
+                focus when the menu opens. */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                setPhase("closed");
+                triggerRef.current?.focus();
+              }}
+              aria-label="Close menu"
+              data-cursor-ring="lg"
+              className="group absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-chalk/35 text-chalk transition-colors duration-500 hover:border-chalk/80 sm:right-7 sm:top-6"
+              initial={{ opacity: 0, rotate: -45 }}
+              animate={{ opacity: 1, rotate: 0, transition: { delay: 0.35, duration: 0.5, ease: EASE } }}
+              exit={{ opacity: 0 }}
+            >
+              <svg
+                viewBox="0 0 16 16"
+                className="h-4 w-4 transition-transform duration-500 ease-aperture group-hover:rotate-90"
+                aria-hidden
+              >
+                <path d="M2 2 L14 14 M14 2 L2 14" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+              </svg>
+            </motion.button>
+
             {/* ===== Desktop: orbital composition ===== */}
             <div className="relative hidden h-full lg:block">
               {/* The lens — slightly off-centre right. Positioning lives on a

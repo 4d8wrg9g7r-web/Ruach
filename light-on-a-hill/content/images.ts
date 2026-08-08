@@ -66,8 +66,8 @@ export const IMAGES = {
     focal: { x: 0.5, y: 0.45 },
   },
   familyCandid: {
-    id: "/photography/family-five-brothers.jpg",
-    alt: "A family session full of easy, genuine smiles",
+    id: "/photography/family-parents-kiss.jpg",
+    alt: "Parents kissing their laughing son on both cheeks",
     focal: { x: 0.5, y: 0.45 },
   },
   familyField: {
@@ -142,6 +142,28 @@ export const IMAGES = {
   creativeComposite: {
     id: "/photography/creative-composite.jpg",
     alt: "A dark creative composite portrait",
+  },
+  familyKiss: {
+    id: "/photography/family-parents-kiss.jpg",
+    alt: "Parents kissing their laughing son on both cheeks",
+    focal: { x: 0.5, y: 0.45 },
+  },
+  familyGrid1: {
+    id: "/photography/family-collage-1.jpg",
+    alt: "A collage of family sessions — young families and multi-generation groups",
+  },
+  familyGrid2: {
+    id: "/photography/family-collage-2.jpg",
+    alt: "A collage of extended-family sessions outdoors and at home",
+  },
+  familyGridHoliday: {
+    id: "/photography/family-collage-holiday.jpg",
+    alt: "A collage of holiday mini-sessions with children in festive red",
+  },
+  performerAutumn: {
+    id: "/photography/performer-autumn.jpg",
+    alt: "A costumed performer against autumn light",
+    focal: { x: 0.5, y: 0.4 },
   },
 } satisfies Record<string, StudioImage>;
 

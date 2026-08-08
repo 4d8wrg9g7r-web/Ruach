@@ -31,7 +31,7 @@ const STORIES: Story[] = [
     headline: ["The beautifully imperfect", "season you're living right now."],
     href: "/families",
     cta: "Explore Families",
-    image: "familyOutdoor",
+    image: "familyCandid",
   },
 ];
 

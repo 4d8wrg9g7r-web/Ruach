@@ -156,7 +156,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["The beautifully imperfect", "season you're in now."],
     positioning:
       "Kids don't hold still, and they shouldn't have to. Family sessions are built around real movement and real personalities — the result looks like your actual family, on an actual good day, not a stiff line-up in matching shirts.",
-    gallery: ["familyOutdoor", "seniorGuitarist", "cheerleader", "portraitMan"],
+    gallery: ["familyKiss", "familyOutdoor", "familyGrid1", "familyGrid2", "familyGridHoliday"],
     reasons: [
       { title: "Built for real kids", body: "We keep it moving and playful. The best frames usually happen in the in-between moments, not the say-cheese ones." },
       { title: "No pressure to perform", body: "If a toddler melts down, that's fine — I've photographed enough families to work with it, not against it." },
@@ -276,7 +276,7 @@ export const SERVICES: Service[] = [
     heroHeadline: ["Your work,", "photographed like it matters."],
     positioning:
       "Personal-brand and business photography for people whose work deserves better than a phone snapshot. We build a small, consistent library of images that actually looks like you and your business — for your site, your press, and everywhere else.",
-    gallery: ["branding", "bandHats", "singerLive", "guitarCollage", "arenaFootball", "raleigh"],
+    gallery: ["branding", "bandHats", "performerAutumn", "singerLive", "guitarCollage", "arenaFootball"],
     reasons: [
       { title: "A usable library, not one headshot", body: "A planned set of images — portraits, at-work, and detail frames — you can draw from all year." },
       { title: "On-brand and consistent", body: "We plan wardrobe, setting, and colour so the whole set feels like one deliberate brand." },
