@@ -17,9 +17,10 @@ export type StudioImage = {
 
 const UNSPLASH = "https://images.unsplash.com/photo-";
 
-/** Resolve an image reference. Local paths pass through untouched. */
+/** Resolve an image reference. Local paths and data/absolute URLs pass through. */
 export function src(image: StudioImage, width = 1600): string {
-  if (image.id.startsWith("/") || image.id.startsWith("http")) return image.id;
+  if (image.id.startsWith("/") || image.id.startsWith("http") || image.id.startsWith("data:"))
+    return image.id;
   const q = width > 1400 ? 72 : 74;
   return `${UNSPLASH}${image.id}?auto=format&fit=crop&w=${width}&q=${q}`;
 }
