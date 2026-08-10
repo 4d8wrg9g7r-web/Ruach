@@ -8,7 +8,7 @@ import { PrismaClient } from "@prisma/client";
  * silent cross-tenant leak. A CI grep check (scripts/check-tenant-scoping.sh) is the
  * third layer, forbidding raw prisma.<tenantModel> calls outside the service layer.
  */
-export const TENANT_SCOPED_MODELS = new Set([
+const TENANT_SCOPED_MODELS = new Set([
   "OrganizationMember",
   "Website",
   "WidgetConfiguration",
@@ -27,26 +27,6 @@ export const TENANT_SCOPED_MODELS = new Set([
   "ContentSource",
   "PrayerWallAccount",
   "PrayerRequest",
-  "Person",
-  "Household",
-  "PersonRelationship",
-  "Group",
-  "GroupMembership",
-  "FormDefinition",
-  "FormVersion",
-  "FormSubmission",
-  "WorkflowDefinition",
-  "WorkflowVersion",
-  "WorkflowRun",
-  "Task",
-  "JourneyDefinition",
-  "JourneyMilestone",
-  "JourneyEnrollment",
-  "JourneyMilestoneCompletion",
-  "Event",
-  "EventRegistration",
-  "Message",
-  "CheckIn",
 ]);
 
 const FIND_UNIQUE_OPS = new Set(["findUnique", "findUniqueOrThrow"]);
