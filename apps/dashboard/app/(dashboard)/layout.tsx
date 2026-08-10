@@ -6,6 +6,7 @@ import {
   Library,
   LayoutDashboard,
   LifeBuoy,
+  MessageSquare,
   Monitor,
   Search,
   Settings as SettingsIcon,
@@ -79,6 +80,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
           badge={pendingReview.length}
         />
         <SidebarNavItem href="/widgets" label="Widgets" icon={<Monitor size={17} strokeWidth={1.75} />} />
+        <SidebarNavItem
+          href="/conversations"
+          label="Conversations"
+          icon={<MessageSquare size={17} strokeWidth={1.75} />}
+        />
         <SidebarNavItem href="/websites" label="Websites" icon={<Globe size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/analytics" label="Analytics" icon={<BarChart3 size={17} strokeWidth={1.75} />} />
         <SidebarNavItem href="/prayer-wall" label="Prayer Wall" icon={<HandHeart size={17} strokeWidth={1.75} />} />

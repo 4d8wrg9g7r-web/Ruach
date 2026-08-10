@@ -57,3 +57,62 @@ export async function countRecommendationResponses(organizationId: string) {
 export async function countConversations(organizationId: string) {
   return tenantDb.conversation.count({ where: { organizationId } });
 }
+
+/**
+ * Dashboard "Conversations" log: paginated, most-recently-active first, with just
+ * enough joined data (widget name, message count, last message preview) to render a
+ * list row without a second round-trip per row. `widgetId` is accepted now even
+ * though no page passes it yet -- filtering by widget is the obvious next control to
+ * add, and threading it through the service now keeps that a page-only change later.
+ */
+export async function listConversations(
+  organizationId: string,
+  params: { page?: number; pageSize?: number; widgetId?: string } = {},
+) {
+  const page = Math.max(1, params.page ?? 1);
+  const pageSize = params.pageSize ?? 25;
+  const where = { organizationId, ...(params.widgetId ? { widgetId: params.widgetId } : {}) };
+
+  const [conversations, total] = await Promise.all([
+    tenantDb.conversation.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        widget: { select: { name: true } },
+        messages: { orderBy: { createdAt: "desc" }, take: 1 },
+        _count: { select: { messages: true } },
+      },
+    }),
+    tenantDb.conversation.count({ where }),
+  ]);
+
+  return {
+    conversations: conversations.map((c) => ({
+      id: c.id,
+      widgetId: c.widgetId,
+      widgetName: c.widget.name,
+      sessionId: c.sessionId,
+      messageCount: c._count.messages,
+      lastMessage: c.messages[0] ?? null,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    })),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+/** Full transcript for the conversation detail page -- messages in reading order (oldest first), unlike getRecentMessages which serves the chat pipeline's own "recent context" needs in newest-first order. */
+export async function getConversationDetail(organizationId: string, conversationId: string) {
+  return tenantDb.conversation.findFirst({
+    where: { id: conversationId, organizationId },
+    include: {
+      widget: { select: { id: true, name: true } },
+      messages: { orderBy: { createdAt: "asc" } },
+    },
+  });
+}
