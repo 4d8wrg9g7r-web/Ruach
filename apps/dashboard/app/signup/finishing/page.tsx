@@ -23,7 +23,7 @@ export default function SignupFinishingPage() {
       const data = await res.json();
       if (data.ready) {
         clearInterval(interval);
-        router.push("/dashboard");
+        router.push("/onboarding/setup");
       }
     }, POLL_INTERVAL_MS);
     return () => {

@@ -14,5 +14,5 @@ export default auth((req) => {
 // embed page and public widget/chat API routes are intentionally NOT matched --
 // they have no session and are scoped entirely by publicWidgetId (build-plan decision).
 export const config = {
-  matcher: ["/dashboard/:path*", "/onboarding", "/websites/:path*", "/widgets/:path*", "/resources/:path*"],
+  matcher: ["/dashboard/:path*", "/onboarding/:path*", "/websites/:path*", "/widgets/:path*", "/resources/:path*"],
 };

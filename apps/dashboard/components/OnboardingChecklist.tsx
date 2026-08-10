@@ -66,10 +66,16 @@ export function OnboardingChecklist({ steps, onDismiss }: OnboardingChecklistPro
           </li>
         ))}
       </ul>
-      <div className="mt-4 border-t border-border pt-3">
+      <div className="mt-4 flex items-center gap-4 border-t border-border pt-3">
+        <Link
+          href="/onboarding/setup"
+          className="rounded-sm text-xs font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+        >
+          Prefer a guided walkthrough? &rarr;
+        </Link>
         <Link
           href="/getting-started"
-          className="rounded-sm text-xs font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          className="rounded-sm text-xs font-medium text-ink-muted hover:text-ink-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
         >
           View the full setup guide &rarr;
         </Link>

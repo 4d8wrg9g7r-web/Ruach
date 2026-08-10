@@ -59,7 +59,7 @@ async function signupAction(formData: FormData) {
     });
     await sendWelcomeEmail({ to: email, organizationName: organization.name });
     await signIn("credentials", { email, password, redirect: false });
-    redirect("/dashboard");
+    redirect("/onboarding/setup");
   }
 
   // No code -> account exists, org doesn't yet: sign in and send them to pick a

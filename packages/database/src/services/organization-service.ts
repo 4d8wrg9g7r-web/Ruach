@@ -178,6 +178,11 @@ export async function dismissOnboardingChecklist(organizationId: string) {
   return rawDb.organization.update({ where: { id: organizationId }, data: { onboardingChecklistDismissedAt: new Date() } });
 }
 
+/** Called once, whether the setup wizard was completed or skipped -- either way, don't auto-redirect there again. */
+export async function markOnboardingWizardSeen(organizationId: string) {
+  return rawDb.organization.update({ where: { id: organizationId }, data: { onboardingWizardSeenAt: new Date() } });
+}
+
 export async function enablePrayerWall(
   organizationId: string,
   params: {

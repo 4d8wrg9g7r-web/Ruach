@@ -173,6 +173,12 @@ model Organization {
   // resources/conversations), not stored. Null just means "not dismissed yet"; the
   // checklist also auto-hides once every step is complete, dismissed or not.
   onboardingChecklistDismissedAt DateTime?
+  // Controls only the auto-redirect into /onboarding/setup right after signup, not
+  // step-by-step progress within the wizard -- that's derived from real data
+  // (website/widget/resource counts), same pattern as onboardingChecklistDismissedAt
+  // above. Set the first time a new org either finishes or skips the wizard, so
+  // returning users always land straight on /dashboard.
+  onboardingWizardSeenAt        DateTime?
   createdAt                     DateTime            @default(now())
   updatedAt                     DateTime            @updatedAt
 
