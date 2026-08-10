@@ -1,7 +1,10 @@
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { HeartHandshake } from "lucide-react";
 import type { OrganizationRole, PrayerRequestCategory } from "@ruach/database";
 import { auditService, billingService, prayerService } from "@ruach/database";
 import { PrayerModerationList } from "../../../components/PrayerModerationList";
+import { buttonClasses } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { PRAYER_CATEGORY_OPTIONS } from "../../../lib/format";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../lib/session";
@@ -79,6 +82,15 @@ export default async function PrayerWallModerationPage() {
   if (!organization) return null;
   await requireOrgRole(organization.id, moderationRoles(organization.planKey));
 
+  const neitherEnabled = !organization.prayerWallEnabled && !organization.testimoniesEnabled;
+  // First time here with neither feature on: go straight into the guided setup
+  // instead of an empty moderation list. "Come back later" inside the wizard marks
+  // prayerTestimonyWizardSeenAt, which is the only thing that stops this -- the card
+  // below still offers a manual way back in for as long as neither is enabled.
+  if (neitherEnabled && !organization.prayerTestimonyWizardSeenAt) {
+    redirect("/prayer-wall/setup");
+  }
+
   const canEditCategory = billingService.planHasFeature(organization.planKey, "prayerCategories");
   const canEditNotes = billingService.planHasFeature(organization.planKey, "internalPrayerNotes");
 
@@ -112,6 +124,25 @@ export default async function PrayerWallModerationPage() {
           </a>
         )}
       </div>
+
+      {neitherEnabled && (
+        <Card padding="md" className="mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
+                <HeartHandshake size={18} />
+              </span>
+              <div>
+                <p className="text-sm font-medium text-ink">Set up Prayer Wall &amp; Testimonies</p>
+                <p className="text-sm text-ink-secondary">Not set up yet -- pick up right where you left off.</p>
+              </div>
+            </div>
+            <a href="/prayer-wall/setup" className={`shrink-0 ${buttonClasses("secondary", "sm")}`}>
+              Continue setup
+            </a>
+          </div>
+        </Card>
+      )}
 
       <Card padding="none">
         <PrayerModerationList

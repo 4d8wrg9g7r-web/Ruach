@@ -183,6 +183,11 @@ export async function markOnboardingWizardSeen(organizationId: string) {
   return rawDb.organization.update({ where: { id: organizationId }, data: { onboardingWizardSeenAt: new Date() } });
 }
 
+/** "Come back later" on the Prayer Wall / Testimonies wizard -- stops the auto-redirect, but PrayerWallModerationPage keeps a manual way back in until the org actually enables one of the two. */
+export async function markPrayerTestimonyWizardSeen(organizationId: string) {
+  return rawDb.organization.update({ where: { id: organizationId }, data: { prayerTestimonyWizardSeenAt: new Date() } });
+}
+
 export async function enablePrayerWall(
   organizationId: string,
   params: {
