@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm --filter @ruach/database exec prisma migrate deploy && pnpm --filter @ruach/database exec prisma generate && next build",
+    "build": "pnpm --filter @ruach/database exec prisma generate && next build",
     "start": "next start",
     "lint": "echo 'lint: not configured for milestone 1'",
     "typecheck": "tsc --noEmit",

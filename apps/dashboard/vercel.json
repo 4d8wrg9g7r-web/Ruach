@@ -1,4 +1,5 @@
 {
+  "buildCommand": "pnpm --filter @ruach/database exec prisma migrate deploy && pnpm --filter @ruach/database exec prisma generate && next build",
   "crons": [
     {
       "path": "/api/cron/sync",
