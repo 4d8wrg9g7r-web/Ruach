@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { HeartHandshake } from "lucide-react";
+import { HeartHandshake, Lightbulb } from "lucide-react";
 import type { OrganizationRole, PrayerRequestCategory } from "@ruach/database";
 import { auditService, billingService, prayerService } from "@ruach/database";
+import { CopySnippetButton } from "../../../components/CopySnippetButton";
 import { PrayerModerationList } from "../../../components/PrayerModerationList";
 import { buttonClasses } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
@@ -94,6 +95,9 @@ export default async function PrayerWallModerationPage() {
   const canEditCategory = billingService.planHasFeature(organization.planKey, "prayerCategories");
   const canEditNotes = billingService.planHasFeature(organization.planKey, "internalPrayerNotes");
 
+  const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+  const publicUrl = `${appOrigin}/prayer/${organization.publicPrayerWallId}`;
+
   const requests = await prayerService.listPrayerRequestsForModeration(organization.id);
   const rows = requests.map((r) => ({
     id: r.id,
@@ -140,6 +144,27 @@ export default async function PrayerWallModerationPage() {
             <a href="/prayer-wall/setup" className={`shrink-0 ${buttonClasses("secondary", "sm")}`}>
               Continue setup
             </a>
+          </div>
+        </Card>
+      )}
+
+      {organization.prayerWallEnabled && (
+        <Card padding="md" className="mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
+              <Lightbulb size={18} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-ink">This link isn&rsquo;t just for the widget</p>
+              <p className="text-sm text-ink-secondary">
+                Add it anywhere on your website -- a nav menu item, a footer link, a button on your homepage -- so
+                visitors can reach the prayer wall directly, not only through chat.
+              </p>
+            </div>
+            <div className="flex w-full items-center gap-2 rounded-md bg-surface-muted px-3 py-2 sm:w-auto sm:min-w-0">
+              <code className="min-w-0 flex-1 truncate text-xs text-ink-secondary">{publicUrl}</code>
+              <CopySnippetButton text={publicUrl} />
+            </div>
           </div>
         </Card>
       )}

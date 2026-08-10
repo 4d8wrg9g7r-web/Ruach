@@ -279,7 +279,7 @@ export function SetupWizard(props: SetupWizardProps) {
                   <p className="mb-2 text-sm text-ink-secondary">Copy this snippet into your website&rsquo;s &lt;head&gt;:</p>
                   <div className="flex items-center gap-2 rounded-md bg-ink px-3 py-2.5">
                     <code className="min-w-0 flex-1 truncate text-xs text-white/80">{snippet}</code>
-                    <CopySnippetButton text={snippet} />
+                    <CopySnippetButton text={snippet} variant="dark" />
                   </div>
                 </div>
               )}

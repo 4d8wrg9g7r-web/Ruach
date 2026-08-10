@@ -208,7 +208,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
         <div className="shadow-panel overflow-hidden rounded-lg border border-white/10 bg-sidebar p-5">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">Installation</h2>
-            <CopySnippetButton text={snippet} />
+            <CopySnippetButton text={snippet} variant="dark" />
           </div>
           <p className="mb-3 text-xs text-white/40">
             Paste this in the <code>&lt;head&gt;</code> of {widget.website.primaryDomain}:
