@@ -185,6 +185,7 @@ model Organization {
   collections             Collection[]
   resourceCollections     ResourceCollection[]
   actionLinks             ActionLink[]
+  organizationalLinks     OrganizationalLink[]
   importJobs              ImportJob[]
   importJobItems          ImportJobItem[]
   bulkJobs                BulkJob[]
@@ -686,6 +687,7 @@ model ConversationMessage {
 // Actions, Audit
 // ---------------------------------------------------------------------------
 
+/** Quick-action buttons shown alongside the chat when a visitor opens the widget (Give, Contact, Service times, ...). Display-only -- never matched against a visitor's chat message, see OrganizationalLink for that. */
 model ActionLink {
   id             String   @id @default(cuid())
   organizationId String
@@ -693,15 +695,34 @@ model ActionLink {
   type           String
   url            String
   icon           String?
-  // Optional admin-authored blurb of what this link is for, e.g. "This week's sermon
-  // notes and study guide." Purely descriptive -- never shown to visitors -- but it's
-  // what ChatPipeline's matchActionLink step compares a visitor's question against
-  // (alongside the label) to decide whether "where can I find the notes?" should
-  // return this link instead of running the full resource-recommendation pipeline.
-  // Nullable because every existing link predates this field and matching still
-  // works off the label alone, just less precisely.
-  description    String?
   order          Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+/**
+ * Site links the chat assistant can answer navigational questions with -- "where can
+ * I find the notes?" -- deliberately separate from ActionLink: those are quick-action
+ * buttons always visible in the widget UI, curated for what a visitor should be able
+ * to tap; these are never shown as buttons, only ever surfaced when a visitor's
+ * question specifically calls for one (see ChatPipeline's link-matching step).
+ * Managed from the Resources page, not the widget's Standard Links box, since they're
+ * conceptually closer to "things the assistant knows about" than to widget chrome.
+ */
+model OrganizationalLink {
+  id             String   @id @default(cuid())
+  organizationId String
+  label          String
+  url            String
+  // What this link is for, e.g. "This week's sermon notes and study guide." Never
+  // shown to visitors -- purely what the matching step compares a visitor's message
+  // against, alongside the label.
+  description    String?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt

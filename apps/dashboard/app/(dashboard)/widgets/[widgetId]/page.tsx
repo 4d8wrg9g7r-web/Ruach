@@ -9,7 +9,7 @@ import { CopySnippetButton } from "../../../../components/CopySnippetButton";
 import { WidgetCustomizePanel } from "../../../../components/WidgetCustomizePanel";
 import { buttonClasses } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
-import { Input, Select, Textarea } from "../../../../components/ui/Input";
+import { Input, Select } from "../../../../components/ui/Input";
 import { getCurrentOrganization, requireOrgRole } from "../../../../lib/session";
 import { saveLogoUpload } from "../../../../lib/upload";
 
@@ -77,13 +77,12 @@ async function createActionLinkAction(widgetId: string, formData: FormData) {
   const label = String(formData.get("label") ?? "").trim();
   const rawUrl = String(formData.get("url") ?? "").trim();
   const type = String(formData.get("type") ?? "CUSTOM");
-  const description = String(formData.get("description") ?? "").trim() || undefined;
   if (!label || !rawUrl) throw new Error("Label and URL are required.");
 
   const urlParsed = actionLinkUrlSchema.safeParse(rawUrl);
   if (!urlParsed.success) throw new Error(urlParsed.error.issues[0]?.message ?? "Enter a valid URL.");
 
-  await actionLinkService.createActionLink({ organizationId: organization.id, label, url: urlParsed.data, type, description });
+  await actionLinkService.createActionLink({ organizationId: organization.id, label, url: urlParsed.data, type });
   revalidatePath(`/widgets/${widgetId}`);
 }
 
@@ -161,48 +160,38 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
           <div className="border-b border-border p-5">
             <h2 className="mb-1 text-sm font-semibold text-ink">Standard Links</h2>
             <p className="text-sm text-ink-secondary">
-              Up to 10 links shown alongside the chat when a visitor opens the widget. The assistant can also send
-              a visitor straight to one of these -- e.g. "where can I find the notes?" -- instead of searching your
-              resource library, when the description below makes it clear what the link is for. These are shared
-              across every widget in your organization, not just this one.
+              Up to 10 quick-action buttons shown alongside the chat when a visitor opens the widget. These are
+              shared across every widget in your organization, not just this one. To let the assistant answer
+              navigational questions like "where can I find the notes?" from chat, add an{" "}
+              <a href="/resources" className="underline hover:text-ink">
+                Organizational Link
+              </a>{" "}
+              instead.
             </p>
           </div>
           <div className="border-b border-border p-5">
-            <form action={boundCreateActionLink} className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="text-sm text-ink-secondary">
-                  Label
-                  <Input name="label" required placeholder="Give" className="mt-1 block w-40" />
-                </label>
-                <label className="grow text-sm text-ink-secondary">
-                  URL
-                  <Input name="url" required placeholder="https://..." className="mt-1 block w-full" />
-                </label>
-                <label className="text-sm text-ink-secondary">
-                  Type
-                  <Select name="type" defaultValue="CUSTOM" className="mt-1 block">
-                    <option value="CUSTOM">Custom</option>
-                    <option value="GIVING">Giving</option>
-                    <option value="CONTACT">Contact</option>
-                    <option value="PRAYER_REQUEST">Prayer request</option>
-                    <option value="SERVICE_TIMES">Service times</option>
-                  </Select>
-                </label>
-              </div>
+            <form action={boundCreateActionLink} className="flex flex-wrap items-end gap-3">
               <label className="text-sm text-ink-secondary">
-                Description <span className="font-normal text-ink-muted">(optional -- helps the assistant know when to use this link)</span>
-                <Textarea
-                  name="description"
-                  rows={2}
-                  placeholder="This week's sermon notes and study guide"
-                  className="mt-1 block w-full max-w-lg"
-                />
+                Label
+                <Input name="label" required placeholder="Give" className="mt-1 block w-40" />
               </label>
-              <div>
-                <button type="submit" className={buttonClasses("secondary", "md")} disabled={actionLinks.length >= 10}>
-                  Add link
-                </button>
-              </div>
+              <label className="grow text-sm text-ink-secondary">
+                URL
+                <Input name="url" required placeholder="https://..." className="mt-1 block w-full" />
+              </label>
+              <label className="text-sm text-ink-secondary">
+                Type
+                <Select name="type" defaultValue="CUSTOM" className="mt-1 block">
+                  <option value="CUSTOM">Custom</option>
+                  <option value="GIVING">Giving</option>
+                  <option value="CONTACT">Contact</option>
+                  <option value="PRAYER_REQUEST">Prayer request</option>
+                  <option value="SERVICE_TIMES">Service times</option>
+                </Select>
+              </label>
+              <button type="submit" className={buttonClasses("secondary", "md")} disabled={actionLinks.length >= 10}>
+                Add link
+              </button>
             </form>
             {actionLinks.length >= 10 && (
               <p className="mt-2 text-xs text-ink-muted">Maximum of 10 links reached -- remove one to add another.</p>

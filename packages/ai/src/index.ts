@@ -4,8 +4,8 @@ import type { AIProvider } from "./AIProvider";
 
 export type {
   AIProvider,
-  ActionLinkCandidate,
-  ActionLinkMatchOutput,
+  LinkCandidate,
+  LinkMatchOutput,
   CategorizationInput,
   CategorizationOutput,
   CategorizationSourceDocument,

@@ -47,14 +47,19 @@ export interface ConversationalResponseOutput {
   followUpQuestion: string | null;
 }
 
-/** An org's admin-curated "Standard Links" (see ActionLink) -- candidates for matchActionLink, never resource content. */
-export interface ActionLinkCandidate {
+/**
+ * An org's OrganizationalLink rows -- link candidates for matchLink, deliberately
+ * generic/source-agnostic here (the AI layer has no concept of OrganizationalLink vs.
+ * ActionLink, that distinction lives in ChatPipeline/the database layer). Never
+ * resource content.
+ */
+export interface LinkCandidate {
   id: string;
   label: string;
   description: string | null;
 }
 
-export interface ActionLinkMatchOutput {
+export interface LinkMatchOutput {
   /** Null when nothing in the list is a confident match for a direct "where do I find X" / "how do I get to Y" request -- ChatPipeline falls through to the normal resource pipeline in that case, it never forces a match. */
   matchedLinkId: string | null;
 }
@@ -71,6 +76,6 @@ export interface AIProvider {
   extractIntent(message: string, recentMessages: string[]): Promise<ExtractedIntent>;
   generateCategorization(input: CategorizationInput): Promise<CategorizationOutput>;
   generateConversationalResponse(input: ConversationalResponseInput): Promise<ConversationalResponseOutput>;
-  /** "Where can I find the notes?" should return a link, not a ministry-toned resource recommendation -- see ChatPipeline's action-link step. */
-  matchActionLink(message: string, links: ActionLinkCandidate[]): Promise<ActionLinkMatchOutput>;
+  /** "Where can I find the notes?" should return a link, not a ministry-toned resource recommendation -- see ChatPipeline's link-matching step. */
+  matchLink(message: string, links: LinkCandidate[]): Promise<LinkMatchOutput>;
 }

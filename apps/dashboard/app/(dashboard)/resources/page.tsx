@@ -2,19 +2,33 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { Filter, Search, Sparkles } from "lucide-react";
-import { ResourceStatus, auditService, billingService, bulkJobService, contentSourceService, resourceService } from "@ruach/database";
+import { Filter, Link2, Search, Sparkles } from "lucide-react";
+import { z } from "zod";
+import {
+  ResourceStatus,
+  auditService,
+  billingService,
+  bulkJobService,
+  contentSourceService,
+  organizationalLinkService,
+  resourceService,
+} from "@ruach/database";
 import { importResourceFromUrl, importYouTubeChannel, importRSSFeed } from "@ruach/providers";
 import { AutoSubmitSelect } from "../../../components/AutoSubmitSelect";
 import type { BulkImportSummary } from "../../../components/BulkImportForm";
 import { ContentSourceList } from "../../../components/ContentSourceList";
 import { ImportTabs } from "../../../components/ImportTabs";
+import { OrganizationalLinkList } from "../../../components/OrganizationalLinkList";
 import { ResourcesTable } from "../../../components/ResourcesTable";
+import { buttonClasses } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { EmptyState } from "../../../components/ui/EmptyState";
+import { Input, Textarea } from "../../../components/ui/Input";
 import { RESOURCE_TYPE_FILTERS, resourceTypeGroup } from "../../../lib/format";
 import { approveAndIndexResources, runBulkJob } from "../../../lib/resource-pipeline";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../lib/session";
+
+const organizationalLinkUrlSchema = z.string().url("Enter a full URL, including https://");
 
 // Server Actions defined in this file inherit it -- runBulkJob (via after(), see
 // enqueueBulkJob below) does real per-resource work (OpenAI calls, web fetches) for
@@ -246,6 +260,47 @@ async function removeContentSourceAction(contentSourceId: string) {
   revalidatePath("/resources");
 }
 
+async function createOrganizationalLinkAction(formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  const label = String(formData.get("label") ?? "").trim();
+  const rawUrl = String(formData.get("url") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim() || undefined;
+  if (!label || !rawUrl) throw new Error("Label and URL are required.");
+
+  const urlParsed = organizationalLinkUrlSchema.safeParse(rawUrl);
+  if (!urlParsed.success) throw new Error(urlParsed.error.issues[0]?.message ?? "Enter a valid URL.");
+
+  await organizationalLinkService.createOrganizationalLink({
+    organizationId: organization.id,
+    label,
+    url: urlParsed.data,
+    description,
+  });
+  revalidatePath("/resources");
+}
+
+async function toggleOrganizationalLinkActiveAction(linkId: string, enabled: boolean) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+  await organizationalLinkService.updateOrganizationalLink(organization.id, linkId, { isActive: enabled });
+  revalidatePath("/resources");
+}
+
+async function removeOrganizationalLinkAction(linkId: string) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+  await organizationalLinkService.deleteOrganizationalLink(organization.id, linkId);
+  revalidatePath("/resources");
+}
+
 export default async function ResourcesPage({
   searchParams,
 }: {
@@ -256,6 +311,7 @@ export default async function ResourcesPage({
   const params = await searchParams;
   const contentSources = await contentSourceService.listContentSources(organization.id);
   const activeJob = await bulkJobService.getMostRecentActiveJob(organization.id);
+  const organizationalLinks = await organizationalLinkService.listOrganizationalLinks(organization.id);
 
   const validStatus =
     params.status && (Object.values(ResourceStatus) as string[]).includes(params.status)
@@ -333,6 +389,57 @@ export default async function ResourcesPage({
             onToggleAutoSync={toggleAutoSyncAction}
             onToggleAutoApprove={toggleAutoApproveAction}
             onRemove={removeContentSourceAction}
+          />
+        </Card>
+      )}
+
+      {!isReviewQueue && (
+        <Card padding="none" className="mb-8">
+          <div className="border-b border-border p-5">
+            <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+              <Link2 size={15} className="text-accent" /> Organizational Links
+            </h2>
+            <p className="text-sm text-ink-secondary">
+              Links the assistant can send a visitor to when they ask a navigational question -- "where can I
+              find the notes?" -- instead of searching your resource library. These are never shown as buttons
+              in the widget; add a description so the assistant knows when each one applies.
+            </p>
+          </div>
+          <div className="border-b border-border p-5">
+            <form action={createOrganizationalLinkAction} className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="text-sm text-ink-secondary">
+                  Label
+                  <Input name="label" required placeholder="Notes" className="mt-1 block w-40" />
+                </label>
+                <label className="grow text-sm text-ink-secondary">
+                  URL
+                  <Input name="url" required placeholder="https://..." className="mt-1 block w-full" />
+                </label>
+              </div>
+              <label className="text-sm text-ink-secondary">
+                Description <span className="font-normal text-ink-muted">(optional -- helps the assistant know when to use this link)</span>
+                <Textarea
+                  name="description"
+                  rows={2}
+                  placeholder="This week's sermon notes and study guide"
+                  className="mt-1 block w-full max-w-lg"
+                />
+              </label>
+              <div>
+                <button type="submit" className={buttonClasses("secondary", "md")} disabled={organizationalLinks.length >= 20}>
+                  Add link
+                </button>
+              </div>
+            </form>
+            {organizationalLinks.length >= 20 && (
+              <p className="mt-2 text-xs text-ink-muted">Maximum of 20 organizational links reached -- remove one to add another.</p>
+            )}
+          </div>
+          <OrganizationalLinkList
+            links={organizationalLinks}
+            onToggleActive={toggleOrganizationalLinkActiveAction}
+            onRemove={removeOrganizationalLinkAction}
           />
         </Card>
       )}

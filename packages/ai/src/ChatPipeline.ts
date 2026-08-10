@@ -1,4 +1,4 @@
-import { actionLinkService, resourceService } from "@ruach/database";
+import { organizationalLinkService, resourceService } from "@ruach/database";
 import {
   ChatResponseSchema,
   type ChatResponse,
@@ -137,25 +137,27 @@ export class ChatPipeline {
     }
     const isNonAcuteSafetyConcern = safety.category !== "ORDINARY";
 
-    // Step 2.5: action-link matching. "Where can I find the notes?" should get a
-    // direct link, not a ministry-toned resource recommendation -- this is a
-    // deliberately separate, cheaper check that runs before intent extraction/
-    // retrieval and short-circuits the rest of the pipeline on a match. Skipped
-    // entirely for any non-ORDINARY safety category (even non-acute) -- a bare link
-    // response would feel dismissive layered under a safety disclaimer, and the
-    // existing blended safety+resource flow below already handles that case.
+    // Step 2.5: organizational-link matching. "Where can I find the notes?" should
+    // get a direct link, not a ministry-toned resource recommendation -- deliberately
+    // separate from ActionLink (the widget's always-visible quick-action buttons,
+    // e.g. Give/Contact): OrganizationalLink rows are never shown as buttons, they
+    // only ever surface here, when a visitor's question specifically calls for one.
+    // This is a cheaper check that runs before intent extraction/retrieval and
+    // short-circuits the rest of the pipeline on a match. Skipped entirely for any
+    // non-ORDINARY safety category (even non-acute) -- a bare link response would
+    // feel dismissive layered under a safety disclaimer, and the existing blended
+    // safety+resource flow below already handles that case.
     if (!isNonAcuteSafetyConcern) {
-      const links = await actionLinkService.listActiveActionLinks(input.organizationId);
+      const links = await organizationalLinkService.listActiveOrganizationalLinks(input.organizationId);
       if (links.length > 0) {
-        const match = await this.aiProvider.matchActionLink(
+        const match = await this.aiProvider.matchLink(
           message,
           links.map((link) => ({ id: link.id, label: link.label, description: link.description })),
         );
-        // ActionLink.url has never been format-validated at creation (a plain text
-        // input, not a <input type="url"> or Zod .url() check) -- suggestedActions
-        // was dormant (always []) until this step, so this is the first path that
-        // actually holds it to ChatResponseSchema's z.string().url(). A malformed
-        // url here must fall through to the normal pipeline, not crash the response.
+        // OrganizationalLink.url is format-validated at creation (Zod .url()), but
+        // guard here too rather than trust that invariant blindly -- a malformed url
+        // must fall through to the normal pipeline, not crash the response via
+        // ChatResponseSchema's z.string().url().
         const matchedLink = match.matchedLinkId ? links.find((link) => link.id === match.matchedLinkId) : undefined;
         const hasValidUrl = matchedLink ? isValidHttpUrl(matchedLink.url) : false;
         if (matchedLink && hasValidUrl) {
@@ -166,7 +168,7 @@ export class ChatPipeline {
             answer: `Here's ${matchedLink.label}.`,
             resources: [],
             followUpQuestion: null,
-            suggestedActions: [{ type: matchedLink.type, label: matchedLink.label, url: matchedLink.url }],
+            suggestedActions: [{ type: "LINK", label: matchedLink.label, url: matchedLink.url }],
             safetyCategory: null,
           });
         }

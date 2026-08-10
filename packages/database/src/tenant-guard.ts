@@ -23,6 +23,7 @@ const TENANT_SCOPED_MODELS = new Set([
   "Conversation",
   "ConversationMessage",
   "ActionLink",
+  "OrganizationalLink",
   "AuditLog",
   "ContentSource",
   "PrayerWallAccount",

@@ -1,12 +1,12 @@
 import type { ExtractedIntent, SafetyClassification } from "@ruach/shared-types";
 import type {
-  ActionLinkCandidate,
-  ActionLinkMatchOutput,
   AIProvider,
   CategorizationInput,
   CategorizationOutput,
   ConversationalResponseInput,
   ConversationalResponseOutput,
+  LinkCandidate,
+  LinkMatchOutput,
 } from "./AIProvider";
 
 /** Dropped from both the message and link text before overlap scoring -- common enough to inflate the score of an unrelated link without meaning anything ("where can I find the page about the thing"). */
@@ -156,7 +156,7 @@ export class MockAIProvider implements AIProvider {
     };
   }
 
-  async matchActionLink(message: string, links: ActionLinkCandidate[]): Promise<ActionLinkMatchOutput> {
+  async matchLink(message: string, links: LinkCandidate[]): Promise<LinkMatchOutput> {
     const messageTokens = matchTokens(message);
     if (messageTokens.size === 0) return { matchedLinkId: null };
 
@@ -177,7 +177,7 @@ export class MockAIProvider implements AIProvider {
       // longer, more helpful descriptions for no reason. The tradeoff: a short
       // message that happens to share its one meaningful word with an unrelated
       // link's description can false-positive -- acceptable here since this is only
-      // the no-network-call mock heuristic (OpenAIProvider's real matchActionLink
+      // the no-network-call mock heuristic (OpenAIProvider's real matchLink
       // reasons about intent, not just word overlap), and a wrong link is a minor
       // UX miss, not a safety issue.
       const score = overlap / messageTokens.size;

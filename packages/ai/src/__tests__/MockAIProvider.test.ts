@@ -36,7 +36,7 @@ describe("MockAIProvider.extractIntent", () => {
   });
 });
 
-describe("MockAIProvider.matchActionLink", () => {
+describe("MockAIProvider.matchLink", () => {
   const provider = new MockAIProvider();
   const links = [
     { id: "link_notes", label: "Notes", description: "This week's sermon notes and study guide" },
@@ -44,22 +44,30 @@ describe("MockAIProvider.matchActionLink", () => {
   ];
 
   it("matches a direct navigational request to the right link", async () => {
-    const result = await provider.matchActionLink("Where can I find the notes?", links);
+    const result = await provider.matchLink("Where can I find the notes?", links);
     expect(result.matchedLinkId).toBe("link_notes");
   });
 
   it("matches on the label alone when there's no description", async () => {
-    const result = await provider.matchActionLink("How do I give?", links);
+    const result = await provider.matchLink("How do I give?", links);
     expect(result.matchedLinkId).toBe("link_give");
   });
 
   it("does not match an unrelated content question", async () => {
-    const result = await provider.matchActionLink("Do you have anything about anxiety?", links);
+    const result = await provider.matchLink("Do you have anything about anxiety?", links);
+    expect(result.matchedLinkId).toBeNull();
+  });
+
+  it("does not match a struggle/content request even when it shares a word with a link's description", async () => {
+    const prayerLinks = [
+      { id: "link_prayer_request", label: "Prayer Request", description: "Submit a prayer request to our prayer team" },
+    ];
+    const result = await provider.matchLink("I've been hitting a wall in prayer", prayerLinks);
     expect(result.matchedLinkId).toBeNull();
   });
 
   it("returns null when there are no links to match against", async () => {
-    const result = await provider.matchActionLink("Where can I find the notes?", []);
+    const result = await provider.matchLink("Where can I find the notes?", []);
     expect(result.matchedLinkId).toBeNull();
   });
 });
