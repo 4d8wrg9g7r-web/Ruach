@@ -1,4 +1,4 @@
-import { resourceService } from "@ruach/database";
+import { actionLinkService, resourceService } from "@ruach/database";
 import {
   ChatResponseSchema,
   type ChatResponse,
@@ -46,6 +46,15 @@ function cleanExcerpt(excerpt: string): string {
     .replace(/(^|\s)-\s+/g, "$1")
     .replace(/\s{2,}/g, " ")
     .trim();
+}
+
+function isValidHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function buttonLabelFor(resourceType: string): ResourceRecommendation["buttonLabel"] {
@@ -127,6 +136,42 @@ export class ChatPipeline {
       });
     }
     const isNonAcuteSafetyConcern = safety.category !== "ORDINARY";
+
+    // Step 2.5: action-link matching. "Where can I find the notes?" should get a
+    // direct link, not a ministry-toned resource recommendation -- this is a
+    // deliberately separate, cheaper check that runs before intent extraction/
+    // retrieval and short-circuits the rest of the pipeline on a match. Skipped
+    // entirely for any non-ORDINARY safety category (even non-acute) -- a bare link
+    // response would feel dismissive layered under a safety disclaimer, and the
+    // existing blended safety+resource flow below already handles that case.
+    if (!isNonAcuteSafetyConcern) {
+      const links = await actionLinkService.listActiveActionLinks(input.organizationId);
+      if (links.length > 0) {
+        const match = await this.aiProvider.matchActionLink(
+          message,
+          links.map((link) => ({ id: link.id, label: link.label, description: link.description })),
+        );
+        // ActionLink.url has never been format-validated at creation (a plain text
+        // input, not a <input type="url"> or Zod .url() check) -- suggestedActions
+        // was dormant (always []) until this step, so this is the first path that
+        // actually holds it to ChatResponseSchema's z.string().url(). A malformed
+        // url here must fall through to the normal pipeline, not crash the response.
+        const matchedLink = match.matchedLinkId ? links.find((link) => link.id === match.matchedLinkId) : undefined;
+        const hasValidUrl = matchedLink ? isValidHttpUrl(matchedLink.url) : false;
+        if (matchedLink && hasValidUrl) {
+          return ChatResponseSchema.parse({
+            ...base,
+            responseType: "ACTION_RESPONSE",
+            acknowledgment: null,
+            answer: `Here's ${matchedLink.label}.`,
+            resources: [],
+            followUpQuestion: null,
+            suggestedActions: [{ type: matchedLink.type, label: matchedLink.label, url: matchedLink.url }],
+            safetyCategory: null,
+          });
+        }
+      }
+    }
 
     // Step 3: intent extraction.
     const intent = await this.aiProvider.extractIntent(message, input.recentMessages);

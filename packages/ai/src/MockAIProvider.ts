@@ -1,11 +1,30 @@
 import type { ExtractedIntent, SafetyClassification } from "@ruach/shared-types";
 import type {
+  ActionLinkCandidate,
+  ActionLinkMatchOutput,
   AIProvider,
   CategorizationInput,
   CategorizationOutput,
   ConversationalResponseInput,
   ConversationalResponseOutput,
 } from "./AIProvider";
+
+/** Dropped from both the message and link text before overlap scoring -- common enough to inflate the score of an unrelated link without meaning anything ("where can I find the page about the thing"). */
+const MATCH_STOPWORDS = new Set([
+  "a", "an", "the", "is", "are", "was", "were", "do", "does", "did", "can", "could", "would", "should",
+  "where", "what", "when", "who", "how", "i", "you", "your", "we", "our", "to", "for", "of", "in", "on",
+  "at", "and", "or", "find", "get", "go", "see", "check", "out", "please", "me", "it", "that", "this",
+]);
+
+function matchTokens(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((word) => word.length > 1 && !MATCH_STOPWORDS.has(word)),
+  );
+}
 
 const CRISIS_KEYWORDS: Array<{ pattern: RegExp; category: SafetyClassification["category"] }> = [
   {
@@ -135,5 +154,37 @@ export class MockAIProvider implements AIProvider {
       answer: `"${top.title}" might be a good place to start${reason}.`,
       followUpQuestion: input.candidates.length > 1 ? "Would you like something shorter, or a full teaching?" : null,
     };
+  }
+
+  async matchActionLink(message: string, links: ActionLinkCandidate[]): Promise<ActionLinkMatchOutput> {
+    const messageTokens = matchTokens(message);
+    if (messageTokens.size === 0) return { matchedLinkId: null };
+
+    let best: { id: string; score: number } | null = null;
+    for (const link of links) {
+      const linkTokens = matchTokens(`${link.label} ${link.description ?? ""}`);
+      if (linkTokens.size === 0) continue;
+
+      let overlap = 0;
+      for (const token of messageTokens) {
+        if (linkTokens.has(token)) overlap += 1;
+      }
+      // Score is overlap as a fraction of the MESSAGE's (typically short) vocabulary,
+      // not the link's -- "where can I find the notes?" reduces to the single token
+      // "notes", which should confidently match a link labeled/described with that
+      // word regardless of how much other, non-overlapping text is in its
+      // description. Scoring against the link's vocabulary instead would penalize
+      // longer, more helpful descriptions for no reason. The tradeoff: a short
+      // message that happens to share its one meaningful word with an unrelated
+      // link's description can false-positive -- acceptable here since this is only
+      // the no-network-call mock heuristic (OpenAIProvider's real matchActionLink
+      // reasons about intent, not just word overlap), and a wrong link is a minor
+      // UX miss, not a safety issue.
+      const score = overlap / messageTokens.size;
+      if (overlap > 0 && score >= 0.5 && (!best || score > best.score)) {
+        best = { id: link.id, score };
+      }
+    }
+    return { matchedLinkId: best?.id ?? null };
   }
 }

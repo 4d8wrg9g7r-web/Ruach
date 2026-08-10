@@ -36,6 +36,34 @@ describe("MockAIProvider.extractIntent", () => {
   });
 });
 
+describe("MockAIProvider.matchActionLink", () => {
+  const provider = new MockAIProvider();
+  const links = [
+    { id: "link_notes", label: "Notes", description: "This week's sermon notes and study guide" },
+    { id: "link_give", label: "Give", description: null },
+  ];
+
+  it("matches a direct navigational request to the right link", async () => {
+    const result = await provider.matchActionLink("Where can I find the notes?", links);
+    expect(result.matchedLinkId).toBe("link_notes");
+  });
+
+  it("matches on the label alone when there's no description", async () => {
+    const result = await provider.matchActionLink("How do I give?", links);
+    expect(result.matchedLinkId).toBe("link_give");
+  });
+
+  it("does not match an unrelated content question", async () => {
+    const result = await provider.matchActionLink("Do you have anything about anxiety?", links);
+    expect(result.matchedLinkId).toBeNull();
+  });
+
+  it("returns null when there are no links to match against", async () => {
+    const result = await provider.matchActionLink("Where can I find the notes?", []);
+    expect(result.matchedLinkId).toBeNull();
+  });
+});
+
 describe("MockAIProvider.generateCategorization", () => {
   const provider = new MockAIProvider();
 

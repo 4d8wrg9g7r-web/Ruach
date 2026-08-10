@@ -10,6 +10,7 @@ export interface ActionLinkRow {
   url: string;
   type: string;
   isActive: boolean;
+  description?: string | null;
 }
 
 interface ActionLinkListProps {
@@ -53,6 +54,7 @@ export function ActionLinkList({ links, onToggleActive, onRemove, onReorder }: A
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-ink">{link.label}</p>
             <p className="truncate text-xs text-ink-muted">{link.url}</p>
+            {link.description && <p className="mt-0.5 truncate text-xs text-ink-muted italic">{link.description}</p>}
           </div>
           <label className="flex shrink-0 items-center gap-1.5 text-xs text-ink-secondary">
             <input

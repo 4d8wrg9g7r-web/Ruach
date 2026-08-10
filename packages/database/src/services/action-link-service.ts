@@ -8,6 +8,7 @@ export async function createActionLink(params: {
   type: string;
   url: string;
   icon?: string;
+  description?: string;
 }) {
   const count = await tenantDb.actionLink.count({ where: { organizationId: params.organizationId } });
   if (count >= MAX_LINKS_PER_ORGANIZATION) {
@@ -35,7 +36,7 @@ export async function listActionLinks(organizationId: string) {
 export async function updateActionLink(
   organizationId: string,
   linkId: string,
-  updates: Partial<{ label: string; url: string; isActive: boolean }>,
+  updates: Partial<{ label: string; url: string; isActive: boolean; description: string | null }>,
 ) {
   const result = await tenantDb.actionLink.updateMany({
     where: { id: linkId, organizationId },

@@ -693,6 +693,14 @@ model ActionLink {
   type           String
   url            String
   icon           String?
+  // Optional admin-authored blurb of what this link is for, e.g. "This week's sermon
+  // notes and study guide." Purely descriptive -- never shown to visitors -- but it's
+  // what ChatPipeline's matchActionLink step compares a visitor's question against
+  // (alongside the label) to decide whether "where can I find the notes?" should
+  // return this link instead of running the full resource-recommendation pipeline.
+  // Nullable because every existing link predates this field and matching still
+  // works off the label alone, just less precisely.
+  description    String?
   order          Int      @default(0)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
