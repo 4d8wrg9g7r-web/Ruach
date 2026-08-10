@@ -56,7 +56,17 @@ async function enableCampusPrayerWallAction(websiteId: string, formData: FormDat
     logoUrl = await saveLogoUpload(organization.id, logoFile);
   }
 
-  await websiteService.enablePrayerWall(organization.id, websiteId, { enabled, forwardingEmails, brandColor, logoUrl });
+  const testimoniesEnabled = formData.get("testimoniesEnabled") === "on";
+  const testimoniesPageName = String(formData.get("testimoniesPageName") ?? "").trim() || "Praise Report";
+
+  await websiteService.enablePrayerWall(organization.id, websiteId, {
+    enabled,
+    forwardingEmails,
+    brandColor,
+    logoUrl,
+    testimoniesEnabled,
+    testimoniesPageName,
+  });
 
   const user = await getCurrentUser();
   await auditService.recordAuditEvent({
@@ -65,7 +75,7 @@ async function enableCampusPrayerWallAction(websiteId: string, formData: FormDat
     action: "prayer_wall.settings_updated",
     targetType: "Website",
     targetId: websiteId,
-    metadata: { enabled, forwardingEmails, brandColor, logoUrl },
+    metadata: { enabled, forwardingEmails, brandColor, logoUrl, testimoniesEnabled, testimoniesPageName },
   });
 
   revalidatePath(`/websites/${websiteId}`);
@@ -117,6 +127,8 @@ export default async function WebsiteDetailPage({ params }: { params: Promise<{ 
                 brandColor={website.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR}
                 logoUrl={website.prayerWallLogoUrl}
                 prayerWallUrl={`${appOrigin}/prayer/${websiteWithWallId.publicPrayerWallId}`}
+                testimoniesEnabled={website.testimoniesEnabled}
+                testimoniesPageName={website.testimoniesPageName}
                 action={boundEnable}
               />
             )}

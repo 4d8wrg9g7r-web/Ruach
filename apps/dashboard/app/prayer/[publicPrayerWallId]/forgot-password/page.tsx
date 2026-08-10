@@ -65,6 +65,7 @@ export default async function PrayerForgotPasswordPage({
         publicPrayerWallId={publicPrayerWallId}
         logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
+        testimoniesPageName={wall.testimoniesEnabled ? wall.testimoniesPageName : undefined}
         isLoggedIn={false}
       />
       <main className="mx-auto max-w-sm px-6 py-12">

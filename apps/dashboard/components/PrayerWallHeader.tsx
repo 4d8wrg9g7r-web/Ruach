@@ -9,6 +9,8 @@ interface PrayerWallHeaderProps {
   brandColor: string;
   isLoggedIn: boolean;
   onLogout?: () => Promise<void>;
+  /** Set when the org has testimonies enabled -- renders a nav link to the public testimonies page using this as the label. */
+  testimoniesPageName?: string;
 }
 
 function initials(name: string) {
@@ -27,6 +29,7 @@ export function PrayerWallHeader({
   brandColor,
   isLoggedIn,
   onLogout,
+  testimoniesPageName,
 }: PrayerWallHeaderProps) {
   const base = `/prayer/${publicPrayerWallId}`;
 
@@ -59,6 +62,14 @@ export function PrayerWallHeader({
           >
             Wall
           </Link>
+          {testimoniesPageName && (
+            <Link
+              href={`${base}/testimonies`}
+              className="rounded-sm text-ink-secondary hover:text-[color:var(--brand-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-color)]/40 focus-visible:ring-offset-2"
+            >
+              {testimoniesPageName}
+            </Link>
+          )}
           {isLoggedIn ? (
             <>
               <Link

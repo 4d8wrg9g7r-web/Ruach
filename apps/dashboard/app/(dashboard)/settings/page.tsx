@@ -80,7 +80,17 @@ async function enablePrayerWallAction(formData: FormData) {
     logoUrl = await saveLogoUpload(organization.id, logoFile);
   }
 
-  await organizationService.enablePrayerWall(organization.id, { enabled, forwardingEmails, brandColor, logoUrl });
+  const testimoniesEnabled = formData.get("testimoniesEnabled") === "on";
+  const testimoniesPageName = String(formData.get("testimoniesPageName") ?? "").trim() || "Praise Report";
+
+  await organizationService.enablePrayerWall(organization.id, {
+    enabled,
+    forwardingEmails,
+    brandColor,
+    logoUrl,
+    testimoniesEnabled,
+    testimoniesPageName,
+  });
 
   const user = await getCurrentUser();
   await auditService.recordAuditEvent({
@@ -89,7 +99,7 @@ async function enablePrayerWallAction(formData: FormData) {
     action: "prayer_wall.settings_updated",
     targetType: "Organization",
     targetId: organization.id,
-    metadata: { enabled, forwardingEmails, brandColor, logoUrl },
+    metadata: { enabled, forwardingEmails, brandColor, logoUrl, testimoniesEnabled, testimoniesPageName },
   });
 
   revalidatePath("/settings");
@@ -146,8 +156,17 @@ export default async function SettingsPage() {
           brandColor={organization.prayerWallBrandColor ?? DEFAULT_PRAYER_WALL_BRAND_COLOR}
           logoUrl={organization.prayerWallLogoUrl}
           prayerWallUrl={prayerWallUrl}
+          testimoniesEnabled={organization.testimoniesEnabled}
+          testimoniesPageName={organization.testimoniesPageName}
           action={enablePrayerWallAction}
         />
+        {organization.testimoniesEnabled && (
+          <p className="mt-4 text-sm">
+            <a href="/prayer-wall/testimonies" className="underline hover:text-ink">
+              Manage testimonies
+            </a>
+          </p>
+        )}
       </Card>
 
       <Card padding="md">

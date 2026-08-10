@@ -27,6 +27,7 @@ const TENANT_SCOPED_MODELS = new Set([
   "ContentSource",
   "PrayerWallAccount",
   "PrayerRequest",
+  "Testimony",
 ]);
 
 const FIND_UNIQUE_OPS = new Set(["findUnique", "findUniqueOrThrow"]);

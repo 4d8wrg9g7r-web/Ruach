@@ -41,6 +41,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   createdAccessCodes  FreeTierAccessCode[] @relation("AccessCodeCreatedBy")
   usedAccessCode      FreeTierAccessCode?  @relation("AccessCodeUsedBy")
+  createdTestimonies  Testimony[]
 }
 
 enum SubscriptionStatus {
@@ -141,6 +142,12 @@ model Organization {
   prayerRequestForwardingEmails String[]            @default([])
   prayerWallBrandColor          String?
   prayerWallLogoUrl             String?
+  // Testimonies ("Praise Report" by default) are a sub-feature of the same prayer
+  // wall -- same publicPrayerWallId page, branding, and visitor login, so no
+  // separate brand color/logo/URL fields are needed here, just an enable toggle and
+  // an admin-chosen display name for the page's nav link.
+  testimoniesEnabled            Boolean             @default(false)
+  testimoniesPageName           String              @default("Praise Report")
   // planKey resolves into the PLANS map in billing-service.ts, not a DB table --
   // see that file's doc comment. The default exists only to backfill pre-billing
   // rows during migration; every real creation path (Stripe webhook, access-code
@@ -188,6 +195,7 @@ model Organization {
   prayerWallAccounts      PrayerWallAccount[]
   prayerRequests          PrayerRequest[]
   prayerWallResetTokens   PrayerWallPasswordResetToken[]
+  testimonies             Testimony[]
 }
 
 enum CategorizationMode {
@@ -242,6 +250,9 @@ model Website {
   prayerRequestForwardingEmails String[] @default([])
   prayerWallBrandColor          String?
   prayerWallLogoUrl             String?
+  // Mirrors Organization's testimonies fields for the same reason as above.
+  testimoniesEnabled            Boolean  @default(false)
+  testimoniesPageName           String   @default("Praise Report")
   createdAt                     DateTime @default(now())
   updatedAt                     DateTime @updatedAt
 
@@ -249,6 +260,7 @@ model Website {
   widgets        WidgetConfiguration[]
   resources      Resource[]
   prayerRequests PrayerRequest[]
+  testimonies    Testimony[]
 
   @@index([organizationId])
 }
@@ -726,6 +738,7 @@ model PrayerWallAccount {
   sessions       PrayerWallSession[]
   prayerRequests PrayerRequest[]
   resetTokens    PrayerWallPasswordResetToken[]
+  testimonies    Testimony[]
 
   @@unique([organizationId, email])
   @@index([organizationId])
@@ -816,6 +829,59 @@ model PrayerRequest {
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   account      PrayerWallAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   website      Website?          @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([accountId])
+  @@index([websiteId])
+}
+
+/**
+ * A "praise report" -- either a visitor submission (accountId set, isFeatured
+ * false) or a staff-curated highlight (createdByUserId set, isFeatured true,
+ * optionally with an embedded YouTube video). One model for both because they
+ * render on the same public list; isFeatured is what the service layer uses to
+ * decide which fields a given caller is allowed to set.
+ */
+model Testimony {
+  id             String   @id @default(cuid())
+  organizationId String
+  // Same convention as PrayerRequest.websiteId: null = org-level default wall,
+  // set = a specific campus's wall. onDelete: SetNull for the same reason.
+  websiteId      String?
+  // Set for visitor submissions; null for staff-added featured testimonies.
+  // onDelete: SetNull (not Cascade like PrayerRequest.accountId) -- a testimony is
+  // durable public content that shouldn't vanish just because the submitter's
+  // login was later removed.
+  accountId      String?
+  message        String
+  // Only ever set on isFeatured rows -- visitor submissions attribute via the
+  // account relation instead (display name/email), same pattern as
+  // PrayerRequest.isAnonymous controlling attribution at render time.
+  authorDisplayName String?
+  isFeatured     Boolean  @default(false)
+  // Visitor submissions publish immediately (no pre-approval queue); staff can
+  // hide via this flag afterward through the moderation page. Featured
+  // testimonies default to public too.
+  isPublic       Boolean  @default(true)
+  // Only ever set on isFeatured rows. Stored as both the raw URL (so the admin
+  // edit form can prefill it) and pre-computed at write time -- same "store
+  // both, never parse on read" pattern as YouTubeProvider.ts.
+  youtubeUrl      String?
+  youtubeVideoId  String?
+  youtubeEmbedUrl String?
+  // Display order among isFeatured rows only (ActionLink.order pattern) --
+  // visitor submissions always sort by createdAt instead.
+  order          Int      @default(0)
+  // Staff member who added a featured testimony. onDelete: SetNull for the same
+  // durable-public-content reasoning as accountId above.
+  createdByUserId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  website      Website?           @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  account      PrayerWallAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  createdBy    User?              @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([accountId])

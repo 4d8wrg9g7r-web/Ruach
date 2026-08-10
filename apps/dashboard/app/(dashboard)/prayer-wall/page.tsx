@@ -98,11 +98,20 @@ export default async function PrayerWallModerationPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">Prayer Wall</h1>
-      <p className="mb-8 text-sm text-ink-secondary">
-        Review, moderate, and respond to every prayer request submitted to {organization.name}
-        {!organization.prayerWallEnabled && " (the prayer wall itself is currently disabled -- enable it in Settings)"}.
-      </p>
+      <div className="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">Prayer Wall</h1>
+          <p className="text-sm text-ink-secondary">
+            Review, moderate, and respond to every prayer request submitted to {organization.name}
+            {!organization.prayerWallEnabled && " (the prayer wall itself is currently disabled -- enable it in Settings)"}.
+          </p>
+        </div>
+        {organization.testimoniesEnabled && (
+          <a href="/prayer-wall/testimonies" className="shrink-0 text-sm text-accent-dark hover:underline">
+            {organization.testimoniesPageName} &rarr;
+          </a>
+        )}
+      </div>
 
       <Card padding="none">
         <PrayerModerationList

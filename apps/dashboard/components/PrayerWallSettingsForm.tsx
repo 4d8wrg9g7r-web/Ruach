@@ -6,7 +6,7 @@ import { CopySnippetButton } from "./CopySnippetButton";
 import { LogoUploadField } from "./LogoUploadField";
 import { PrayerWallPreviewFrame } from "./PrayerWallPreviewFrame";
 import { SubmitButton } from "./SubmitButton";
-import { Textarea } from "./ui/Input";
+import { Input, Textarea } from "./ui/Input";
 import { useToast } from "./ui/Toast";
 
 const PREVIEW_DEBOUNCE_MS = 200;
@@ -20,6 +20,8 @@ interface PrayerWallSettingsFormProps {
   brandColor: string;
   logoUrl: string | null;
   prayerWallUrl: string;
+  testimoniesEnabled: boolean;
+  testimoniesPageName: string;
   action: (formData: FormData) => Promise<void>;
 }
 
@@ -37,6 +39,8 @@ export function PrayerWallSettingsForm({
   brandColor,
   logoUrl,
   prayerWallUrl,
+  testimoniesEnabled,
+  testimoniesPageName,
   action,
 }: PrayerWallSettingsFormProps) {
   const [previewColor, setPreviewColor] = useState(brandColor);
@@ -92,6 +96,26 @@ export function PrayerWallSettingsForm({
           <div className="flex items-center gap-2 rounded-md bg-surface-muted px-3 py-2">
             <code className="min-w-0 flex-1 truncate text-xs text-ink-secondary">{prayerWallUrl}</code>
             <CopySnippetButton text={prayerWallUrl} />
+          </div>
+        )}
+        {prayerWallEnabled && (
+          <div className="flex flex-col gap-3 rounded-md border border-border-strong p-3">
+            <label className="flex items-center gap-2 text-sm text-ink-secondary">
+              <input type="checkbox" name="testimoniesEnabled" defaultChecked={testimoniesEnabled} />
+              Enable testimonies ("praise reports") on this same wall
+            </label>
+            <label className="text-sm text-ink-secondary">
+              Page name
+              <Input
+                name="testimoniesPageName"
+                defaultValue={testimoniesPageName}
+                placeholder="Praise Report"
+                className="mt-1 block w-full max-w-xs"
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                Shown as the nav link on the public wall, e.g. "{testimoniesPageName || "Praise Report"}".
+              </span>
+            </label>
           </div>
         )}
         <div className="flex justify-end">

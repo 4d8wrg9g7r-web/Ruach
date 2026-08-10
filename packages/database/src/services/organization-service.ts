@@ -180,7 +180,14 @@ export async function dismissOnboardingChecklist(organizationId: string) {
 
 export async function enablePrayerWall(
   organizationId: string,
-  params: { enabled: boolean; forwardingEmails: string[]; brandColor: string | null; logoUrl: string | null },
+  params: {
+    enabled: boolean;
+    forwardingEmails: string[];
+    brandColor: string | null;
+    logoUrl: string | null;
+    testimoniesEnabled?: boolean;
+    testimoniesPageName?: string;
+  },
 ) {
   return rawDb.organization.update({
     where: { id: organizationId },
@@ -189,6 +196,8 @@ export async function enablePrayerWall(
       prayerRequestForwardingEmails: params.forwardingEmails,
       prayerWallBrandColor: params.brandColor,
       prayerWallLogoUrl: params.logoUrl,
+      ...(params.testimoniesEnabled !== undefined ? { testimoniesEnabled: params.testimoniesEnabled } : {}),
+      ...(params.testimoniesPageName !== undefined ? { testimoniesPageName: params.testimoniesPageName } : {}),
     },
   });
 }

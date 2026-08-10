@@ -64,6 +64,7 @@ export default async function MyPrayerRequestsPage({ params }: { params: Promise
         publicPrayerWallId={publicPrayerWallId}
         logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
+        testimoniesPageName={wall.testimoniesEnabled ? wall.testimoniesPageName : undefined}
         isLoggedIn
       />
       <main className="mx-auto max-w-2xl px-6 py-8">

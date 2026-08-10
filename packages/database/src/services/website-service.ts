@@ -53,7 +53,14 @@ export async function ensurePrayerWallId(organizationId: string, websiteId: stri
 export async function enablePrayerWall(
   organizationId: string,
   websiteId: string,
-  params: { enabled: boolean; forwardingEmails: string[]; brandColor: string | null; logoUrl: string | null },
+  params: {
+    enabled: boolean;
+    forwardingEmails: string[];
+    brandColor: string | null;
+    logoUrl: string | null;
+    testimoniesEnabled?: boolean;
+    testimoniesPageName?: string;
+  },
 ) {
   const result = await tenantDb.website.updateMany({
     where: { id: websiteId, organizationId },
@@ -62,6 +69,8 @@ export async function enablePrayerWall(
       prayerRequestForwardingEmails: params.forwardingEmails,
       prayerWallBrandColor: params.brandColor,
       prayerWallLogoUrl: params.logoUrl,
+      ...(params.testimoniesEnabled !== undefined ? { testimoniesEnabled: params.testimoniesEnabled } : {}),
+      ...(params.testimoniesPageName !== undefined ? { testimoniesPageName: params.testimoniesPageName } : {}),
     },
   });
   if (result.count === 0) return null;

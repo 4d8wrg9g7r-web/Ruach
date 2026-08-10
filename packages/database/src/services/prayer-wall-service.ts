@@ -10,6 +10,15 @@ export interface PublicPrayerWallConfig {
   prayerWallBrandColor: string | null;
   prayerWallLogoUrl: string | null;
   prayerRequestForwardingEmails: string[];
+  /**
+   * Testimonies are a sub-feature of this same wall (same publicPrayerWallId page,
+   * branding, and PrayerWallAccount login -- see the Testimony model's doc comment),
+   * so this whole config is only reachable when prayerWallEnabled is true already
+   * (resolvePublicPrayerWall returns null otherwise) -- there's no independent
+   * "testimonies without the prayer wall" state to handle.
+   */
+  testimoniesEnabled: boolean;
+  testimoniesPageName: string;
 }
 
 /**
@@ -32,6 +41,8 @@ export async function resolvePublicPrayerWall(publicPrayerWallId: string): Promi
       prayerWallBrandColor: organization.prayerWallBrandColor,
       prayerWallLogoUrl: organization.prayerWallLogoUrl,
       prayerRequestForwardingEmails: organization.prayerRequestForwardingEmails,
+      testimoniesEnabled: organization.testimoniesEnabled,
+      testimoniesPageName: organization.testimoniesPageName,
     };
   }
 
@@ -45,6 +56,8 @@ export async function resolvePublicPrayerWall(publicPrayerWallId: string): Promi
       prayerWallBrandColor: website.prayerWallBrandColor,
       prayerWallLogoUrl: website.prayerWallLogoUrl,
       prayerRequestForwardingEmails: website.prayerRequestForwardingEmails,
+      testimoniesEnabled: website.testimoniesEnabled,
+      testimoniesPageName: website.testimoniesPageName,
     };
   }
 
@@ -71,6 +84,8 @@ export async function resolvePublicPrayerWallForPreview(publicPrayerWallId: stri
       prayerWallBrandColor: organization.prayerWallBrandColor,
       prayerWallLogoUrl: organization.prayerWallLogoUrl,
       prayerRequestForwardingEmails: organization.prayerRequestForwardingEmails,
+      testimoniesEnabled: organization.testimoniesEnabled,
+      testimoniesPageName: organization.testimoniesPageName,
     };
   }
 
@@ -84,6 +99,8 @@ export async function resolvePublicPrayerWallForPreview(publicPrayerWallId: stri
       prayerWallBrandColor: website.prayerWallBrandColor,
       prayerWallLogoUrl: website.prayerWallLogoUrl,
       prayerRequestForwardingEmails: website.prayerRequestForwardingEmails,
+      testimoniesEnabled: website.testimoniesEnabled,
+      testimoniesPageName: website.testimoniesPageName,
     };
   }
 

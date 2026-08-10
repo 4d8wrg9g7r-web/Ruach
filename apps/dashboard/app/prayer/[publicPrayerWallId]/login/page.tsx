@@ -37,7 +37,9 @@ async function loginAction(publicPrayerWallId: string, formData: FormData) {
   const token = await prayerService.createSession(account.id, new Date(Date.now() + SESSION_DURATION_MS));
   await setPrayerSessionCookie(publicPrayerWallId, token);
 
-  redirect(`/prayer/${publicPrayerWallId}/${next === "submit" ? "submit" : "mine"}`);
+  redirect(
+    `/prayer/${publicPrayerWallId}/${next === "submit" ? "submit" : next === "testimonies" ? "testimonies/submit" : "mine"}`,
+  );
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -69,6 +71,7 @@ export default async function PrayerLoginPage({
         publicPrayerWallId={publicPrayerWallId}
         logoUrl={wall.prayerWallLogoUrl}
         brandColor={brandColor}
+        testimoniesPageName={wall.testimoniesEnabled ? wall.testimoniesPageName : undefined}
         isLoggedIn={false}
       />
       <main className="mx-auto max-w-sm px-6 py-12">

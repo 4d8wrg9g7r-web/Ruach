@@ -14,6 +14,7 @@ export * as auditService from "./services/audit-service";
 export * as contentSourceService from "./services/content-source-service";
 export * as prayerService from "./services/prayer-service";
 export * as prayerWallService from "./services/prayer-wall-service";
+export * as testimonyService from "./services/testimony-service";
 export * as analyticsService from "./services/analytics-service";
 export * as teamService from "./services/team-service";
 export * as billingService from "./services/billing-service";

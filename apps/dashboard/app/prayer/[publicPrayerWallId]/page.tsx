@@ -102,6 +102,7 @@ export default async function PrayerWallPage({
         publicPrayerWallId={publicPrayerWallId}
         logoUrl={logoUrl}
         brandColor={brandColor}
+        testimoniesPageName={wall.testimoniesEnabled ? wall.testimoniesPageName : undefined}
         isLoggedIn={!!account}
         onLogout={account ? boundLogout : undefined}
       />
