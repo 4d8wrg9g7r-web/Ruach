@@ -89,6 +89,28 @@ await record("resource-import", async (page) => {
   await pause(page, 900);
 });
 
+await record("organizational-links-add", async (page) => {
+  await page.goto(`${BASE_URL}/resources`, { waitUntil: "networkidle" });
+  // Scoped to the Organizational Links form specifically -- the page's main import
+  // panel has its own "https://..." URL field with the same placeholder.
+  const form = page.locator('form:has(input[placeholder="Notes"])');
+  await form.scrollIntoViewIfNeeded();
+  await pause(page, 500);
+  const label = form.locator('input[name="label"]');
+  await label.click();
+  await label.pressSequentially("Sermon Notes", { delay: 45 });
+  const url = form.locator('input[name="url"]');
+  await url.click();
+  await url.pressSequentially("https://example.org/notes", { delay: 30 });
+  const description = form.locator('textarea[name="description"]');
+  await description.click();
+  await description.pressSequentially("This week's sermon notes and study guide", { delay: 20 });
+  await pause(page, 600);
+  await form.getByRole("button", { name: "Add link" }).click();
+  await page.waitForLoadState("networkidle");
+  await pause(page, 900);
+});
+
 await record("widget-customize", async (page) => {
   await page.goto(`${BASE_URL}/widgets`, { waitUntil: "networkidle" });
   await page.locator('a[href^="/widgets/"]').first().click();
@@ -116,6 +138,37 @@ await record("prayer-wall-enable", async (page) => {
   await pause(page, 700);
 });
 
+await record("testimonies-enable", async (page) => {
+  await page.goto(`${BASE_URL}/settings`, { waitUntil: "networkidle" });
+
+  // The testimonies checkbox only renders once the org already has the prayer wall
+  // enabled server-side (same form, gated by a server-rendered prop, not live
+  // checkbox state) -- the recording above never actually saves, so enable and save
+  // it for real here first if this is a fresh org.
+  let testimoniesCheckbox = page.getByLabel(/Enable testimonies/);
+  if ((await testimoniesCheckbox.count()) === 0) {
+    await page.getByLabel("Enable the public prayer wall").click();
+    await page.getByRole("button", { name: "Save" }).first().click();
+    await page.waitForLoadState("networkidle");
+    await page.reload({ waitUntil: "networkidle" });
+    testimoniesCheckbox = page.getByLabel(/Enable testimonies/);
+  }
+
+  await pause(page, 400);
+  await testimoniesCheckbox.scrollIntoViewIfNeeded();
+  await pause(page, 400);
+  await testimoniesCheckbox.click();
+  await pause(page, 400);
+  const pageName = page.locator('input[name="testimoniesPageName"]');
+  await pageName.click();
+  await pageName.fill("");
+  await pageName.pressSequentially("Praise Reports", { delay: 40 });
+  await pause(page, 700);
+  await page.getByRole("button", { name: "Save" }).first().click();
+  await page.waitForLoadState("networkidle");
+  await pause(page, 900);
+});
+
 await record("moderate", async (page) => {
   await page.goto(`${BASE_URL}/prayer-wall`, { waitUntil: "networkidle" });
   await pause(page, 600);
@@ -136,6 +189,29 @@ await record("team-invite", async (page) => {
   await pause(page, 400);
   await page.getByLabel("Role").selectOption({ label: "Analytics Viewer" });
   await pause(page, 700);
+});
+
+await record("conversations-review", async (page) => {
+  // Seeds a real conversation by chatting with the widget as a visitor first, in the
+  // same browser context -- shows a populated list rather than an empty state,
+  // without writing to the database directly.
+  await page.goto(`${BASE_URL}/widgets`, { waitUntil: "networkidle" });
+  await page.locator('a[href^="/widgets/"]').first().click();
+  await page.waitForLoadState("networkidle");
+  const previewHref = await page.locator('a[href^="/widget/embed/"]').first().getAttribute("href");
+  await page.goto(`${BASE_URL}${previewHref}`, { waitUntil: "networkidle" });
+  await pause(page, 800);
+  const chatInput = page.getByRole("textbox");
+  await chatInput.click();
+  await chatInput.pressSequentially("Do you have anything about anxiety?", { delay: 30 });
+  await page.getByRole("button", { name: "Send" }).click();
+  await pause(page, 2500);
+
+  await page.goto(`${BASE_URL}/conversations`, { waitUntil: "networkidle" });
+  await pause(page, 600);
+  await page.locator('a[href^="/conversations/"]').first().click();
+  await page.waitForLoadState("networkidle");
+  await pause(page, 900);
 });
 
 await record("analytics-tour", async (page) => {

@@ -61,6 +61,22 @@ export const GETTING_STARTED_GUIDES: GettingStartedGuide[] = [
     ctaHref: "/resources",
   },
   {
+    id: "organizational-links",
+    title: "Add organizational links",
+    summary:
+      "Not everything a visitor asks for is content -- give the assistant direct links to things like this week's notes, giving, or your address.",
+    image: "/getting-started/organizational-links-add.gif",
+    imageAlt: "The Resources page's Organizational Links panel, with the add-a-link form and one saved link",
+    steps: [
+      "Go to Resources in the sidebar and scroll to Organizational Links.",
+      "Enter a Label and URL -- e.g. \"Sermon Notes\" linking to this week's notes page.",
+      "Add a Description so the assistant knows when to use it, like \"This week's sermon notes and study guide.\"",
+      "Click Add link. Unlike Standard Links on the widget page, these are never shown as buttons -- the assistant only offers one when a visitor's question calls for it, e.g. \"where can I find the notes?\"",
+    ],
+    ctaLabel: "Go to Resources",
+    ctaHref: "/resources",
+  },
+  {
     id: "customize",
     title: "Customize and install your widget",
     summary: "Set the assistant's name, welcome message, and brand color, then copy the install snippet onto your site.",
@@ -69,6 +85,7 @@ export const GETTING_STARTED_GUIDES: GettingStartedGuide[] = [
     steps: [
       "Open a widget from the Widgets page.",
       "Set the assistant name, welcome message, suggested prompts, and brand color -- the preview on the right updates live.",
+      "Add Standard Links (Give, Contact, Service times, ...) -- quick-action buttons always visible when a visitor opens the widget.",
       "Click Publish Changes.",
       "Copy the <script> snippet from the Installation card and paste it into your website's <head>.",
     ],
@@ -106,6 +123,21 @@ export const GETTING_STARTED_GUIDES: GettingStartedGuide[] = [
     ctaHref: "/prayer-wall",
   },
   {
+    id: "testimonies",
+    title: "Collect testimonies",
+    summary: "\"Praise reports\" from your community -- a sub-feature of the same Prayer Wall, with its own enable toggle and page name.",
+    image: "/getting-started/testimonies-enable.gif",
+    imageAlt: "The Settings page's testimonies checkbox and page-name field, shown once the Prayer Wall is enabled",
+    steps: [
+      "Go to Settings and enable the Prayer Wall first if you haven't already -- testimonies share its page, branding, and visitor login.",
+      "Check Enable testimonies and set a page name (defaults to \"Praise Report\"), then click Save.",
+      "Visitors submit from the public wall; submissions publish immediately, no pre-approval queue.",
+      "Go to Prayer Wall → Testimonies to hide/delete a submission, or add a staff-curated featured story with an optional YouTube video.",
+    ],
+    ctaLabel: "Go to Settings",
+    ctaHref: "/settings",
+  },
+  {
     id: "team",
     title: "Invite your team",
     summary: "Bring in staff to help manage content, moderate prayer requests, or just view analytics.",
@@ -118,6 +150,20 @@ export const GETTING_STARTED_GUIDES: GettingStartedGuide[] = [
     ],
     ctaLabel: "Go to Team",
     ctaHref: "/team",
+  },
+  {
+    id: "conversations",
+    title: "Review your conversations",
+    summary: "Every conversation a visitor has had with your widget, in full -- not just the aggregated numbers.",
+    image: "/getting-started/conversations-review.gif",
+    imageAlt: "The Conversations list page and one conversation's full transcript, including a recommended resource",
+    steps: [
+      "Go to Conversations in the sidebar.",
+      "Filter by widget if you have more than one, or search by widget name or message content.",
+      "Click a conversation to read the full back-and-forth, including any resources or links the assistant offered.",
+    ],
+    ctaLabel: "Go to Conversations",
+    ctaHref: "/conversations",
   },
   {
     id: "analytics",
