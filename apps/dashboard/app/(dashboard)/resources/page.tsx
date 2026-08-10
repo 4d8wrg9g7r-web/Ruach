@@ -413,7 +413,7 @@ export default async function ResourcesPage({
                   <Input name="label" required placeholder="Notes" className="mt-1 block w-40" />
                 </label>
                 <label className="grow text-sm text-ink-secondary">
-                  URL
+                  Link URL
                   <Input name="url" required placeholder="https://..." className="mt-1 block w-full" />
                 </label>
               </div>
