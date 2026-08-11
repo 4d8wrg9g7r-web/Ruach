@@ -1,8 +1,10 @@
 import { organizationalLinkService, resourceService } from "@ruach/database";
 import {
   ChatResponseSchema,
+  resourceTypeGroup,
   type ChatResponse,
   type ResourceRecommendation,
+  type ResourceTypeGroup,
 } from "@ruach/shared-types";
 import type { RetrievalProvider } from "@ruach/retrieval";
 import type { AIProvider } from "./AIProvider";
@@ -20,6 +22,8 @@ export interface ChatPipelineInput {
   recentMessages: string[];
   maxRecommendations: number;
   noResultMessage: string;
+  /** Organization.priorityContentType -- null means no priority, plain relevance-score ranking. See Step 7's doc comment for what this actually does to the sort. */
+  priorityContentType: ResourceTypeGroup | null;
 }
 
 function formatDurationLabel(seconds: number | null): string | null {
@@ -197,11 +201,22 @@ export class ChatPipeline {
     const validResources = await resourceService.getResourcesByIds(input.organizationId, candidateIds, input.websiteId);
     const scoreByResourceId = new Map(candidates.map((c) => [c.resourceId, c]));
 
-    // Step 7: ranking (semantic score from retrieval; ties broken by transcript presence).
+    // Step 7: ranking. When the org has set a priority content type, every matching-
+    // type candidate sorts ahead of every non-matching one -- a deliberate override,
+    // not a mere tiebreak or score boost, matching what "prioritize Videos" actually
+    // promises: a video on the visitor's topic outranks a blog post or podcast on
+    // the same topic no matter how much more relevant retrieval scored the other
+    // two. Only ties within the same priority bucket (both matching, or both not)
+    // fall through to relevance score, then transcript presence, same as before.
     const ranked = validResources
       .map((resource) => ({ resource, score: scoreByResourceId.get(resource.id) }))
       .filter((r): r is { resource: typeof validResources[number]; score: NonNullable<typeof r.score> } => Boolean(r.score))
       .sort((a, b) => {
+        if (input.priorityContentType) {
+          const aMatches = resourceTypeGroup(a.resource.resourceType) === input.priorityContentType ? 1 : 0;
+          const bMatches = resourceTypeGroup(b.resource.resourceType) === input.priorityContentType ? 1 : 0;
+          if (aMatches !== bMatches) return bMatches - aMatches;
+        }
         if (b.score.relevanceScore !== a.score.relevanceScore) return b.score.relevanceScore - a.score.relevanceScore;
         return (b.resource.cleanTranscript ? 1 : 0) - (a.resource.cleanTranscript ? 1 : 0);
       })

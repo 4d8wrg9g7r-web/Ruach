@@ -10,10 +10,12 @@ import {
   billingService,
   bulkJobService,
   contentSourceService,
+  organizationService,
   organizationalLinkService,
   resourceService,
 } from "@ruach/database";
 import { importResourceFromUrl, importYouTubeChannel, importRSSFeed } from "@ruach/providers";
+import { PRIORITIZABLE_RESOURCE_TYPE_GROUPS } from "@ruach/shared-types";
 import { AutoSubmitSelect } from "../../../components/AutoSubmitSelect";
 import type { BulkImportSummary } from "../../../components/BulkImportForm";
 import { ContentSourceList } from "../../../components/ContentSourceList";
@@ -301,6 +303,18 @@ async function removeOrganizationalLinkAction(linkId: string) {
   revalidatePath("/resources");
 }
 
+async function setPriorityContentTypeAction(formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN"]);
+
+  const raw = String(formData.get("priorityContentType") ?? "");
+  const isValid = PRIORITIZABLE_RESOURCE_TYPE_GROUPS.some((g) => g.key === raw);
+  await organizationService.setPriorityContentType(organization.id, isValid ? raw : null);
+  revalidatePath("/resources");
+}
+
 export default async function ResourcesPage({
   searchParams,
 }: {
@@ -441,6 +455,30 @@ export default async function ResourcesPage({
             onToggleActive={toggleOrganizationalLinkActiveAction}
             onRemove={removeOrganizationalLinkAction}
           />
+        </Card>
+      )}
+
+      {!isReviewQueue && (
+        <Card padding="md" className="mb-8">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+            <Sparkles size={15} className="text-accent" /> Content Priority
+          </h2>
+          <p className="mb-4 text-sm text-ink-secondary">
+            When a visitor's question matches resources of different types, always show this type first --
+            regardless of how closely the others match. Leave as "No priority" to rank purely by relevance, like
+            today.
+          </p>
+          <form action={setPriorityContentTypeAction} className="flex items-center gap-2">
+            <AutoSubmitSelect
+              name="priorityContentType"
+              defaultValue={organization.priorityContentType ?? ""}
+              options={[
+                { value: "", label: "No priority" },
+                ...PRIORITIZABLE_RESOURCE_TYPE_GROUPS.map((g) => ({ value: g.key, label: g.label })),
+              ]}
+              className="rounded-sm border border-border-strong bg-surface py-2 pl-3 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+            />
+          </form>
         </Card>
       )}
 

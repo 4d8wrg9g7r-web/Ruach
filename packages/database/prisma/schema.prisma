@@ -134,6 +134,14 @@ model Organization {
   name                          String
   slug                          String              @unique
   categorizationMode            CategorizationMode  @default(ASSISTED)
+  // Null = no priority, natural relevance-score ranking (today's behavior). Set to
+  // one of ResourceTypeGroup's keys ("VIDEOS", "PODCASTS", "ARTICLES", "DOCUMENTS")
+  // to make ChatPipeline's ranking step sort every matching-type candidate ahead of
+  // every non-matching one, regardless of relevance score -- "no matter what, a
+  // video on faith outranks a blog post or podcast on faith." Stored as a plain
+  // string, not an enum column, so ResourceTypeGroup can stay a shared-types-only
+  // concept without a matching Prisma enum to keep in sync.
+  priorityContentType           String?
   prayerWallEnabled             Boolean             @default(false)
   publicPrayerWallId            String              @unique @default(cuid())
   // A plain list, not a join table -- just a set of addresses with no other

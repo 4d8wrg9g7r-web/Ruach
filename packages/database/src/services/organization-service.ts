@@ -188,6 +188,11 @@ export async function markPrayerTestimonyWizardSeen(organizationId: string) {
   return rawDb.organization.update({ where: { id: organizationId }, data: { prayerTestimonyWizardSeenAt: new Date() } });
 }
 
+/** null clears the priority, back to plain relevance-score ranking. See schema.prisma's doc comment on Organization.priorityContentType for what this actually does in ChatPipeline. */
+export async function setPriorityContentType(organizationId: string, priorityContentType: string | null) {
+  return rawDb.organization.update({ where: { id: organizationId }, data: { priorityContentType } });
+}
+
 export async function enablePrayerWall(
   organizationId: string,
   params: {

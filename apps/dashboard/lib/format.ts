@@ -1,3 +1,7 @@
+import type { ResourceTypeGroup } from "@ruach/shared-types";
+export { resourceTypeGroup } from "@ruach/shared-types";
+export type { ResourceTypeGroup } from "@ruach/shared-types";
+
 export function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return "just now";
@@ -62,24 +66,6 @@ export function formatDurationLabel(seconds: number | null): string | null {
   if (!seconds) return null;
   const minutes = Math.round(seconds / 60);
   return minutes < 1 ? "<1 min" : `${minutes} min`;
-}
-
-export type ResourceTypeGroup = "VIDEOS" | "PODCASTS" | "ARTICLES" | "DOCUMENTS" | "OTHER";
-
-const TYPE_GROUPS: Record<string, ResourceTypeGroup> = {
-  VIDEO: "VIDEOS",
-  SERMON: "VIDEOS",
-  COURSE: "VIDEOS",
-  PODCAST: "PODCASTS",
-  AUDIO: "PODCASTS",
-  ARTICLE: "ARTICLES",
-  DEVOTIONAL: "ARTICLES",
-  DOCUMENT: "DOCUMENTS",
-  OTHER: "OTHER",
-};
-
-export function resourceTypeGroup(resourceType: string): ResourceTypeGroup {
-  return TYPE_GROUPS[resourceType] ?? "OTHER";
 }
 
 export const RESOURCE_TYPE_FILTERS: { key: ResourceTypeGroup | "ALL"; label: string }[] = [

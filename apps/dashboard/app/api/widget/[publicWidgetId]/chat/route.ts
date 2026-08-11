@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { conversationService, websiteService, widgetService } from "@ruach/database";
+import { conversationService, organizationService, websiteService, widgetService } from "@ruach/database";
 import { ChatPipeline, getAIProvider } from "@ruach/ai";
 import { LocalRetrievalProvider } from "@ruach/retrieval";
-import { ChatRequestSchema } from "@ruach/shared-types";
+import { ChatRequestSchema, ResourceTypeGroupSchema } from "@ruach/shared-types";
 import { checkRateLimit, getClientIp } from "../../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -76,6 +76,14 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
     content: message,
   });
 
+  // Stored as a plain string (see schema.prisma's doc comment on
+  // Organization.priorityContentType), so re-validate against the real enum here --
+  // a stale/invalid value degrades to "no priority" rather than reaching
+  // ChatPipeline with something it doesn't recognize.
+  const organization = await organizationService.getOrganization(widget.organizationId);
+  const priorityContentTypeParsed = ResourceTypeGroupSchema.safeParse(organization?.priorityContentType);
+  const priorityContentType = priorityContentTypeParsed.success ? priorityContentTypeParsed.data : null;
+
   const pipeline = new ChatPipeline(getAIProvider(), new LocalRetrievalProvider());
   const response = await pipeline.respond({
     organizationId: widget.organizationId,
@@ -87,6 +95,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
     recentMessages: recentMessages.reverse().map((m) => m.content),
     maxRecommendations: widget.maxRecommendations,
     noResultMessage: widget.noResultMessage,
+    priorityContentType,
   });
 
   await conversationService.appendMessage({
