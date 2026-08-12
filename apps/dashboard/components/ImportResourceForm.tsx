@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { buttonClasses } from "./ui/Button";
+import { useToast } from "./ui/Toast";
 
 const PROCESSING_STEPS = [
   "Fetching content",
@@ -22,6 +23,7 @@ export function ImportResourceForm({ action }: { action: (formData: FormData) =>
   const [isPending, startTransition] = useTransition();
   const [stepIndex, setStepIndex] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!isPending) {
@@ -38,7 +40,15 @@ export function ImportResourceForm({ action }: { action: (formData: FormData) =>
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
-      await action(formData);
+      try {
+        await action(formData);
+      } catch (err) {
+        // Without this, a thrown error (an invalid URL, the SSRF guard rejecting a
+        // private/non-HTTPS address, a fetch failure) crashed the whole request
+        // instead of telling the person what to fix -- action() only ever resolves
+        // on success (it redirects), so any throw here is real, user-facing feedback.
+        showToast(err instanceof Error ? err.message : "Couldn't import that URL. Please try again.", "error");
+      }
     });
   }
 
