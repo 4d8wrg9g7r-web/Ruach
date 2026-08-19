@@ -29,6 +29,8 @@ const PUBLIC_PATHS = new Set([
   "/manifest.webmanifest",
   "/robots.txt",
   "/sitemap.xml",
+  "/llms.txt",
+  "/llms-full.txt",
   "/login",
   "/forgot-password",
   "/reset-password",
@@ -52,6 +54,7 @@ const PUBLIC_PREFIXES = [
   "/pricing",
   "/privacy",
   "/product",
+  "/release-notes",
   "/terms",
   "/why-ruach",
   // Signup flow -- must work for a visitor with no session yet.
