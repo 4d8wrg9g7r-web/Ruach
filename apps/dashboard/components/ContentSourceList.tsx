@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { buttonClasses } from "./ui/Button";
+import { useToast } from "./ui/Toast";
 import { timeAgo } from "../lib/format";
 
 export interface ContentSourceRow {
@@ -24,6 +25,21 @@ interface ContentSourceListProps {
 
 export function ContentSourceList({ sources, onToggleAutoSync, onToggleAutoApprove, onRemove }: ContentSourceListProps) {
   const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
+
+  // A thrown error here (permission race, stale row, network hiccup) used to fail
+  // completely silently -- the toggle/remove just wouldn't happen, with no
+  // indication why. Centralizing the try/catch here means every action below gets
+  // the same error surface for free.
+  function runAction(action: () => Promise<void>) {
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "That didn't work. Please try again.", "error");
+      }
+    });
+  }
 
   if (sources.length === 0) {
     return <p className="p-6 text-center text-sm text-ink-muted">No tracked sources yet.</p>;
@@ -48,9 +64,7 @@ export function ContentSourceList({ sources, onToggleAutoSync, onToggleAutoAppro
               disabled={isPending}
               onChange={(e) => {
                 const enabled = e.currentTarget.checked;
-                startTransition(async () => {
-                  await onToggleAutoSync(source.id, enabled);
-                });
+                runAction(() => onToggleAutoSync(source.id, enabled));
               }}
             />
             Auto-sync
@@ -62,9 +76,7 @@ export function ContentSourceList({ sources, onToggleAutoSync, onToggleAutoAppro
               disabled={isPending}
               onChange={(e) => {
                 const enabled = e.currentTarget.checked;
-                startTransition(async () => {
-                  await onToggleAutoApprove(source.id, enabled);
-                });
+                runAction(() => onToggleAutoApprove(source.id, enabled));
               }}
             />
             Auto-approve
@@ -72,7 +84,7 @@ export function ContentSourceList({ sources, onToggleAutoSync, onToggleAutoAppro
           <button
             type="button"
             disabled={isPending}
-            onClick={() => startTransition(async () => onRemove(source.id))}
+            onClick={() => runAction(() => onRemove(source.id))}
             className={buttonClasses("ghost", "sm")}
             aria-label={`Stop tracking ${source.sourceUrl}`}
           >

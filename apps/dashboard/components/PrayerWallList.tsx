@@ -5,6 +5,7 @@ import { CheckCircle2, Heart, HeartHandshake } from "lucide-react";
 import { hexToRgba } from "../lib/color";
 import { timeAgo } from "../lib/format";
 import { EmptyState } from "./ui/EmptyState";
+import { useToast } from "./ui/Toast";
 
 export interface PublicPrayerRow {
   id: string;
@@ -30,6 +31,7 @@ interface PrayerWallListProps {
 export function PrayerWallList({ requests, onPray, brandColor }: PrayerWallListProps) {
   const [prayedIds, setPrayedIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
 
   if (requests.length === 0) {
     return (
@@ -72,7 +74,21 @@ export function PrayerWallList({ requests, onPray, brandColor }: PrayerWallListP
                 aria-label={alreadyPrayed ? "Praying for this request" : "Pray for this request"}
                 onClick={() => {
                   setPrayedIds((prev) => new Set(prev).add(request.id));
-                  startTransition(async () => onPray(request.id));
+                  startTransition(async () => {
+                    try {
+                      await onPray(request.id);
+                    } catch (err) {
+                      // Roll back the optimistic "Praying" state on failure (most
+                      // often the per-IP rate limit) -- without this, a failed
+                      // request still looked exactly like a successful one.
+                      setPrayedIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(request.id);
+                        return next;
+                      });
+                      showToast(err instanceof Error ? err.message : "Couldn't send that. Please try again.", "error");
+                    }
+                  });
                 }}
                 style={
                   {

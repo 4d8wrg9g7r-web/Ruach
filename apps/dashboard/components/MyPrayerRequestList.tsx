@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { CheckCircle2, NotebookPen } from "lucide-react";
 import { buttonClasses } from "./ui/Button";
 import { EmptyState } from "./ui/EmptyState";
+import { useToast } from "./ui/Toast";
 import { timeAgo } from "../lib/format";
 
 export interface MyPrayerRow {
@@ -26,6 +27,17 @@ interface MyPrayerRequestListProps {
 
 export function MyPrayerRequestList({ requests, onMarkAnswered, onTogglePublic, onToggleAnonymous, brandColor }: MyPrayerRequestListProps) {
   const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
+
+  function runAction(action: () => Promise<void>) {
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "That didn't work. Please try again.", "error");
+      }
+    });
+  }
 
   if (requests.length === 0) {
     return (
@@ -67,7 +79,7 @@ export function MyPrayerRequestList({ requests, onMarkAnswered, onTogglePublic, 
                     disabled={isPending}
                     onChange={(e) => {
                       const isPublic = e.currentTarget.checked;
-                      startTransition(async () => onTogglePublic(request.id, isPublic));
+                      runAction(() => onTogglePublic(request.id, isPublic));
                     }}
                   />
                   Public on the wall
@@ -80,7 +92,7 @@ export function MyPrayerRequestList({ requests, onMarkAnswered, onTogglePublic, 
                       disabled={isPending}
                       onChange={(e) => {
                         const isAnonymous = e.currentTarget.checked;
-                        startTransition(async () => onToggleAnonymous(request.id, isAnonymous));
+                        runAction(() => onToggleAnonymous(request.id, isAnonymous));
                       }}
                     />
                     Anonymous
@@ -91,7 +103,7 @@ export function MyPrayerRequestList({ requests, onMarkAnswered, onTogglePublic, 
                 <button
                   type="button"
                   disabled={isPending}
-                  onClick={() => startTransition(async () => onMarkAnswered(request.id))}
+                  onClick={() => runAction(() => onMarkAnswered(request.id))}
                   className={buttonClasses("secondary", "sm")}
                 >
                   Mark as answered

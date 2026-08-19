@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { buttonClasses } from "./ui/Button";
+import { useToast } from "./ui/Toast";
 
 export interface OrganizationalLinkRow {
   id: string;
@@ -21,6 +22,17 @@ interface OrganizationalLinkListProps {
 /** No reorder control (unlike ActionLinkList) -- these are never displayed to visitors in any order, only ever matched by the chat pipeline, so display order in this admin list is purely cosmetic. */
 export function OrganizationalLinkList({ links, onToggleActive, onRemove }: OrganizationalLinkListProps) {
   const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
+
+  function runAction(action: () => Promise<void>) {
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "That didn't work. Please try again.", "error");
+      }
+    });
+  }
 
   if (links.length === 0) {
     return <p className="p-6 text-center text-sm text-ink-muted">No organizational links yet.</p>;
@@ -42,7 +54,7 @@ export function OrganizationalLinkList({ links, onToggleActive, onRemove }: Orga
               disabled={isPending}
               onChange={(e) => {
                 const enabled = e.currentTarget.checked;
-                startTransition(async () => onToggleActive(link.id, enabled));
+                runAction(() => onToggleActive(link.id, enabled));
               }}
             />
             Active
@@ -50,7 +62,7 @@ export function OrganizationalLinkList({ links, onToggleActive, onRemove }: Orga
           <button
             type="button"
             disabled={isPending}
-            onClick={() => startTransition(async () => onRemove(link.id))}
+            onClick={() => runAction(() => onRemove(link.id))}
             className={buttonClasses("ghost", "sm")}
             aria-label={`Remove ${link.label}`}
           >

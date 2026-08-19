@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { Filter, Link2, Search, Sparkles } from "lucide-react";
+import { Filter, Link2, Sparkles } from "lucide-react";
 import { z } from "zod";
 import {
   ResourceStatus,
@@ -16,6 +16,7 @@ import {
 } from "@ruach/database";
 import { importResourceFromUrl, importYouTubeChannel, importRSSFeed } from "@ruach/providers";
 import { PRIORITIZABLE_RESOURCE_TYPE_GROUPS } from "@ruach/shared-types";
+import { AutoSubmitSearchInput } from "../../../components/AutoSubmitSearchInput";
 import { AutoSubmitSelect } from "../../../components/AutoSubmitSelect";
 import type { BulkImportSummary } from "../../../components/BulkImportForm";
 import { ContentSourceList } from "../../../components/ContentSourceList";
@@ -342,7 +343,7 @@ export default async function ResourcesPage({
 
   const typeFilter = params.type ?? "ALL";
   const search = (params.q ?? "").trim().toLowerCase();
-  const page = Math.max(1, Number(params.page ?? "1") || 1);
+  const requestedPage = Math.max(1, Number(params.page ?? "1") || 1);
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(params.pageSize) as (typeof PAGE_SIZE_OPTIONS)[number])
     ? Number(params.pageSize)
     : DEFAULT_PAGE_SIZE;
@@ -354,6 +355,10 @@ export default async function ResourcesPage({
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  // Clamped to totalPages, not just floored at 1 -- otherwise typing a number past
+  // the last page (the new jump-to-page input's max is only advisory in some
+  // browsers) silently rendered an empty list, indistinguishable from "no results."
+  const page = Math.min(requestedPage, totalPages);
   const pageResources = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const baseParams = new URLSearchParams();
@@ -504,16 +509,12 @@ export default async function ResourcesPage({
           </div>
           <form className="flex items-center gap-2" action="/resources">
             {params.type && <input type="hidden" name="type" value={params.type} />}
-            <div className="relative">
-              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-              <input
-                type="text"
-                name="q"
-                defaultValue={params.q}
-                placeholder="Search resources..."
-                className="w-56 rounded-sm border border-border-strong bg-surface py-2 pl-8 pr-3 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
-              />
-            </div>
+            <AutoSubmitSearchInput
+              name="q"
+              defaultValue={params.q}
+              placeholder="Search resources..."
+              className="w-56 rounded-sm border border-border-strong bg-surface py-2 pl-8 pr-3 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+            />
             <div className="relative">
               <Filter size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
               <AutoSubmitSelect
@@ -558,27 +559,59 @@ export default async function ResourcesPage({
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-ink-muted">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-xs text-ink-muted">
             <span>
               Page {page} of {totalPages} &middot; {filtered.length} resources
             </span>
-            <div className="flex gap-2">
-              {page > 1 && (
-                <Link
-                  href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page - 1) }).toString()}`}
-                  className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                >
-                  Previous
-                </Link>
+            <div className="flex items-center gap-3">
+              {/* Previous/Next alone meant reaching page 50 of a large library took 49
+                  clicks -- worst for the exact accounts (Multi-Site, highest resource
+                  caps) with the most pages to click through. A plain GET form matches
+                  every other filter on this page (no client JS needed). */}
+              {totalPages > 3 && (
+                <form action="/resources" className="flex items-center gap-1.5">
+                  {params.status && <input type="hidden" name="status" value={params.status} />}
+                  {params.q && <input type="hidden" name="q" value={params.q} />}
+                  {params.type && <input type="hidden" name="type" value={params.type} />}
+                  {params.pageSize && <input type="hidden" name="pageSize" value={params.pageSize} />}
+                  <label htmlFor="jump-to-page" className="sr-only">
+                    Go to page
+                  </label>
+                  <input
+                    id="jump-to-page"
+                    type="number"
+                    name="page"
+                    min={1}
+                    max={totalPages}
+                    defaultValue={page}
+                    className="w-14 rounded-sm border border-border-strong bg-surface px-2 py-1 text-xs text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  >
+                    Go
+                  </button>
+                </form>
               )}
-              {page < totalPages && (
-                <Link
-                  href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page + 1) }).toString()}`}
-                  className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                >
-                  Next
-                </Link>
-              )}
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Link
+                    href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page - 1) }).toString()}`}
+                    className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  >
+                    Previous
+                  </Link>
+                )}
+                {page < totalPages && (
+                  <Link
+                    href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page + 1) }).toString()}`}
+                    className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  >
+                    Next
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         )}

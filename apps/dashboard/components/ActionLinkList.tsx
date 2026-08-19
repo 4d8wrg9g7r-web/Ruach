@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { buttonClasses } from "./ui/Button";
+import { useToast } from "./ui/Toast";
 
 export interface ActionLinkRow {
   id: string;
@@ -21,6 +22,17 @@ interface ActionLinkListProps {
 
 export function ActionLinkList({ links, onToggleActive, onRemove, onReorder }: ActionLinkListProps) {
   const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
+
+  function runAction(action: () => Promise<void>) {
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "That didn't work. Please try again.", "error");
+      }
+    });
+  }
 
   if (links.length === 0) {
     return <p className="p-6 text-center text-sm text-ink-muted">No links yet.</p>;
@@ -34,7 +46,7 @@ export function ActionLinkList({ links, onToggleActive, onRemove, onReorder }: A
             <button
               type="button"
               disabled={isPending || index === 0}
-              onClick={() => startTransition(async () => onReorder(link.id, "up"))}
+              onClick={() => runAction(() => onReorder(link.id, "up"))}
               className="rounded-sm p-1 text-ink-secondary hover:bg-surface-muted hover:text-ink disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               aria-label={`Move ${link.label} up`}
             >
@@ -43,7 +55,7 @@ export function ActionLinkList({ links, onToggleActive, onRemove, onReorder }: A
             <button
               type="button"
               disabled={isPending || index === links.length - 1}
-              onClick={() => startTransition(async () => onReorder(link.id, "down"))}
+              onClick={() => runAction(() => onReorder(link.id, "down"))}
               className="rounded-sm p-1 text-ink-secondary hover:bg-surface-muted hover:text-ink disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               aria-label={`Move ${link.label} down`}
             >
@@ -61,7 +73,7 @@ export function ActionLinkList({ links, onToggleActive, onRemove, onReorder }: A
               disabled={isPending}
               onChange={(e) => {
                 const enabled = e.currentTarget.checked;
-                startTransition(async () => onToggleActive(link.id, enabled));
+                runAction(() => onToggleActive(link.id, enabled));
               }}
             />
             Active
@@ -69,7 +81,7 @@ export function ActionLinkList({ links, onToggleActive, onRemove, onReorder }: A
           <button
             type="button"
             disabled={isPending}
-            onClick={() => startTransition(async () => onRemove(link.id))}
+            onClick={() => runAction(() => onRemove(link.id))}
             className={buttonClasses("ghost", "sm")}
             aria-label={`Remove ${link.label}`}
           >

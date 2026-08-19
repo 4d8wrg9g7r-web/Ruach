@@ -1,8 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { Select } from "./ui/Input";
+import { useToast } from "./ui/Toast";
 import { timeAgo } from "../lib/format";
 
 export interface TeamMemberRow {
@@ -39,9 +41,22 @@ interface TeamMemberListProps {
 
 export function TeamMemberList({ members, currentUserId, canManage, canAssignModerator, onUpdateRole, onRemove }: TeamMemberListProps) {
   const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
+  const [memberToRemove, setMemberToRemove] = useState<TeamMemberRow | null>(null);
+
+  function runAction(action: () => Promise<void>) {
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "That didn't work. Please try again.", "error");
+      }
+    });
+  }
 
   return (
-    <ul className="flex flex-col divide-y divide-border">
+    <>
+      <ul className="flex flex-col divide-y divide-border">
       {members.map((member) => {
         const isSelf = member.userId === currentUserId;
         return (
@@ -63,7 +78,7 @@ export function TeamMemberList({ members, currentUserId, canManage, canAssignMod
                   disabled={isPending}
                   onChange={(e) => {
                     const role = e.currentTarget.value as TeamMemberRow["role"];
-                    startTransition(async () => onUpdateRole(member.userId, role));
+                    runAction(() => onUpdateRole(member.userId, role));
                   }}
                   className="w-auto py-1.5 text-xs"
                 >
@@ -83,10 +98,7 @@ export function TeamMemberList({ members, currentUserId, canManage, canAssignMod
                   type="button"
                   disabled={isPending}
                   aria-label={`Remove ${member.email}`}
-                  onClick={() => {
-                    if (!window.confirm(`Remove ${member.email} from this organization?`)) return;
-                    startTransition(async () => onRemove(member.userId));
-                  }}
+                  onClick={() => setMemberToRemove(member)}
                   className="rounded-sm p-1.5 text-ink-muted transition-colors duration-180 hover:bg-danger-bg hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 disabled:opacity-50"
                 >
                   <Trash2 size={14} />
@@ -96,6 +108,20 @@ export function TeamMemberList({ members, currentUserId, canManage, canAssignMod
           </li>
         );
       })}
-    </ul>
+      </ul>
+
+      <ConfirmDialog
+        open={memberToRemove !== null}
+        title="Remove team member?"
+        description={memberToRemove ? `Remove ${memberToRemove.email} from this organization?` : ""}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={() => {
+          if (memberToRemove) runAction(() => onRemove(memberToRemove.userId));
+          setMemberToRemove(null);
+        }}
+        onCancel={() => setMemberToRemove(null)}
+      />
+    </>
   );
 }

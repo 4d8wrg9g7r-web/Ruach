@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Menu, Wind, X } from "lucide-react";
+import { useDialogA11y } from "../lib/useDialogA11y";
 
 /**
  * The dashboard shell had zero responsive treatment -- a fixed 240px sidebar with
@@ -13,6 +14,11 @@ import { Menu, Wind, X } from "lucide-react";
  */
 export function DashboardShell({ sidebar, children }: { sidebar: React.ReactNode; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  // The <aside> below is dual-purpose -- a persistent, non-modal sidebar on desktop
+  // (lg:static), and an off-canvas drawer on mobile -- so dialog semantics only
+  // apply while `open`, which in practice only ever becomes true via the
+  // mobile-only hamburger button below.
+  const dialogRef = useDialogA11y(open, () => setOpen(false));
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -34,7 +40,12 @@ export function DashboardShell({ sidebar, children }: { sidebar: React.ReactNode
       {open && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
       <aside
-        className={`bg-sidebar-gradient fixed inset-y-0 left-0 z-50 flex w-[240px] shrink-0 flex-col border-r border-sidebar-border transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+        ref={dialogRef}
+        role={open ? "dialog" : undefined}
+        aria-modal={open ? "true" : undefined}
+        aria-label="Navigation"
+        tabIndex={-1}
+        className={`bg-sidebar-gradient fixed inset-y-0 left-0 z-50 flex w-[240px] shrink-0 flex-col border-r border-sidebar-border transition-transform duration-200 ease-in-out focus:outline-none lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

@@ -1,9 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { AlertTriangle } from "lucide-react";
 import { buttonClasses } from "./ui/Button";
 import { Card } from "./ui/Card";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { useToast } from "./ui/Toast";
 
 interface CancelPlanCardProps {
   planName: string;
@@ -20,6 +22,18 @@ interface CancelPlanCardProps {
  */
 export function CancelPlanCard({ planName, periodEndLabel, cancelAtPeriodEnd, onCancel, onResume }: CancelPlanCardProps) {
   const [isPending, startTransition] = useTransition();
+  const { showToast } = useToast();
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+
+  function runAction(action: () => Promise<void>) {
+    startTransition(async () => {
+      try {
+        await action();
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : "That didn't work. Please try again.", "error");
+      }
+    });
+  }
 
   if (cancelAtPeriodEnd) {
     return (
@@ -31,12 +45,7 @@ export function CancelPlanCard({ planName, periodEndLabel, cancelAtPeriodEnd, on
             access until then.
           </span>
         </div>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => startTransition(onResume)}
-          className={buttonClasses("secondary", "sm")}
-        >
+        <button type="button" disabled={isPending} onClick={() => runAction(onResume)} className={buttonClasses("secondary", "sm")}>
           Resume subscription
         </button>
       </div>
@@ -56,17 +65,25 @@ export function CancelPlanCard({ planName, periodEndLabel, cancelAtPeriodEnd, on
         <button
           type="button"
           disabled={isPending}
-          onClick={() => {
-            if (!window.confirm(`Cancel your ${planName} plan? You'll keep access until${periodEndLabel ? ` ${periodEndLabel}` : " the end of your current billing period"}, then it won't renew.`)) {
-              return;
-            }
-            startTransition(onCancel);
-          }}
+          onClick={() => setConfirmCancelOpen(true)}
           className={`${buttonClasses("secondary", "sm")} text-danger hover:bg-danger-bg`}
         >
           Cancel plan
         </button>
       </div>
+
+      <ConfirmDialog
+        open={confirmCancelOpen}
+        title="Cancel your plan?"
+        description={`You'll keep access until${periodEndLabel ? ` ${periodEndLabel}` : " the end of your current billing period"}, then it won't renew.`}
+        confirmLabel="Cancel plan"
+        variant="danger"
+        onConfirm={() => {
+          setConfirmCancelOpen(false);
+          runAction(onCancel);
+        }}
+        onCancel={() => setConfirmCancelOpen(false)}
+      />
     </Card>
   );
 }

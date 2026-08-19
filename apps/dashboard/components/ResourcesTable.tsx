@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CheckCheck, CheckCircle2, FileText, Link2, Mic, MoreHorizontal, Newspaper, Sparkles, Trash2, Video, XCircle } from "lucide-react";
 import { Badge } from "./ui/Badge";
 import { buttonClasses } from "./ui/Button";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { resourceStatusLabel, resourceStatusTone, resourceTypeGroup, timeAgo } from "../lib/format";
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
@@ -101,8 +102,17 @@ export function ResourcesTable({
   const [isEnqueuing, setIsEnqueuing] = useState(false);
   const [activeJob, setActiveJob] = useState<ActiveJobState | null>(initialJob);
   const [summary, setSummary] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  const allSelected = allResourceIds.length > 0 && allResourceIds.every((id) => selected.has(id));
+  // The header checkbox used to toggle against allResourceIds directly -- every
+  // other table convention (Gmail, Notion, Airtable) defaults that checkbox to "this
+  // page" and offers select-everything-matching as a separate, explicit follow-up,
+  // specifically because silently selecting hundreds of cross-page rows from one
+  // click is surprising right before a Delete button.
+  const pageIds = resources.map((r) => r.id);
+  const pageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const allMatchingSelected = allResourceIds.length > 0 && allResourceIds.every((id) => selected.has(id));
+  const canExpandToAllMatching = pageSelected && !allMatchingSelected && allResourceIds.length > pageIds.length;
   const someSelected = selected.size > 0;
   const jobRunning = activeJob !== null && activeJob.status !== "COMPLETED" && activeJob.status !== "FAILED";
 
@@ -135,7 +145,11 @@ export function ResourcesTable({
   }, [activeJob?.id]);
 
   function toggleAll() {
-    setSelected(allSelected ? new Set() : new Set(allResourceIds));
+    setSelected(pageSelected ? new Set() : new Set(pageIds));
+  }
+
+  function selectAllMatching() {
+    setSelected(new Set(allResourceIds));
   }
 
   function toggleOne(id: string) {
@@ -160,11 +174,15 @@ export function ResourcesTable({
     });
   }
 
+  // Delete is irreversible (a real DB delete, unlike reject/archive) -- the confirm
+  // dialog is a low-effort but real guardrail against an accidental
+  // bulk-select-all + delete.
   function handleDelete() {
-    const count = selected.size;
-    // Delete is irreversible (a real DB delete, unlike reject/archive) -- a browser
-    // confirm is a low-effort but real guardrail against an accidental bulk-select-all + delete.
-    if (!window.confirm(`Delete ${count} resource${count === 1 ? "" : "s"}? This can't be undone.`)) return;
+    setConfirmDeleteOpen(true);
+  }
+
+  function confirmDelete() {
+    setConfirmDeleteOpen(false);
     runBulkAction("DELETE", onDelete);
   }
 
@@ -231,6 +249,18 @@ export function ResourcesTable({
               </div>
             )}
           </div>
+          {canExpandToAllMatching && !jobRunning && (
+            <p className="mt-2 text-xs text-ink-secondary">
+              All {pageIds.length} resources on this page are selected.{" "}
+              <button
+                type="button"
+                onClick={selectAllMatching}
+                className="rounded-sm font-medium text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              >
+                Select all {allResourceIds.length} resources matching this filter
+              </button>
+            </p>
+          )}
           {jobRunning && activeJob && activeJob.totalCount > 0 && (
             <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-border">
               <div
@@ -265,7 +295,7 @@ export function ResourcesTable({
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-muted">
               <th className="w-10 px-5 py-3">
-                <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all resources" />
+                <input type="checkbox" checked={pageSelected} onChange={toggleAll} aria-label="Select all resources on this page" />
               </th>
               <th className="px-3 py-3 font-medium">Title</th>
               <th className="px-3 py-3 font-medium">Type</th>
@@ -334,6 +364,16 @@ export function ResourcesTable({
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        title={`Delete ${selected.size} resource${selected.size === 1 ? "" : "s"}?`}
+        description="This can't be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
     </>
   );
 }

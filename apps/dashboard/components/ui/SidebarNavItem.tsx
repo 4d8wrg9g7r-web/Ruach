@@ -23,6 +23,7 @@ export function SidebarNavItem({
   return (
     <Link
       href={href}
+      aria-current={isActive ? "page" : undefined}
       className={`flex h-11 items-center gap-3 rounded-md px-3 text-sm transition-colors duration-180 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-light focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
         isActive
           ? "bg-[rgba(181,123,57,0.13)] text-white"

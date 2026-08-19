@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Badge } from "./ui/Badge";
 import { buttonClasses } from "./ui/Button";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 
 export interface PlanPickerOption {
   key: string;
@@ -34,6 +35,10 @@ interface PlanPickerProps {
 export function PlanPicker({ orgName, plans, action, currentPlanKey, currentInterval }: PlanPickerProps) {
   const [interval, setInterval] = useState<"monthly" | "yearly">(currentInterval ?? "monthly");
   const currentIndex = currentPlanKey ? plans.findIndex((p) => p.key === currentPlanKey) : -1;
+  const [pendingDowngrade, setPendingDowngrade] = useState<{ form: HTMLFormElement; planName: string } | null>(null);
+  // Set right before requestSubmit()-ing the same form again after confirmation --
+  // lets that one resubmission through without re-opening the dialog it just closed.
+  const skipConfirmRef = useRef(false);
 
   return (
     <div>
@@ -102,9 +107,11 @@ export function PlanPicker({ orgName, plans, action, currentPlanKey, currentInte
                 action={action}
                 className="mt-4 flex flex-col justify-end"
                 onSubmit={(e) => {
-                  if (isDowngrade && !window.confirm(`Downgrade to ${plan.name}? You'll lose access to features only available on your current plan.`)) {
+                  if (isDowngrade && !skipConfirmRef.current) {
                     e.preventDefault();
+                    setPendingDowngrade({ form: e.currentTarget, planName: plan.name });
                   }
+                  skipConfirmRef.current = false;
                 }}
               >
                 <input type="hidden" name="planKey" value={plan.key} />
@@ -137,6 +144,22 @@ export function PlanPicker({ orgName, plans, action, currentPlanKey, currentInte
           </a>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={pendingDowngrade !== null}
+        title="Downgrade plan?"
+        description={pendingDowngrade ? `Downgrade to ${pendingDowngrade.planName}? You'll lose access to features only available on your current plan.` : ""}
+        confirmLabel="Downgrade"
+        variant="primary"
+        onConfirm={() => {
+          if (pendingDowngrade) {
+            skipConfirmRef.current = true;
+            pendingDowngrade.form.requestSubmit();
+          }
+          setPendingDowngrade(null);
+        }}
+        onCancel={() => setPendingDowngrade(null)}
+      />
     </div>
   );
 }

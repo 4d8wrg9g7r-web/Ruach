@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Code2, Copy, X } from "lucide-react";
+import { useDialogA11y } from "../lib/useDialogA11y";
 
 const PLATFORMS = [
   { key: "custom", label: "Custom HTML", instructions: "Paste the snippet just before the closing </head> tag." },
@@ -15,6 +16,7 @@ export function InstallCodeModal({ snippet, websiteName }: { snippet: string; we
   const [isOpen, setIsOpen] = useState(false);
   const [platform, setPlatform] = useState(PLATFORMS[0]!.key);
   const [copied, setCopied] = useState(false);
+  const dialogRef = useDialogA11y<HTMLDivElement>(isOpen, () => setIsOpen(false));
 
   async function handleCopy() {
     await navigator.clipboard.writeText(snippet);
@@ -37,11 +39,18 @@ export function InstallCodeModal({ snippet, websiteName }: { snippet: string; we
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setIsOpen(false)}>
           <div
-            className="shadow-panel w-full max-w-lg rounded-lg border border-border bg-surface p-5"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="install-code-modal-title"
+            tabIndex={-1}
+            className="shadow-panel w-full max-w-lg rounded-lg border border-border bg-surface p-5 focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink">Install on {websiteName}</h2>
+              <h2 id="install-code-modal-title" className="text-sm font-semibold text-ink">
+                Install on {websiteName}
+              </h2>
               <button type="button" onClick={() => setIsOpen(false)} aria-label="Close" className="text-ink-muted hover:text-ink">
                 <X size={16} />
               </button>

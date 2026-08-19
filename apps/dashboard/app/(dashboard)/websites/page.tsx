@@ -2,15 +2,15 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { ChevronRight, Globe, PlusCircle } from "lucide-react";
 import { auditService, billingService, websiteService, widgetService } from "@ruach/database";
+import { AddWebsiteForm } from "../../../components/AddWebsiteForm";
 import { InstallCodeModal } from "../../../components/InstallCodeModal";
 import { Badge } from "../../../components/ui/Badge";
-import { buttonClasses } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
 import { EmptyState } from "../../../components/ui/EmptyState";
-import { Input } from "../../../components/ui/Input";
+import type { FormActionResult } from "../../../lib/form-errors";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../lib/session";
 
-async function createWebsiteAction(formData: FormData) {
+async function createWebsiteAction(formData: FormData): Promise<FormActionResult | void> {
   "use server";
   const organization = await getCurrentOrganization();
   if (!organization) throw new Error("No organization");
@@ -18,11 +18,19 @@ async function createWebsiteAction(formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const primaryDomain = String(formData.get("primaryDomain") ?? "").trim();
-  if (!name || !primaryDomain) throw new Error("Name and domain are required");
+  const fieldErrors: Record<string, string> = {};
+  if (!name) fieldErrors.name = "Name is required.";
+  if (!primaryDomain) fieldErrors.primaryDomain = "Domain is required.";
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   const plan = billingService.getPlan(organization.planKey);
   const websiteCount = await websiteService.countWebsites(organization.id);
-  billingService.assertUnderCap(websiteCount, plan.maxWebsites, "website");
+  try {
+    billingService.assertUnderCap(websiteCount, plan.maxWebsites, "website");
+  } catch (err) {
+    // Not tied to either field -- the fix is upgrading the plan, not editing an input.
+    return { formError: err instanceof Error ? err.message : "You've reached your plan's website limit." };
+  }
 
   const website = await websiteService.createWebsite({ organizationId: organization.id, name, primaryDomain });
   const user = await getCurrentUser();
@@ -55,19 +63,7 @@ export default async function WebsitesPage() {
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
           <PlusCircle size={15} className="text-accent" /> Add a website
         </h2>
-        <form action={createWebsiteAction} className="flex flex-wrap items-end gap-3">
-          <label className="text-sm text-ink-secondary">
-            Name
-            <Input name="name" required placeholder="Main Website" className="mt-1 block" />
-          </label>
-          <label className="text-sm text-ink-secondary">
-            Primary domain
-            <Input name="primaryDomain" required placeholder="localhost:3000" className="mt-1 block" />
-          </label>
-          <button type="submit" className={buttonClasses("primary", "md")}>
-            Add website
-          </button>
-        </form>
+        <AddWebsiteForm action={createWebsiteAction} />
       </Card>
 
       <Card padding="none">
