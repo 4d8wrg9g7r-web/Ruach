@@ -7,7 +7,7 @@ import { buttonClasses } from "../../../components/ui/Button";
 import { pageMetadata } from "../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Why Ruach | Ruach",
+  title: "Why Ruach",
   description: "Technology should support ministry, not compete with it. Why Ruach exists, and what the name means.",
   path: "/why-ruach",
 });

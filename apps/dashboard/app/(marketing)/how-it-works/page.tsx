@@ -17,7 +17,7 @@ import { buttonClasses } from "../../../components/ui/Button";
 import { pageMetadata } from "../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
-  title: "How Ruach Works | Ruach",
+  title: "How Ruach Works",
   description: "The full lifecycle of Ruach -- from connecting your church's content to conversational discovery, installation, and ongoing sync.",
   path: "/how-it-works",
 });

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { pageMetadata } from "../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Privacy Policy | Ruach",
+  title: "Privacy Policy",
   description: "How Ruach collects, uses, and protects data for churches and their visitors.",
   path: "/privacy",
 });

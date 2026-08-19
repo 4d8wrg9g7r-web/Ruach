@@ -9,7 +9,7 @@ import { buttonClasses } from "../../../components/ui/Button";
 import { pageMetadata } from "../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Request a Demo | Ruach",
+  title: "Request a Demo",
   description: "Start Ruach today, or request a demo and we'll walk you through how it fits your church.",
   path: "/demo",
 });

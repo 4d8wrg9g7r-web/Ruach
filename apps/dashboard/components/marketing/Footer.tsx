@@ -11,6 +11,7 @@ const PRODUCT_LINKS = [
 const COMPANY_LINKS = [
   { href: "/why-ruach", label: "Why Ruach" },
   { href: "/faq", label: "FAQ" },
+  { href: "/release-notes", label: "Release Notes" },
   { href: "/demo", label: "Contact" },
 ];
 

@@ -106,3 +106,35 @@ export async function resolvePublicPrayerWallForPreview(publicPrayerWallId: stri
 
   return null;
 }
+
+export interface PublicPrayerWallSitemapEntry {
+  publicPrayerWallId: string;
+  updatedAt: Date;
+}
+
+/**
+ * Every publicly reachable prayer-wall page -- org-level default walls and
+ * campus-specific ones alike -- for sitemap.ts. Mirrors resolvePublicPrayerWall's own
+ * prayerWallEnabled gate exactly (a wall reachable there but missing here would be a
+ * silent indexing gap; one listed here but not reachable there would be a dead
+ * sitemap entry). No subscription-status filter, on purpose: resolvePublicPrayerWall
+ * doesn't gate on billing state either, so a wall stays live -- and should stay
+ * indexed -- through a lapsed subscription.
+ */
+export async function listPublicPrayerWalls(): Promise<PublicPrayerWallSitemapEntry[]> {
+  const [organizations, websites] = await Promise.all([
+    rawDb.organization.findMany({
+      where: { prayerWallEnabled: true },
+      select: { publicPrayerWallId: true, updatedAt: true },
+    }),
+    rawDb.website.findMany({
+      where: { prayerWallEnabled: true, publicPrayerWallId: { not: null } },
+      select: { publicPrayerWallId: true, updatedAt: true },
+    }),
+  ]);
+
+  return [
+    ...organizations.map((org) => ({ publicPrayerWallId: org.publicPrayerWallId, updatedAt: org.updatedAt })),
+    ...websites.map((site) => ({ publicPrayerWallId: site.publicPrayerWallId as string, updatedAt: site.updatedAt })),
+  ];
+}

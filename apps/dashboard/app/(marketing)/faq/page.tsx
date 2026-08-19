@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { EyebrowLabel } from "../../../components/marketing/EyebrowLabel";
 import { FadeIn } from "../../../components/marketing/FadeIn";
 import { FAQAccordion, type FAQItem } from "../../../components/marketing/FAQAccordion";
+import { JsonLd } from "../../../components/marketing/JsonLd";
 import { pageMetadata } from "../../../lib/marketing/page-metadata";
+import { faqPageSchema } from "../../../lib/marketing/schema";
 
 export const metadata: Metadata = pageMetadata({
-  title: "FAQ | Ruach",
+  title: "FAQ",
   description: "Answers to common questions about Ruach's conversational assistant, AI guardrails, Prayer Wall, setup, and pricing.",
   path: "/faq",
 });
@@ -194,24 +196,13 @@ const CATEGORIES = [
   { title: "Pricing", items: PRICING },
 ];
 
-/** FAQPage structured data -- makes every question here eligible for FAQ rich results in search. */
-const FAQ_STRUCTURED_DATA = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: CATEGORIES.flatMap((category) =>
-    category.items.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: { "@type": "Answer", text: item.answer },
-    })),
-  ),
-};
+/** Makes every question below eligible for FAQ rich results in search. */
+const FAQ_STRUCTURED_DATA = faqPageSchema(CATEGORIES.flatMap((category) => category.items));
 
 export default function FAQPage() {
   return (
     <div>
-      {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }} />
+      <JsonLd data={FAQ_STRUCTURED_DATA} />
       <section className="mx-auto max-w-3xl px-5 pb-10 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>FAQ</EyebrowLabel>

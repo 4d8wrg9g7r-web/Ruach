@@ -12,7 +12,7 @@ const SITE_URL = process.env.NEXTAUTH_URL ?? "https://ruachplatform.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "Ruach", template: "%s" },
+  title: { default: "Ruach", template: "%s | Ruach" },
   description: "Turn your media library into a conversation.",
   openGraph: {
     siteName: "Ruach",

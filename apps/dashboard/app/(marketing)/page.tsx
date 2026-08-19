@@ -19,6 +19,7 @@ import { AssistantDemo } from "../../components/marketing/AssistantDemo";
 import { EyebrowLabel } from "../../components/marketing/EyebrowLabel";
 import { FadeIn } from "../../components/marketing/FadeIn";
 import { FeatureCard } from "../../components/marketing/FeatureCard";
+import { JsonLd } from "../../components/marketing/JsonLd";
 import { LogoGrid } from "../../components/marketing/LogoGrid";
 import { PrayerWallPreview } from "../../components/marketing/PrayerWallPreview";
 import { PricingGrid } from "../../components/marketing/PricingGrid";
@@ -27,47 +28,24 @@ import { TestimonialCard } from "../../components/marketing/TestimonialCard";
 import { buttonClasses } from "../../components/ui/Button";
 import { MARKETING_PLANS } from "../../lib/marketing/pricing-data";
 import { pageMetadata } from "../../lib/marketing/page-metadata";
+import { organizationSchema, softwareApplicationSchema } from "../../lib/marketing/schema";
 
 export const metadata: Metadata = pageMetadata({
   title: "Ruach | Help People Discover Your Church's Content",
+  absoluteTitle: true,
   description:
-    "Ruach helps churches turn sermons, articles, ministry pages, and other resources into a conversational website experience, with an optional moderated Prayer Wall.",
+    "Ruach helps churches turn sermons, articles, and ministry pages into a conversational website experience, with an optional moderated Prayer Wall.",
   path: "/",
 });
 
-const SITE_URL = process.env.NEXTAUTH_URL ?? "https://ruachplatform.com";
-
 /**
- * JSON-LD structured data -- Organization (brand identity for knowledge-panel-style
- * results) and SoftwareApplication (eligible for rich results like pricing/rating
- * snippets). Only on the homepage, not repeated per marketing page, since both
- * describe the product/company as a whole rather than page-specific content.
+ * Organization (brand identity for knowledge-panel-style results) and
+ * SoftwareApplication (eligible for rich results like pricing/rating snippets) --
+ * builders live in lib/marketing/schema.ts. Only on the homepage, not repeated per
+ * marketing page, since both describe the product/company as a whole rather than
+ * page-specific content.
  */
-const STRUCTURED_DATA = [
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "Ruach",
-    url: SITE_URL,
-    description: "Ruach helps churches turn sermons, articles, ministry pages, and other resources into a conversational website experience.",
-  },
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Ruach",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
-    url: SITE_URL,
-    description: "A conversational assistant and Prayer Wall for church websites, grounded entirely in a church's own approved content.",
-    offers: {
-      "@type": "AggregateOffer",
-      priceCurrency: "USD",
-      lowPrice: "29",
-      highPrice: "179",
-      offerCount: "4",
-    },
-  },
-];
+const STRUCTURED_DATA = [organizationSchema(), softwareApplicationSchema()];
 
 const HOW_STEPS = [
   {
@@ -190,10 +168,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      {STRUCTURED_DATA.map((schema, i) => (
-        // eslint-disable-next-line react/no-danger
-        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      ))}
+      <JsonLd data={STRUCTURED_DATA} />
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-5 pb-16 pt-14 sm:pt-20">
         <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr]">

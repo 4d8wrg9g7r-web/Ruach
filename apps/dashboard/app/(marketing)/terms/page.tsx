@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { pageMetadata } from "../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Terms of Service | Ruach",
+  title: "Terms of Service",
   description: "The terms governing use of Ruach's conversational assistant and Prayer Wall.",
   path: "/terms",
 });

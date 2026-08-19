@@ -9,6 +9,7 @@ import { pageMetadata } from "../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
   title: "Ruach Pricing | Plans for Churches of Every Size",
+  absoluteTitle: true,
   description: "Ruach pricing plans for churches of every size, from church plants to multi-campus organizations. Every plan includes the core Ruach experience.",
   path: "/pricing",
 });

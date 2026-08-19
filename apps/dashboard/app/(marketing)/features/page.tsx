@@ -10,6 +10,7 @@ import { pageMetadata } from "../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
   title: "Ruach Features | Conversational Search and Prayer Tools for Churches",
+  absoluteTitle: true,
   description: "Every Ruach feature, grouped by category -- conversational assistant, content library, branding, Prayer Wall, analytics, team administration, and support.",
   path: "/features",
 });

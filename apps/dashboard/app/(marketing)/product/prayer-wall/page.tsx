@@ -8,8 +8,8 @@ import { buttonClasses } from "../../../../components/ui/Button";
 import { pageMetadata } from "../../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
-  title: "Prayer Wall | Ruach",
-  description: "Give your community a thoughtful way to share requests, respond in prayer, and celebrate answered prayers -- while your team remains in control of what is public.",
+  title: "Prayer Wall",
+  description: "Give your community a thoughtful way to share prayer requests, respond in prayer, and celebrate answered prayers -- while staying in control of what's public.",
   path: "/product/prayer-wall",
 });
 
