@@ -174,14 +174,17 @@ export function ResourcesTable({
     <>
       {(someSelected || jobRunning) && (
         <div className="border-b border-border bg-surface-warm px-5 py-3">
-          <div className="flex items-center justify-between">
+          {/* flex-wrap: 6 text+icon buttons don't fit one row on a phone-width
+              viewport -- without wrapping they forced this row (and the page around
+              it) wider than the screen instead of just stacking onto a second line. */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-medium text-ink">
               {jobRunning && activeJob
                 ? `${JOB_PROGRESS_LABEL[activeJob.type] ?? "Working on"} ${activeJob.processedCount} of ${activeJob.totalCount}...`
                 : `${selected.size} selected`}
             </span>
             {someSelected && (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   disabled={buttonsDisabled}
@@ -252,78 +255,85 @@ export function ResourcesTable({
         </div>
       )}
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-muted">
-            <th className="w-10 px-5 py-3">
-              <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all resources" />
-            </th>
-            <th className="px-3 py-3 font-medium">Title</th>
-            <th className="px-3 py-3 font-medium">Type</th>
-            <th className="px-3 py-3 font-medium">Topics</th>
-            <th className="px-3 py-3 font-medium">Status</th>
-            <th className="px-3 py-3 font-medium">Imported</th>
-            <th className="w-10 px-3 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {resources.map((resource) => (
-            <tr key={resource.id} className="border-b border-border last:border-0 hover:bg-surface-muted">
-              <td className="px-5 py-3">
-                <input
-                  type="checkbox"
-                  checked={selected.has(resource.id)}
-                  onChange={() => toggleOne(resource.id)}
-                  aria-label={`Select ${resource.title}`}
-                />
-              </td>
-              <td className="px-3 py-3">
-                <Link href={`/resources/${resource.id}`} className="flex items-center gap-3">
-                  <span className="h-10 w-14 shrink-0 overflow-hidden rounded bg-surface-muted">
-                    {resource.thumbnailUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={resource.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="truncate font-medium text-ink">{resource.title}</div>
-                    <div className="truncate text-xs text-ink-muted">
-                      {[
-                        resource.speakerName,
-                        resource.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
-                  </div>
-                </Link>
-              </td>
-              <td className="px-3 py-3 text-ink-secondary">
-                <span className="flex items-center gap-1.5">
-                  {TYPE_ICON[resourceTypeGroup(resource.resourceType)]}
-                  <span className="text-xs">{resource.resourceType}</span>
-                </span>
-              </td>
-              <td className="max-w-[220px] truncate px-3 py-3 text-ink-secondary">
-                {resource.topics.length > 0 ? resource.topics.join(", ") : <span className="text-ink-muted">--</span>}
-              </td>
-              <td className="px-3 py-3">
-                <Badge variant={resourceStatusTone(resource.status)}>{resourceStatusLabel(resource.status)}</Badge>
-              </td>
-              <td className="whitespace-nowrap px-3 py-3 text-ink-muted">{timeAgo(resource.createdAt)}</td>
-              <td className="px-3 py-3">
-                <Link
-                  href={`/resources/${resource.id}`}
-                  aria-label={`More options for ${resource.title}`}
-                  className="rounded-sm text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-                >
-                  <MoreHorizontal size={16} />
-                </Link>
-              </td>
+      {/* overflow-x-auto so the table's natural min-content width (7 columns --
+          thumbnail+title, type, topics, status, date, actions -- comfortably wider
+          than a phone viewport) scrolls locally instead of forcing the whole page
+          layout wider than the screen, matching the pattern already used for wide
+          content elsewhere (ComparisonTable, WidgetPreviewFrame, InstallCodeModal). */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-muted">
+              <th className="w-10 px-5 py-3">
+                <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all resources" />
+              </th>
+              <th className="px-3 py-3 font-medium">Title</th>
+              <th className="px-3 py-3 font-medium">Type</th>
+              <th className="px-3 py-3 font-medium">Topics</th>
+              <th className="px-3 py-3 font-medium">Status</th>
+              <th className="px-3 py-3 font-medium">Imported</th>
+              <th className="w-10 px-3 py-3" />
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {resources.map((resource) => (
+              <tr key={resource.id} className="border-b border-border last:border-0 hover:bg-surface-muted">
+                <td className="px-5 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(resource.id)}
+                    onChange={() => toggleOne(resource.id)}
+                    aria-label={`Select ${resource.title}`}
+                  />
+                </td>
+                <td className="px-3 py-3">
+                  <Link href={`/resources/${resource.id}`} className="flex items-center gap-3">
+                    <span className="h-10 w-14 shrink-0 overflow-hidden rounded bg-surface-muted">
+                      {resource.thumbnailUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={resource.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium text-ink">{resource.title}</div>
+                      <div className="truncate text-xs text-ink-muted">
+                        {[
+                          resource.speakerName,
+                          resource.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    </div>
+                  </Link>
+                </td>
+                <td className="px-3 py-3 text-ink-secondary">
+                  <span className="flex items-center gap-1.5">
+                    {TYPE_ICON[resourceTypeGroup(resource.resourceType)]}
+                    <span className="text-xs">{resource.resourceType}</span>
+                  </span>
+                </td>
+                <td className="max-w-[220px] truncate px-3 py-3 text-ink-secondary">
+                  {resource.topics.length > 0 ? resource.topics.join(", ") : <span className="text-ink-muted">--</span>}
+                </td>
+                <td className="px-3 py-3">
+                  <Badge variant={resourceStatusTone(resource.status)}>{resourceStatusLabel(resource.status)}</Badge>
+                </td>
+                <td className="whitespace-nowrap px-3 py-3 text-ink-muted">{timeAgo(resource.createdAt)}</td>
+                <td className="px-3 py-3">
+                  <Link
+                    href={`/resources/${resource.id}`}
+                    aria-label={`More options for ${resource.title}`}
+                    className="rounded-sm text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                  >
+                    <MoreHorizontal size={16} />
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
