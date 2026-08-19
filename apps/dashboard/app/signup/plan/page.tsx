@@ -31,6 +31,15 @@ async function subscribeAction(formData: FormData) {
     success_url: `${appOrigin}/signup/finishing`,
     cancel_url: `${appOrigin}/signup/plan?orgName=${encodeURIComponent(orgName)}`,
     metadata: { flow: "signup", userId: user.id, orgName, planKey },
+    subscription_data: { trial_period_days: billingService.TRIAL_PERIOD_DAYS },
+    // "if_required" -- nothing is due today during a full trial, so Checkout skips
+    // asking for a card at all. The tradeoff (documented, not accidental): this
+    // maximizes trial starts, but a trial with no card on file can't auto-convert to
+    // paid when it ends -- Stripe will fail the first invoice and the subscription
+    // becomes PAST_DUE. billing/page.tsx already surfaces PAST_DUE with an "Update
+    // payment method" call to action, which is what actually converts these once the
+    // trial ends -- it's an existing path, not new to trials.
+    payment_method_collection: "if_required",
   });
 
   if (!session.url) throw new Error("Failed to create checkout session");
@@ -47,7 +56,10 @@ export default async function SignupPlanPage({ searchParams }: { searchParams: P
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="mb-1 text-center text-2xl font-semibold text-ink">Choose a plan</h1>
-      <p className="mb-8 text-center text-sm text-ink-secondary">Pick a plan for {orgName}. You can change or cancel anytime.</p>
+      <p className="mb-8 text-center text-sm text-ink-secondary">
+        Pick a plan for {orgName}. Every plan starts with a {billingService.TRIAL_PERIOD_DAYS}-day free trial &mdash; no
+        card required, change or cancel anytime.
+      </p>
       <PlanPicker orgName={orgName} plans={plans} action={subscribeAction} />
     </main>
   );

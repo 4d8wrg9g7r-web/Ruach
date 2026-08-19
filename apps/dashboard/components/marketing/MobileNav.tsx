@@ -49,7 +49,7 @@ export function MobileNav() {
                 Sign In
               </Link>
               <Link href="/signup" onClick={() => setOpen(false)} className={buttonClasses("primary", "md")}>
-                Start with Ruach
+                Start free trial
               </Link>
             </div>
           </motion.div>

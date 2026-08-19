@@ -125,6 +125,13 @@ export type Plan = (typeof PLANS)[PlanKey];
 /** The 3 self-serve paid tiers in display order, for pricing/upgrade UI. Enterprise is deliberately excluded -- it's contact-us only. */
 export const PAID_PLAN_KEYS: PlanKey[] = ["essential", "growth", "multisite"];
 
+/**
+ * Applies to every self-serve paid plan's first subscription (signup/plan/page.tsx's
+ * checkout session) -- one canonical constant so marketing copy that names the trial
+ * (hero, pricing page) can never drift from what checkout actually grants.
+ */
+export const TRIAL_PERIOD_DAYS = 14;
+
 export function isPlanKey(value: string): value is PlanKey {
   return value in PLANS;
 }

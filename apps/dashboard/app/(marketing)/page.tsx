@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import {
   BarChart3,
@@ -9,11 +10,14 @@ import {
   HeartHandshake,
   MessageCircleQuestion,
   Palette,
+  Rocket,
   Search,
   Sparkles,
   UploadCloud,
+  Users,
   X,
 } from "lucide-react";
+import { billingService } from "@ruach/database";
 import { getCurrentOrganization, getCurrentUser } from "../../lib/session";
 import { AssistantDemo } from "../../components/marketing/AssistantDemo";
 import { EyebrowLabel } from "../../components/marketing/EyebrowLabel";
@@ -24,7 +28,6 @@ import { LogoGrid } from "../../components/marketing/LogoGrid";
 import { PrayerWallPreview } from "../../components/marketing/PrayerWallPreview";
 import { PricingGrid } from "../../components/marketing/PricingGrid";
 import { StepProcess } from "../../components/marketing/StepProcess";
-import { TestimonialCard } from "../../components/marketing/TestimonialCard";
 import { buttonClasses } from "../../components/ui/Button";
 import { MARKETING_PLANS } from "../../lib/marketing/pricing-data";
 import { pageMetadata } from "../../lib/marketing/page-metadata";
@@ -107,21 +110,30 @@ const FEATURES = [
   },
 ];
 
-const TESTIMONIALS = [
+/**
+ * Honest "we're new" section, replacing an earlier placeholder-testimonials section
+ * that quoted invented churches -- see git history. No claims here that aren't true
+ * today: real shipping cadence (see /release-notes), real direct-access support (no
+ * dedicated support team yet to hide behind), real feature provenance.
+ */
+const BUILDING_POINTS = [
   {
-    quote: "Ruach helps our website feel less like an archive and more like an extension of our ministry.",
-    role: "Communications Director",
-    churchLabel: "Church name coming soon",
+    icon: <Rocket size={18} />,
+    title: "We ship every week",
+    description:
+      "New features go out constantly, not on a quarterly roadmap -- Testimonies, content-type priority, and direct-answer links all shipped in the last two weeks alone.",
   },
   {
-    quote: "Our sermon library goes back a decade. Now people actually find what they're looking for.",
-    role: "Executive Pastor",
-    churchLabel: "Church name coming soon",
+    icon: <Users size={18} />,
+    title: "You'll talk to the people building it",
+    description:
+      "Early churches get direct access to the team building Ruach, not a support ticket queue. Your feedback shapes what ships next -- literally.",
   },
   {
-    quote: "The Prayer Wall gave our congregation a simple way to stay connected between services.",
-    role: "Pastoral Care Coordinator",
-    churchLabel: "Church name coming soon",
+    icon: <Sparkles size={18} />,
+    title: "Built from real requests, not guesses",
+    description:
+      "Every feature so far started as something a church actually asked for. If Ruach is missing something you need, that's the fastest way to get it built.",
   },
 ];
 
@@ -187,13 +199,15 @@ export default async function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link href="/signup" className={buttonClasses("primary", "lg")}>
-                Start with Ruach
+                Start free trial
               </Link>
               <Link href="/how-it-works" className={buttonClasses("secondary", "lg")}>
                 See how it works
               </Link>
             </div>
-            <p className="mt-5 text-sm text-ink-muted">Built for churches. Easy to install. Grounded only in your content.</p>
+            <p className="mt-5 text-sm text-ink-muted">
+              Free for {billingService.TRIAL_PERIOD_DAYS} days, no card required. Grounded only in your content.
+            </p>
           </FadeIn>
 
           <FadeIn delay={0.15}>
@@ -431,22 +445,36 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* We're new */}
       <section className="py-20">
         <div className="mx-auto max-w-6xl px-5">
           <FadeIn>
             <div className="mx-auto mb-12 max-w-2xl text-center">
-              <EyebrowLabel>What churches are saying</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">Early feedback from ministry teams.</h2>
+              <EyebrowLabel>New</EyebrowLabel>
+              <h2 className="text-3xl font-semibold tracking-tight text-ink">We&rsquo;re new. Here&rsquo;s what we&rsquo;re building.</h2>
+              <div className="mt-5 flex items-center justify-center gap-2 text-sm text-ink-muted">
+                <span>Built with</span>
+                <Image src="/brand/victory-church-logo.png" alt="Victory Church, Raleigh, NC" width={759} height={217} className="h-6 w-auto" />
+              </div>
             </div>
           </FadeIn>
           <div className="grid gap-5 sm:grid-cols-3">
-            {TESTIMONIALS.map((testimonial, i) => (
-              <FadeIn key={testimonial.role} delay={i * 0.08}>
-                <TestimonialCard {...testimonial} />
+            {BUILDING_POINTS.map((point, i) => (
+              <FadeIn key={point.title} delay={i * 0.08}>
+                <FeatureCard {...point} />
               </FadeIn>
             ))}
           </div>
+          <FadeIn delay={0.24}>
+            <p className="mt-8 text-center">
+              <Link
+                href="/release-notes"
+                className="rounded-sm text-sm font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              >
+                See everything we&rsquo;ve shipped &rarr;
+              </Link>
+            </p>
+          </FadeIn>
         </div>
       </section>
 
@@ -489,7 +517,7 @@ export default async function HomePage() {
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link href="/signup" className={buttonClasses("primary", "lg")}>
-                Start with Ruach
+                Start free trial
               </Link>
               <Link
                 href="/demo"
@@ -498,6 +526,7 @@ export default async function HomePage() {
                 Request a Demo
               </Link>
             </div>
+            <p className="mt-4 text-sm text-white/60">Free for {billingService.TRIAL_PERIOD_DAYS} days. No credit card required.</p>
           </FadeIn>
         </div>
       </section>

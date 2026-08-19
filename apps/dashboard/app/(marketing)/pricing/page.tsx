@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bell, Gauge, Layers, ShieldCheck } from "lucide-react";
+import { billingService } from "@ruach/database";
 import { ComparisonTable } from "../../../components/marketing/ComparisonTable";
 import { EyebrowLabel } from "../../../components/marketing/EyebrowLabel";
 import { FadeIn } from "../../../components/marketing/FadeIn";
@@ -43,6 +44,9 @@ export default function PricingPage() {
           <p className="mt-5 text-base leading-relaxed text-ink-secondary">
             Every plan includes the core Ruach experience. Higher plans add scale, customization, and
             organization-wide tools for larger and multi-campus churches.
+          </p>
+          <p className="mt-3 text-sm font-medium text-accent-dark">
+            Every plan starts with a {billingService.TRIAL_PERIOD_DAYS}-day free trial &mdash; no credit card required.
           </p>
         </FadeIn>
       </section>

@@ -6,12 +6,17 @@ import { Wind } from "lucide-react";
 import { buttonClasses } from "../ui/Button";
 import { MobileNav } from "./MobileNav";
 
+/**
+ * Deliberately 3, not 5 -- every extra primary-nav item is a competing exit before a
+ * first-time visitor has read the pitch (Linear/Superhuman/Arc all converge on a
+ * minimal header). "How It Works" and "Why Ruach" aren't gone, just demoted to the
+ * footer (Footer.tsx's PRODUCT_LINKS/COMPANY_LINKS) -- still one click away, not
+ * fighting for space with the CTA.
+ */
 export const NAV_LINKS = [
-  { href: "/how-it-works", label: "Product" },
   { href: "/features", label: "Features" },
   { href: "/product/prayer-wall", label: "Prayer Wall" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/why-ruach", label: "Why Ruach" },
 ];
 
 /**
@@ -59,7 +64,7 @@ export function Header() {
             Sign In
           </Link>
           <Link href="/signup" className={buttonClasses("primary", "sm")}>
-            Start with Ruach
+            Start free trial
           </Link>
         </div>
 

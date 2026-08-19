@@ -44,6 +44,12 @@ async function upgradeCheckoutAction(formData: FormData) {
   const priceId = interval === "yearly" ? plan.priceIdYearly : plan.priceIdMonthly;
   if (!priceId) throw new Error(`${plan.name} (${interval}) isn't configured yet -- missing Stripe price id.`);
 
+  // Reached only when !hasLiveSubscription (this org has never had a paid
+  // subscription, or its last one was fully canceled) -- the same "first paid
+  // subscription" moment signup/plan/page.tsx's checkout session covers, so it gets
+  // the same trial. Known, accepted edge case: an org that cancels and later
+  // resubscribes gets a fresh trial too -- no "has this org ever trialed before"
+  // tracking exists, and building it isn't worth it for how rarely that happens.
   const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -53,6 +59,8 @@ async function upgradeCheckoutAction(formData: FormData) {
     success_url: `${appOrigin}/billing?upgraded=1`,
     cancel_url: `${appOrigin}/billing`,
     metadata: { flow: "upgrade", organizationId: organization.id, planKey },
+    subscription_data: { trial_period_days: billingService.TRIAL_PERIOD_DAYS },
+    payment_method_collection: "if_required",
   });
 
   if (!session.url) throw new Error("Failed to create checkout session");

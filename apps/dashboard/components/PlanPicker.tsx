@@ -20,7 +20,7 @@ interface PlanPickerProps {
   action: (formData: FormData) => Promise<void>;
   /**
    * The org's current plan/interval, when it already has a live subscription --
-   * turns this from a first-time "Subscribe" picker into a "Change plan" picker:
+   * turns this from a first-time "Start free trial" picker into a "Change plan" picker:
    * the matching card is marked Current plan (disabled), and every other card is
    * labeled Upgrade/Downgrade based on its position in `plans` relative to the
    * current one (plans is always in tier order, low to high). Omit both for a
@@ -64,7 +64,7 @@ export function PlanPicker({ orgName, plans, action, currentPlanKey, currentInte
           const isCurrentPlan = plan.key === currentPlanKey;
           const isExactCurrent = isCurrentPlan && currentInterval === interval;
 
-          let label = "Subscribe";
+          let label = "Start free trial";
           let isDowngrade = false;
           if (currentIndex !== -1) {
             if (isExactCurrent) label = "Current plan";
