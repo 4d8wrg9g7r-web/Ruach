@@ -98,8 +98,25 @@ jobs:
       - name: Seed database
         run: pnpm db:seed
 
-      - name: Install Playwright browsers
-        run: pnpm --filter @ruach/dashboard exec playwright install --with-deps chromium
+      # The browser binary download (from Playwright's CDN) is what's actually slow/
+      # flaky, not the OS package install below it -- this cache turns a ~20-90min
+      # stall (observed twice) into a no-network cache hit on every run after the
+      # first for a given Playwright version. GitHub Actions runners are fresh VMs
+      # every run, so OS packages can never be cached this way -- install-deps (apt,
+      # not CDN) always runs regardless of cache-hit.
+      - name: Cache Playwright browser binary
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-1.62.1-${{ runner.os }}
+
+      - name: Install Playwright browser (chromium)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @ruach/dashboard exec playwright install chromium
+
+      - name: Install Playwright OS dependencies
+        run: pnpm --filter @ruach/dashboard exec playwright install-deps chromium
 
       - name: Run e2e tests
         run: pnpm --filter @ruach/dashboard test:e2e
