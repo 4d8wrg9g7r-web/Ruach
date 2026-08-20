@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { HeartHandshake, Lightbulb } from "lucide-react";
 import type { OrganizationRole, PrayerRequestCategory } from "@ruach/database";
 import { auditService, billingService, prayerService } from "@ruach/database";
+import { getEmailProvider } from "@ruach/email";
 import { CopySnippetButton } from "../../../components/CopySnippetButton";
 import { PrayerModerationList } from "../../../components/PrayerModerationList";
 import { buttonClasses } from "../../../components/ui/Button";
@@ -78,6 +79,52 @@ async function saveNotesAction(requestId: string, notes: string) {
   revalidatePath("/prayer-wall");
 }
 
+async function sendReplyAction(requestId: string, message: string) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, moderationRoles(organization.planKey));
+  if (!billingService.planHasFeature(organization.planKey, "prayerRequestReplies")) {
+    throw new Error("Upgrade your plan to reply to prayer requests by email.");
+  }
+
+  const trimmed = message.trim();
+  if (!trimmed) throw new Error("Write a reply before sending.");
+
+  const request = await prayerService.getPrayerRequestById(organization.id, requestId);
+  if (!request) throw new Error("That prayer request no longer exists.");
+
+  const user = await getCurrentUser();
+
+  // Sent from a shared noreply@ address (see ResendEmailProvider) but replyTo
+  // routes a reply straight to the staff member's own inbox -- Ruach never sees or
+  // stores anything the requester writes back, same as the mailto:-link approach
+  // would give, just with real delivery and an audit trail on our side.
+  await getEmailProvider().sendEmail({
+    to: request.account.email,
+    replyTo: user?.email || undefined,
+    subject: `A reply from ${organization.name} about your prayer request`,
+    text: `${trimmed}\n\n---\nYou wrote:\n"${request.message}"`,
+  });
+
+  await prayerService.recordReply({
+    organizationId: organization.id,
+    requestId,
+    staffUserId: user?.id ?? null,
+    message: trimmed,
+  });
+
+  await auditService.recordAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user?.id,
+    action: "prayer_request.replied",
+    targetType: "PrayerRequest",
+    targetId: requestId,
+  });
+
+  revalidatePath("/prayer-wall");
+}
+
 export default async function PrayerWallModerationPage() {
   const organization = await getCurrentOrganization();
   if (!organization) return null;
@@ -94,6 +141,7 @@ export default async function PrayerWallModerationPage() {
 
   const canEditCategory = billingService.planHasFeature(organization.planKey, "prayerCategories");
   const canEditNotes = billingService.planHasFeature(organization.planKey, "internalPrayerNotes");
+  const canReply = billingService.planHasFeature(organization.planKey, "prayerRequestReplies");
 
   const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const publicUrl = `${appOrigin}/prayer/${organization.publicPrayerWallId}`;
@@ -110,6 +158,12 @@ export default async function PrayerWallModerationPage() {
     internalNotes: r.internalNotes,
     createdAt: r.createdAt,
     campusName: r.website?.name ?? null,
+    replies: r.replies.map((reply) => ({
+      id: reply.id,
+      message: reply.message,
+      createdAt: reply.createdAt,
+      staffName: reply.staffUser?.name ?? reply.staffUser?.email ?? null,
+    })),
   }));
 
   return (
@@ -174,11 +228,13 @@ export default async function PrayerWallModerationPage() {
           requests={rows}
           canEditCategory={canEditCategory}
           canEditNotes={canEditNotes}
+          canReply={canReply}
           onTogglePublic={togglePublicAction}
           onMarkAnswered={markAnsweredAction}
           onDelete={deleteAction}
           onSetCategory={setCategoryAction}
           onSaveNotes={saveNotesAction}
+          onSendReply={sendReplyAction}
         />
       </Card>
     </div>

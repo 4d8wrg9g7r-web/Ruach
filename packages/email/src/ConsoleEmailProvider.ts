@@ -8,6 +8,7 @@ import type { EmailProvider, SendEmailInput } from "./EmailProvider";
  */
 export class ConsoleEmailProvider implements EmailProvider {
   async sendEmail(input: SendEmailInput): Promise<void> {
-    console.log(`[email stub] to=${input.to} subject="${input.subject}"\n${input.text}`);
+    const replyTo = input.replyTo ? ` replyTo=${input.replyTo}` : "";
+    console.log(`[email stub] to=${input.to}${replyTo} subject="${input.subject}"\n${input.text}`);
   }
 }

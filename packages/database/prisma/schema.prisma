@@ -36,12 +36,13 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  memberships         OrganizationMember[]
-  auditLogs           AuditLog[]
-  passwordResetTokens PasswordResetToken[]
-  createdAccessCodes  FreeTierAccessCode[] @relation("AccessCodeCreatedBy")
-  usedAccessCode      FreeTierAccessCode?  @relation("AccessCodeUsedBy")
-  createdTestimonies  Testimony[]
+  memberships          OrganizationMember[]
+  auditLogs            AuditLog[]
+  passwordResetTokens  PasswordResetToken[]
+  createdAccessCodes   FreeTierAccessCode[] @relation("AccessCodeCreatedBy")
+  usedAccessCode       FreeTierAccessCode?  @relation("AccessCodeUsedBy")
+  createdTestimonies   Testimony[]
+  prayerRequestReplies PrayerRequestReply[]
 }
 
 enum SubscriptionStatus {
@@ -114,26 +115,26 @@ enum OrganizationRole {
  * from the tenant-guard the same way FreeTierAccessCode is.
  */
 model DemoRequest {
-  id                String   @id @default(cuid())
-  name              String
-  churchName        String
-  role              String
-  email             String
-  churchWebsite     String?
-  attendanceRange   String
-  campusCount       String?
-  currentPlatform   String?
-  contentPlatforms  String?
-  message           String?
-  preferredContact  String?
-  createdAt         DateTime @default(now())
+  id               String   @id @default(cuid())
+  name             String
+  churchName       String
+  role             String
+  email            String
+  churchWebsite    String?
+  attendanceRange  String
+  campusCount      String?
+  currentPlatform  String?
+  contentPlatforms String?
+  message          String?
+  preferredContact String?
+  createdAt        DateTime @default(now())
 }
 
 model Organization {
-  id                            String              @id @default(cuid())
-  name                          String
-  slug                          String              @unique
-  categorizationMode            CategorizationMode  @default(ASSISTED)
+  id                             String              @id @default(cuid())
+  name                           String
+  slug                           String              @unique
+  categorizationMode             CategorizationMode  @default(ASSISTED)
   // Null = no priority, natural relevance-score ranking (today's behavior). Set to
   // one of ResourceTypeGroup's keys ("VIDEOS", "PODCASTS", "ARTICLES", "DOCUMENTS")
   // to make ChatPipeline's ranking step sort every matching-type candidate ahead of
@@ -141,41 +142,41 @@ model Organization {
   // video on faith outranks a blog post or podcast on faith." Stored as a plain
   // string, not an enum column, so ResourceTypeGroup can stay a shared-types-only
   // concept without a matching Prisma enum to keep in sync.
-  priorityContentType           String?
-  prayerWallEnabled             Boolean             @default(false)
-  publicPrayerWallId            String              @unique @default(cuid())
+  priorityContentType            String?
+  prayerWallEnabled              Boolean             @default(false)
+  publicPrayerWallId             String              @unique @default(cuid())
   // A plain list, not a join table -- just a set of addresses with no other
   // attributes. Essential/free are capped at 1 entry (enforced in the Settings
   // Server Action); prayerTeamNotifications entitles more.
-  prayerRequestForwardingEmails String[]            @default([])
-  prayerWallBrandColor          String?
-  prayerWallLogoUrl             String?
+  prayerRequestForwardingEmails  String[]            @default([])
+  prayerWallBrandColor           String?
+  prayerWallLogoUrl              String?
   // Testimonies ("Praise Report" by default) are a sub-feature of the same prayer
   // wall -- same publicPrayerWallId page, branding, and visitor login, so no
   // separate brand color/logo/URL fields are needed here, just an enable toggle and
   // an admin-chosen display name for the page's nav link.
-  testimoniesEnabled            Boolean             @default(false)
-  testimoniesPageName           String              @default("Praise Report")
+  testimoniesEnabled             Boolean             @default(false)
+  testimoniesPageName            String              @default("Praise Report")
   // planKey resolves into the PLANS map in billing-service.ts, not a DB table --
   // see that file's doc comment. The default exists only to backfill pre-billing
   // rows during migration; every real creation path (Stripe webhook, access-code
   // redemption) sets it explicitly.
-  planKey                       String              @default("essential")
-  stripeCustomerId              String?             @unique
-  stripeSubscriptionId          String?             @unique
-  subscriptionStatus            SubscriptionStatus?
-  billingInterval               BillingInterval?
-  currentPeriodEnd              DateTime?
+  planKey                        String              @default("essential")
+  stripeCustomerId               String?             @unique
+  stripeSubscriptionId           String?             @unique
+  subscriptionStatus             SubscriptionStatus?
+  billingInterval                BillingInterval?
+  currentPeriodEnd               DateTime?
   // True once Cancel plan has been confirmed -- the subscription stays ACTIVE and
   // fully usable through currentPeriodEnd, then Stripe's subscription.deleted event
   // flips subscriptionStatus to CANCELED. Resume plan just sets this back to false
   // before the period ends.
-  cancelAtPeriodEnd             Boolean             @default(false)
+  cancelAtPeriodEnd              Boolean             @default(false)
   // Usage-warning email dedup (lib/usage-warnings.ts): compared against the current
   // billing period's start on each cron run rather than explicitly reset, so a
   // null/stale timestamp just means "eligible to send again this period."
-  usageWarning75SentAt          DateTime?
-  usageWarning90SentAt          DateTime?
+  usageWarning75SentAt           DateTime?
+  usageWarning90SentAt           DateTime?
   // Explicit dismissal of the guided-onboarding checklist (Dashboard Overview) --
   // completion itself is computed live from existing counts (websites/widgets/
   // resources/conversations), not stored. Null just means "not dismissed yet"; the
@@ -186,16 +187,16 @@ model Organization {
   // (website/widget/resource counts), same pattern as onboardingChecklistDismissedAt
   // above. Set the first time a new org either finishes or skips the wizard, so
   // returning users always land straight on /dashboard.
-  onboardingWizardSeenAt        DateTime?
+  onboardingWizardSeenAt         DateTime?
   // Same pattern as onboardingWizardSeenAt -- controls only the auto-redirect into
   // /prayer-wall/setup the first time staff visits Prayer Wall with neither
   // prayerWallEnabled nor testimoniesEnabled on yet, not step progress (derived from
   // those same two flags). "Come back later" sets this without enabling anything, so
   // the auto-redirect never fires again, but PrayerWallModerationPage still shows a
   // persistent card linking back into the wizard for as long as neither is enabled.
-  prayerTestimonyWizardSeenAt   DateTime?
-  createdAt                     DateTime            @default(now())
-  updatedAt                     DateTime            @updatedAt
+  prayerTestimonyWizardSeenAt    DateTime?
+  createdAt                      DateTime            @default(now())
+  updatedAt                      DateTime            @updatedAt
 
   members                 OrganizationMember[]
   websites                Website[]
@@ -216,6 +217,7 @@ model Organization {
   contentSources          ContentSource[]
   prayerWallAccounts      PrayerWallAccount[]
   prayerRequests          PrayerRequest[]
+  prayerRequestReplies    PrayerRequestReply[]
   prayerWallResetTokens   PrayerWallPasswordResetToken[]
   testimonies             Testimony[]
 }
@@ -255,28 +257,28 @@ enum WebsiteStatus {
 }
 
 model Website {
-  id             String        @id @default(cuid())
-  organizationId String
-  name           String
-  primaryDomain  String
-  allowedDomains String[]      @default([])
-  stagingDomains String[]      @default([])
-  status         WebsiteStatus @default(ACTIVE)
+  id                            String        @id @default(cuid())
+  organizationId                String
+  name                          String
+  primaryDomain                 String
+  allowedDomains                String[]      @default([])
+  stagingDomains                String[]      @default([])
+  status                        WebsiteStatus @default(ACTIVE)
   // Campus-specific prayer wall (Multi-Site+ only, campusScopedPrayerWalls feature).
   // Mirrors Organization's 5 prayer-wall fields exactly -- the org-level wall stays
   // the default/fallback for every org unchanged; these are an additive per-campus
   // option, not a replacement. publicPrayerWallId is nullable+unique (not every
   // website has its own wall) unlike Organization's always-present version.
-  prayerWallEnabled             Boolean  @default(false)
-  publicPrayerWallId            String?  @unique
-  prayerRequestForwardingEmails String[] @default([])
+  prayerWallEnabled             Boolean       @default(false)
+  publicPrayerWallId            String?       @unique
+  prayerRequestForwardingEmails String[]      @default([])
   prayerWallBrandColor          String?
   prayerWallLogoUrl             String?
   // Mirrors Organization's testimonies fields for the same reason as above.
-  testimoniesEnabled            Boolean  @default(false)
-  testimoniesPageName           String   @default("Praise Report")
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
+  testimoniesEnabled            Boolean       @default(false)
+  testimoniesPageName           String        @default("Praise Report")
+  createdAt                     DateTime      @default(now())
+  updatedAt                     DateTime      @updatedAt
 
   organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   widgets        WidgetConfiguration[]
@@ -316,29 +318,29 @@ enum WidgetDisplayStyle {
 }
 
 model WidgetConfiguration {
-  id                        String           @id @default(cuid())
+  id                        String             @id @default(cuid())
   organizationId            String
   websiteId                 String
   name                      String
-  publicWidgetId            String           @unique @default(cuid())
-  status                    WidgetStatus     @default(ACTIVE)
-  assistantName             String           @default("Resource Assistant")
-  welcomeMessage            String           @default("Hi! What are you looking for today?")
-  inputPlaceholder          String           @default("Ask a question...")
-  launcherLabel             String           @default("Ask a question")
-  launcherPosition          LauncherPosition @default(BOTTOM_RIGHT)
+  publicWidgetId            String             @unique @default(cuid())
+  status                    WidgetStatus       @default(ACTIVE)
+  assistantName             String             @default("Resource Assistant")
+  welcomeMessage            String             @default("Hi! What are you looking for today?")
+  inputPlaceholder          String             @default("Ask a question...")
+  launcherLabel             String             @default("Ask a question")
+  launcherPosition          LauncherPosition   @default(BOTTOM_RIGHT)
   displayStyle              WidgetDisplayStyle @default(BUBBLE)
-  primaryColor              String           @default("#161616")
+  primaryColor              String             @default("#161616")
   logoUrl                   String?
-  suggestedPrompts          String[]         @default([])
-  privacyNotice             String           @default("Conversations are anonymous and not linked to your identity.")
-  noResultMessage           String           @default("I couldn't find a resource that directly addresses that yet.")
-  maxRecommendations        Int              @default(3)
-  allowInlinePlayback       Boolean          @default(true)
-  showPlatformBranding      Boolean          @default(true)
-  conversationRetentionDays Int              @default(30)
-  createdAt                 DateTime         @default(now())
-  updatedAt                 DateTime         @updatedAt
+  suggestedPrompts          String[]           @default([])
+  privacyNotice             String             @default("Conversations are anonymous and not linked to your identity.")
+  noResultMessage           String             @default("I couldn't find a resource that directly addresses that yet.")
+  maxRecommendations        Int                @default(3)
+  allowInlinePlayback       Boolean            @default(true)
+  showPlatformBranding      Boolean            @default(true)
+  conversationRetentionDays Int                @default(30)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   website       Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
@@ -621,30 +623,30 @@ enum BulkJobStatus {
  * resourceIds, and the UI only needs an aggregate progress bar + one summary line.
  */
 model BulkJob {
-  id              String        @id @default(cuid())
-  organizationId  String
-  type            BulkJobType
-  status          BulkJobStatus @default(PENDING)
-  resourceIds     String[]
-  totalCount      Int
-  processedCount  Int           @default(0)
-  successCount    Int           @default(0)
-  failureCount    Int           @default(0)
+  id                   String        @id @default(cuid())
+  organizationId       String
+  type                 BulkJobType
+  status               BulkJobStatus @default(PENDING)
+  resourceIds          String[]
+  totalCount           Int
+  processedCount       Int           @default(0)
+  successCount         Int           @default(0)
+  failureCount         Int           @default(0)
   // Exactly which of resourceIds are done so far -- not derivable from processedCount
   // alone once work resumes across multiple chunked invocations (see
   // resource-pipeline.ts's runBulkJob), since concurrent workers can finish items out
   // of resourceIds' original order.
-  processedResourceIds String[] @default([])
+  processedResourceIds String[]      @default([])
   // FIND_LINKS/INCLUDE_LINKS-specific running total (links discovered / links
   // included) folded into resultSummary once the job fully completes -- generic
   // rather than two separate fields since only one job type's summary needs it at a
   // time.
-  extraCount      Int           @default(0)
-  resultSummary   String?
-  errorMessage    String?
-  createdByUserId String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  extraCount           Int           @default(0)
+  resultSummary        String?
+  errorMessage         String?
+  createdByUserId      String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -727,7 +729,9 @@ model ConversationMessage {
 // Actions, Audit
 // ---------------------------------------------------------------------------
 
-/** Quick-action buttons shown alongside the chat when a visitor opens the widget (Give, Contact, Service times, ...). Display-only -- never matched against a visitor's chat message, see OrganizationalLink for that. */
+/**
+ * Quick-action buttons shown alongside the chat when a visitor opens the widget (Give, Contact, Service times, ...). Display-only -- never matched against a visitor's chat message, see OrganizationalLink for that.
+ */
 model ActionLink {
   id             String   @id @default(cuid())
   organizationId String
@@ -895,13 +899,41 @@ model PrayerRequest {
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
 
-  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  account      PrayerWallAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  website      Website?          @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account      PrayerWallAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  website      Website?             @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  replies      PrayerRequestReply[]
 
   @@index([organizationId])
   @@index([accountId])
   @@index([websiteId])
+}
+
+/**
+ * A one-way transactional email sent by staff directly to a request's submitter --
+ * not a live two-way thread (see prayer-service.ts's recordReply). Kept as its own
+ * row rather than folded into PrayerRequest.internalNotes, which is explicitly
+ * staff-only and never sent to anyone -- this is a durable record of what was
+ * actually emailed to a real person, by whom, and when. Requires the
+ * prayerRequestReplies feature (Growth+), same gate as internalPrayerNotes.
+ */
+model PrayerRequestReply {
+  id             String   @id @default(cuid())
+  organizationId String
+  requestId      String
+  // The staff member who sent it. onDelete: SetNull (not Cascade) -- same durable-
+  // record reasoning as Testimony.createdByUserId: the reply and its audit trail
+  // should outlive the staff account that sent it.
+  staffUserId    String?
+  message        String
+  createdAt      DateTime @default(now())
+
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  prayerRequest PrayerRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  staffUser     User?         @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([requestId])
 }
 
 /**
@@ -912,40 +944,40 @@ model PrayerRequest {
  * decide which fields a given caller is allowed to set.
  */
 model Testimony {
-  id             String   @id @default(cuid())
-  organizationId String
+  id                String   @id @default(cuid())
+  organizationId    String
   // Same convention as PrayerRequest.websiteId: null = org-level default wall,
   // set = a specific campus's wall. onDelete: SetNull for the same reason.
-  websiteId      String?
+  websiteId         String?
   // Set for visitor submissions; null for staff-added featured testimonies.
   // onDelete: SetNull (not Cascade like PrayerRequest.accountId) -- a testimony is
   // durable public content that shouldn't vanish just because the submitter's
   // login was later removed.
-  accountId      String?
-  message        String
+  accountId         String?
+  message           String
   // Only ever set on isFeatured rows -- visitor submissions attribute via the
   // account relation instead (display name/email), same pattern as
   // PrayerRequest.isAnonymous controlling attribution at render time.
   authorDisplayName String?
-  isFeatured     Boolean  @default(false)
+  isFeatured        Boolean  @default(false)
   // Visitor submissions publish immediately (no pre-approval queue); staff can
   // hide via this flag afterward through the moderation page. Featured
   // testimonies default to public too.
-  isPublic       Boolean  @default(true)
+  isPublic          Boolean  @default(true)
   // Only ever set on isFeatured rows. Stored as both the raw URL (so the admin
   // edit form can prefill it) and pre-computed at write time -- same "store
   // both, never parse on read" pattern as YouTubeProvider.ts.
-  youtubeUrl      String?
-  youtubeVideoId  String?
-  youtubeEmbedUrl String?
+  youtubeUrl        String?
+  youtubeVideoId    String?
+  youtubeEmbedUrl   String?
   // Display order among isFeatured rows only (ActionLink.order pattern) --
   // visitor submissions always sort by createdAt instead.
-  order          Int      @default(0)
+  order             Int      @default(0)
   // Staff member who added a featured testimony. onDelete: SetNull for the same
   // durable-public-content reasoning as accountId above.
-  createdByUserId String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdByUserId   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   website      Website?           @relation(fields: [websiteId], references: [id], onDelete: SetNull)

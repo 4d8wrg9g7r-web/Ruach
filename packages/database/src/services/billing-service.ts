@@ -7,6 +7,7 @@ export type FeatureFlag =
   | "prayerCategories"
   | "prayerTeamNotifications"
   | "internalPrayerNotes"
+  | "prayerRequestReplies"
   | "multipleModerators"
   | "advancedRolesPermissions"
   | "campusScopedContentLibraries"
@@ -21,6 +22,7 @@ const GROWTH_FEATURES: FeatureFlag[] = [
   "prayerCategories",
   "prayerTeamNotifications",
   "internalPrayerNotes",
+  "prayerRequestReplies",
   "multipleModerators",
   "guidedOnboarding",
 ];

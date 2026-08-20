@@ -15,6 +15,17 @@ describe("ConsoleEmailProvider", () => {
     expect(line).toContain("Test");
     logSpy.mockRestore();
   });
+
+  it("includes replyTo in the logged line when provided", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const provider = new ConsoleEmailProvider();
+
+    await provider.sendEmail({ to: "someone@example.org", subject: "Test", text: "Hello", replyTo: "staff@church.org" });
+
+    const [line] = logSpy.mock.calls[0]!;
+    expect(line).toContain("replyTo=staff@church.org");
+    logSpy.mockRestore();
+  });
 });
 
 describe("getEmailProvider", () => {

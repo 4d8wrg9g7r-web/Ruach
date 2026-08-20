@@ -209,12 +209,16 @@ export async function markForwarded(organizationId: string, requestId: string) {
 // intentionally have no accountId check: any request in the org is fair game.
 // ---------------------------------------------------------------------------
 
-/** Every request for the org, not just public ones -- the staff review surface, unlike listPublicPrayerRequests. Includes which campus (if any) it came through. */
+/** Every request for the org, not just public ones -- the staff review surface, unlike listPublicPrayerRequests. Includes which campus (if any) it came through, and any staff replies already sent (newest first). */
 export async function listPrayerRequestsForModeration(organizationId: string) {
   return tenantDb.prayerRequest.findMany({
     where: { organizationId },
     orderBy: { createdAt: "desc" },
-    include: { account: { select: { displayName: true, email: true } }, website: { select: { name: true } } },
+    include: {
+      account: { select: { displayName: true, email: true } },
+      website: { select: { name: true } },
+      replies: { orderBy: { createdAt: "desc" }, include: { staffUser: { select: { name: true, email: true } } } },
+    },
   });
 }
 
@@ -244,4 +248,19 @@ export async function setCategory(organizationId: string, requestId: string, cat
 /** Gated by the org's plan having the internalPrayerNotes feature -- callers are responsible for that check. Never rendered on any public/submitter-facing page. */
 export async function setInternalNotes(organizationId: string, requestId: string, notes: string | null) {
   return tenantDb.prayerRequest.updateMany({ where: { id: requestId, organizationId }, data: { internalNotes: notes } });
+}
+
+/**
+ * Records the audit-trail row for a reply the caller has already emailed to the
+ * submitter -- see sendReplyAction in prayer-wall/page.tsx, which sends via
+ * getEmailProvider() first and only calls this once that succeeds. Gated by the
+ * org's plan having the prayerRequestReplies feature -- caller's responsibility.
+ */
+export async function recordReply(params: {
+  organizationId: string;
+  requestId: string;
+  staffUserId: string | null;
+  message: string;
+}) {
+  return tenantDb.prayerRequestReply.create({ data: params });
 }

@@ -24,6 +24,7 @@ const FEATURE_LABELS: Record<billingService.FeatureFlag, string> = {
   prayerCategories: "Prayer request categories",
   prayerTeamNotifications: "Prayer team notifications",
   internalPrayerNotes: "Internal prayer notes",
+  prayerRequestReplies: "Reply to requests by email",
   multipleModerators: "Multiple prayer moderators",
   advancedRolesPermissions: "Advanced roles & permissions",
   campusScopedContentLibraries: "Campus-specific content libraries",
