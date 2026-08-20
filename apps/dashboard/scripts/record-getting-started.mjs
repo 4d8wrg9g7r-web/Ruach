@@ -83,7 +83,11 @@ await record("resource-import", async (page) => {
   await pause(page, 700);
   await page.getByRole("tab", { name: "Paste a URL" }).click();
   await pause(page, 500);
-  const url = page.getByPlaceholder("https://...");
+  // Scoped to the form containing "Analyze Resource" -- the Organizational Links
+  // card further down this same page has its own URL field with the identical
+  // "https://..." placeholder, so the bare getByPlaceholder used to match both and
+  // hang waiting for an unambiguous target.
+  const url = page.locator("form").filter({ has: page.getByRole("button", { name: "Analyze Resource" }) }).getByPlaceholder("https://...");
   await url.click();
   await url.pressSequentially("https://www.youtube.com/watch?v=dQw4w9WgXcQ", { delay: 30 });
   await pause(page, 900);
