@@ -17,7 +17,8 @@
     "db:generate": "pnpm --filter @ruach/database prisma generate",
     "db:seed": "pnpm --filter @ruach/database db:seed",
     "db:studio": "pnpm --filter @ruach/database prisma studio",
-    "tenant-check": "bash scripts/check-tenant-scoping.sh"
+    "tenant-check": "bash scripts/check-tenant-scoping.sh",
+    "deploy:prod": "bash scripts/deploy-prod.sh"
   },
   "devDependencies": {
     "prettier": "^3.3.3",
