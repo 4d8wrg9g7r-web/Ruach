@@ -66,7 +66,7 @@ const HOW_STEPS = [
   {
     number: 3,
     title: "Add Ruach to your website",
-    description: "Install the widget with a simple embed. Customize the name, colors, welcome message, and suggested questions.",
+    description: "Install the widget with a simple embed. Choose a display style, then customize the name, colors, welcome message, and suggested questions.",
     icon: <Code2 size={18} />,
   },
   {
@@ -96,7 +96,7 @@ const FEATURES = [
   {
     icon: <Palette size={18} />,
     title: "Make it feel like your church.",
-    description: "Set your accent color, logo, assistant name, and welcome message so the experience feels native to your site.",
+    description: "Choose from 10 widget display styles, then set your accent color, logo, assistant name, and welcome message so the experience feels native to your site.",
   },
   {
     icon: <HeartHandshake size={18} />,

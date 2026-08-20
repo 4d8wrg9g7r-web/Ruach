@@ -49,7 +49,7 @@ const LIFECYCLE = [
   {
     icon: <Palette size={18} />,
     title: "Branding and customization",
-    description: "Set an accent color, logo, assistant name, welcome message, and suggested questions so it feels native to your site.",
+    description: "Choose from 10 widget display styles, set an accent color, logo, assistant name, welcome message, and suggested questions so it feels native to your site.",
   },
   {
     icon: <RefreshCw size={18} />,

@@ -61,8 +61,9 @@ const CATEGORIES: FeatureCategory[] = [
   {
     title: "Branding and Appearance",
     items: [
-      { name: "Accent color" },
-      { name: "Church logo" },
+      { name: "10 widget display styles" },
+      { name: "Accent color", plan: "Growth+" },
+      { name: "Church logo", plan: "Growth+" },
       { name: "Assistant name" },
       { name: "Welcome message" },
       { name: "Suggested questions", plan: "Growth+" },

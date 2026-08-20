@@ -116,6 +116,11 @@ await record("widget-customize", async (page) => {
   await page.locator('a[href^="/widgets/"]').first().click();
   await page.waitForLoadState("networkidle");
   await pause(page, 400);
+  // Picking a style first so the live preview's shell visibly changes on camera --
+  // targets the radio by its value (the WidgetDisplayStyle key) rather than its
+  // label text, since the label also contains the style's description.
+  await page.locator('input[name="displayStyle"][value="GREETER"]').click({ force: true });
+  await pause(page, 700);
   const welcome = page.getByLabel("Welcome message");
   await welcome.click();
   await welcome.fill("");

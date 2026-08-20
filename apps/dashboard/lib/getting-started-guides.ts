@@ -79,12 +79,13 @@ export const GETTING_STARTED_GUIDES: GettingStartedGuide[] = [
   {
     id: "customize",
     title: "Customize and install your widget",
-    summary: "Set the assistant's name, welcome message, and brand color, then copy the install snippet onto your site.",
+    summary: "Pick a display style, set the assistant's name, welcome message, and brand color, then copy the install snippet onto your site.",
     image: "/getting-started/widget-customize.gif",
     imageAlt: "A widget's customize panel with live preview, and the installation embed snippet at the bottom",
     steps: [
       "Open a widget from the Widgets page.",
-      "Set the assistant name, welcome message, suggested prompts, and brand color -- the preview on the right updates live.",
+      "Pick a display style -- a corner bubble, slide-in panel, full-screen sheet, and 7 others -- the preview on the right shows it open and closed.",
+      "Set the assistant name, welcome message, and suggested prompts. Brand color and logo are available on Growth plans and above.",
       "Add Standard Links (Give, Contact, Service times, ...) -- quick-action buttons always visible when a visitor opens the widget.",
       "Click Publish Changes.",
       "Copy the <script> snippet from the Installation card and paste it into your website's <head>.",

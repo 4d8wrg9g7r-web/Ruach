@@ -45,7 +45,7 @@ const PRODUCT: FAQItem[] = [
   {
     question: "Can we customize the assistant?",
     answer:
-      "Yes -- accent color, logo, assistant name, welcome message, and (on Growth and above) suggested questions can all be set from your dashboard.",
+      "Yes -- pick from 10 widget display styles, and set the assistant name and welcome message, all on every plan. Accent color, logo, and suggested questions are available on Growth and above.",
   },
   {
     question: "Can we use more than one widget?",
