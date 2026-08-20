@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { z } from "zod";
 import { actionLinkService, billingService, widgetService } from "@ruach/database";
+import { WidgetDisplayStyleSchema } from "@ruach/shared-types";
 import { ActionLinkList } from "../../../../components/ActionLinkList";
 import { CopySnippetButton } from "../../../../components/CopySnippetButton";
 import { WidgetCustomizePanel } from "../../../../components/WidgetCustomizePanel";
@@ -22,28 +23,38 @@ async function updateWidgetAction(widgetId: string, formData: FormData) {
   await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
 
   const plan = billingService.getPlan(organization.planKey);
+  const canCustomizeAppearance = billingService.planHasFeature(organization.planKey, "advancedWidgetCustomization");
 
-  // Disabled form fields never submit, so a disabled checkbox/textarea in the UI
-  // already degrades to "unset" here -- these checks are the real enforcement
-  // (defense in depth against a raw POST that skips the UI entirely), not merely
-  // mirroring what the disabled inputs already do.
-  const suggestedPrompts = billingService.planHasFeature(organization.planKey, "advancedWidgetCustomization")
+  const existingWidget = await widgetService.getWidget(organization.id, widgetId);
+  if (!existingWidget) throw new Error("Widget not found");
+
+  // Disabled form fields never submit, so a disabled checkbox/textarea/color-picker
+  // in the UI already degrades to "unset" here -- these checks are the real
+  // enforcement (defense in depth against a raw POST that skips the UI entirely),
+  // not merely mirroring what the disabled inputs already do. Below plan, every
+  // gated field falls back to whatever the widget already had, not a hardcoded
+  // default -- an org that had a custom color/logo set before a downgrade keeps
+  // seeing it, just can't change it further without upgrading again.
+  const suggestedPrompts = canCustomizeAppearance
     ? String(formData.get("suggestedPrompts") ?? "")
         .split("\n")
         .map((p) => p.trim())
         .filter(Boolean)
     : [];
-
-  const existingWidget = await widgetService.getWidget(organization.id, widgetId);
-  if (!existingWidget) throw new Error("Widget not found");
+  const primaryColor = canCustomizeAppearance ? String(formData.get("primaryColor") ?? "#161616") : existingWidget.primaryColor;
 
   let logoUrl = existingWidget.logoUrl;
-  const logoFile = formData.get("logoFile");
-  if (formData.get("removeLogo") === "on") {
-    logoUrl = null;
-  } else if (logoFile instanceof File && logoFile.size > 0) {
-    logoUrl = await saveLogoUpload(organization.id, logoFile);
+  if (canCustomizeAppearance) {
+    const logoFile = formData.get("logoFile");
+    if (formData.get("removeLogo") === "on") {
+      logoUrl = null;
+    } else if (logoFile instanceof File && logoFile.size > 0) {
+      logoUrl = await saveLogoUpload(organization.id, logoFile);
+    }
   }
+
+  const displayStyleParsed = WidgetDisplayStyleSchema.safeParse(formData.get("displayStyle"));
+  const displayStyle = displayStyleParsed.success ? displayStyleParsed.data : existingWidget.displayStyle;
 
   await widgetService.updateWidget(organization.id, widgetId, {
     assistantName: String(formData.get("assistantName") ?? ""),
@@ -51,7 +62,8 @@ async function updateWidgetAction(widgetId: string, formData: FormData) {
     inputPlaceholder: String(formData.get("inputPlaceholder") ?? ""),
     launcherLabel: String(formData.get("launcherLabel") ?? ""),
     launcherPosition: formData.get("launcherPosition") === "BOTTOM_LEFT" ? "BOTTOM_LEFT" : "BOTTOM_RIGHT",
-    primaryColor: String(formData.get("primaryColor") ?? "#161616"),
+    displayStyle,
+    primaryColor,
     logoUrl,
     suggestedPrompts,
     privacyNotice: String(formData.get("privacyNotice") ?? ""),

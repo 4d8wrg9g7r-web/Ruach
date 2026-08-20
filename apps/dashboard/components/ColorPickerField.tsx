@@ -10,6 +10,7 @@ interface ColorPickerFieldProps {
   defaultValue: string;
   /** Fired with the current valid hex value (never a partial/invalid typed string) whenever it changes -- only used by callers building a live preview; omitted everywhere else. */
   onChange?: (hex: string) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -20,7 +21,7 @@ interface ColorPickerFieldProps {
  * valid ways to set the same field. Only the text input carries `name` so the form
  * submits one value; the swatch is a secondary control kept in sync via state.
  */
-export function ColorPickerField({ label, name, defaultValue, onChange }: ColorPickerFieldProps) {
+export function ColorPickerField({ label, name, defaultValue, onChange, disabled = false }: ColorPickerFieldProps) {
   const [value, setValue] = useState(defaultValue);
   const swatchValue = HEX_RE.test(value) ? value : defaultValue;
 
@@ -38,7 +39,8 @@ export function ColorPickerField({ label, name, defaultValue, onChange }: ColorP
           value={swatchValue}
           onChange={(e) => setValue(e.target.value)}
           aria-label={`${label} swatch`}
-          className="h-10 w-12 shrink-0 rounded-sm border border-border-strong bg-surface p-1"
+          disabled={disabled}
+          className="h-10 w-12 shrink-0 rounded-sm border border-border-strong bg-surface p-1 disabled:opacity-50"
         />
         <input
           type="text"
@@ -47,7 +49,8 @@ export function ColorPickerField({ label, name, defaultValue, onChange }: ColorP
           onChange={(e) => setValue(e.target.value)}
           placeholder="#b87b38"
           maxLength={7}
-          className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+          disabled={disabled}
+          className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50"
         />
       </div>
     </label>

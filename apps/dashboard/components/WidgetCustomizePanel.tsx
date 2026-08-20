@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WIDGET_DISPLAY_STYLES, type WidgetDisplayStyle } from "@ruach/shared-types";
 import { ColorPickerField } from "./ColorPickerField";
 import { LogoUploadField } from "./LogoUploadField";
 import { SubmitButton } from "./SubmitButton";
-import { WidgetPreviewFrame } from "./WidgetPreviewFrame";
+import { WidgetShellPreview } from "./WidgetShellPreview";
+import { WidgetStyleField } from "./WidgetStyleField";
 import { Card } from "./ui/Card";
 import { Input, Select, Textarea } from "./ui/Input";
 import { useToast } from "./ui/Toast";
@@ -23,6 +25,7 @@ interface WidgetForPanel {
   launcherLabel: string;
   logoUrl: string | null;
   launcherPosition: string;
+  displayStyle: WidgetDisplayStyle;
   allowInlinePlayback: boolean;
   showPlatformBranding: boolean;
 }
@@ -38,15 +41,18 @@ interface WidgetCustomizePanelProps {
 
 /**
  * Houses the Customize form and the preview panel together so they can share live
- * color/logo state -- the preview used to only ever show the last *saved* state
- * (WidgetPreviewFrame just iframes the real embed page), this makes it update as
- * you edit, before "Publish Changes" is ever clicked.
+ * color/logo/style state, updating the preview as you edit rather than only after
+ * "Publish Changes." Uses WidgetShellPreview (not the simpler WidgetPreviewFrame
+ * still used on the dashboard overview) since a display-style choice specifically
+ * needs the launcher/panel shell shown, not just the chat content inside it.
  */
 export function WidgetCustomizePanel({ widget, updateAction, entitlements, children }: WidgetCustomizePanelProps) {
   const [previewColor, setPreviewColor] = useState(widget.primaryColor);
   const [previewLogo, setPreviewLogo] = useState<string | null>(widget.logoUrl);
+  const [previewStyle, setPreviewStyle] = useState<WidgetDisplayStyle>(widget.displayStyle);
   const [debouncedColor, setDebouncedColor] = useState(previewColor);
   const { showToast } = useToast();
+  const styleInfo = WIDGET_DISPLAY_STYLES.find((s) => s.key === previewStyle) ?? WIDGET_DISPLAY_STYLES[0]!;
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedColor(previewColor), PREVIEW_DEBOUNCE_MS);
@@ -103,26 +109,56 @@ export function WidgetCustomizePanel({ widget, updateAction, entitlements, child
               <Input name="privacyNotice" defaultValue={widget.privacyNotice} className="mt-1 block" />
             </label>
 
+            <h3 className="mt-2 border-t border-border pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Display style</h3>
+            <WidgetStyleField name="displayStyle" defaultValue={widget.displayStyle} onChange={setPreviewStyle} />
+            {styleInfo.key === "INLINE" && (
+              <p className="-mt-1 rounded-md bg-surface-warm px-3 py-2 text-xs text-ink-secondary">
+                Inline requires a small change to your embed code -- add{" "}
+                <code className="rounded bg-surface px-1 py-0.5">&lt;div id=&quot;ruach-widget-inline&quot;&gt;&lt;/div&gt;</code>{" "}
+                wherever you want the widget to appear on the page. If that element isn&rsquo;t found, visitors see the
+                classic bubble instead.
+              </p>
+            )}
+            {styleInfo.supportsLauncherPosition && (
+              <label className="text-sm text-ink-secondary">
+                Launcher position
+                <Select name="launcherPosition" defaultValue={widget.launcherPosition} className="mt-1 block">
+                  <option value="BOTTOM_RIGHT">Bottom right</option>
+                  <option value="BOTTOM_LEFT">Bottom left</option>
+                </Select>
+              </label>
+            )}
+
             <h3 className="mt-2 border-t border-border pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Appearance</h3>
             <div className="grid grid-cols-2 gap-4">
-              <ColorPickerField label="Brand color" name="primaryColor" defaultValue={widget.primaryColor} onChange={setPreviewColor} />
+              <div>
+                <ColorPickerField
+                  label="Brand color"
+                  name="primaryColor"
+                  defaultValue={widget.primaryColor}
+                  onChange={setPreviewColor}
+                  disabled={!entitlements.advancedWidgetCustomization}
+                />
+                {!entitlements.advancedWidgetCustomization && (
+                  <span className="mt-1 block text-xs text-ink-muted">Upgrade your plan to change the brand color.</span>
+                )}
+              </div>
               <label className="text-sm text-ink-secondary">
                 Launcher label
                 <Input name="launcherLabel" defaultValue={widget.launcherLabel} className="mt-1 block" />
               </label>
             </div>
-            <LogoUploadField
-              label="Logo (optional -- shown in place of your initials)"
-              currentUrl={widget.logoUrl}
-              onFileSelected={(dataUrl) => setPreviewLogo(dataUrl === undefined ? widget.logoUrl : dataUrl)}
-            />
-            <label className="text-sm text-ink-secondary">
-              Launcher position
-              <Select name="launcherPosition" defaultValue={widget.launcherPosition} className="mt-1 block">
-                <option value="BOTTOM_RIGHT">Bottom right</option>
-                <option value="BOTTOM_LEFT">Bottom left</option>
-              </Select>
-            </label>
+            <div>
+              <LogoUploadField
+                label="Logo (optional -- shown in place of your initials)"
+                currentUrl={widget.logoUrl}
+                onFileSelected={(dataUrl) => setPreviewLogo(dataUrl === undefined ? widget.logoUrl : dataUrl)}
+                disabled={!entitlements.advancedWidgetCustomization}
+              />
+              {!entitlements.advancedWidgetCustomization && (
+                <span className="mt-1 block text-xs text-ink-muted">Upgrade your plan to set a logo.</span>
+              )}
+            </div>
 
             <h3 className="mt-2 border-t border-border pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Behavior</h3>
             <div className="flex flex-col gap-2">
@@ -156,9 +192,14 @@ export function WidgetCustomizePanel({ widget, updateAction, entitlements, child
       <div className="min-w-0">
         <div className="mb-3">
           <h2 className="text-sm font-semibold text-ink">Widget Preview</h2>
-          <p className="text-xs text-ink-muted">This is how your widget looks to visitors.</p>
+          <p className="text-xs text-ink-muted">This is how your widget looks to visitors. Click it to see it open and close.</p>
         </div>
-        <WidgetPreviewFrame publicWidgetId={widget.publicWidgetId} previewColor={debouncedColor} previewLogo={previewLogo} />
+        <WidgetShellPreview
+          publicWidgetId={widget.publicWidgetId}
+          previewColor={debouncedColor}
+          previewLogo={previewLogo}
+          displayStyle={previewStyle}
+        />
       </div>
     </div>
   );

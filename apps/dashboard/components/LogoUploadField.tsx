@@ -21,6 +21,7 @@ interface LogoUploadFieldProps {
    * widget builder, Settings' prayer-wall card); omitted everywhere else.
    */
   onFileSelected?: (dataUrl: string | null | undefined) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export function LogoUploadField({
   name = "logoFile",
   removeFieldName = "removeLogo",
   onFileSelected,
+  disabled = false,
 }: LogoUploadFieldProps) {
   const inputId = useId();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export function LogoUploadField({
             <label
               htmlFor={inputId}
               className={`rounded-sm bg-surface-warm px-3 py-1.5 text-xs font-medium text-accent-dark transition-colors duration-180 hover:bg-accent/15 ${
-                markedForRemoval ? "pointer-events-none opacity-50" : "cursor-pointer"
+                markedForRemoval || disabled ? "pointer-events-none opacity-50" : "cursor-pointer"
               }`}
             >
               {currentUrl || previewUrl ? "Change logo" : "Choose File"}
@@ -89,7 +91,7 @@ export function LogoUploadField({
             type="file"
             name={name}
             accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
-            disabled={markedForRemoval}
+            disabled={markedForRemoval || disabled}
             onChange={(e) => {
               const file = e.currentTarget.files?.[0];
               setPreviewUrl(file ? URL.createObjectURL(file) : null);
@@ -109,11 +111,12 @@ export function LogoUploadField({
           />
           <p className="text-[11px] text-ink-muted">Recommended: square, at least 256&times;256px (PNG, JPG, WEBP, GIF, or SVG)</p>
           {currentUrl && (
-            <label className="flex w-fit items-center gap-1.5 text-xs text-ink-muted">
+            <label className={`flex w-fit items-center gap-1.5 text-xs text-ink-muted ${disabled ? "pointer-events-none opacity-50" : ""}`}>
               <input
                 type="checkbox"
                 name={removeFieldName}
                 checked={markedForRemoval}
+                disabled={disabled}
                 onChange={(e) => {
                   setMarkedForRemoval(e.currentTarget.checked);
                   if (e.currentTarget.checked) setPreviewUrl(null);

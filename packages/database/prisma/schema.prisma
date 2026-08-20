@@ -297,6 +297,24 @@ enum LauncherPosition {
   BOTTOM_LEFT
 }
 
+// Ten shell treatments widget-loader.js knows how to mount (see that file's
+// buildXShell functions) -- launcherPosition still applies within the styles where
+// left/right genuinely varies (BUBBLE, GREETER, LINK); the rest are inherently
+// edge/center-anchored (SLIDE, TAB, DOCK, RIBBON, PALETTE, SHEET) or have no
+// launcher at all (INLINE), and ignore it.
+enum WidgetDisplayStyle {
+  BUBBLE
+  SLIDE
+  INLINE
+  DOCK
+  PALETTE
+  GREETER
+  SHEET
+  TAB
+  RIBBON
+  LINK
+}
+
 model WidgetConfiguration {
   id                        String           @id @default(cuid())
   organizationId            String
@@ -309,6 +327,7 @@ model WidgetConfiguration {
   inputPlaceholder          String           @default("Ask a question...")
   launcherLabel             String           @default("Ask a question")
   launcherPosition          LauncherPosition @default(BOTTOM_RIGHT)
+  displayStyle              WidgetDisplayStyle @default(BUBBLE)
   primaryColor              String           @default("#161616")
   logoUrl                   String?
   suggestedPrompts          String[]         @default([])

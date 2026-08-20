@@ -35,6 +35,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ publicW
       inputPlaceholder: widget.inputPlaceholder,
       launcherLabel: widget.launcherLabel,
       launcherPosition: widget.launcherPosition,
+      displayStyle: widget.displayStyle,
       primaryColor: widget.primaryColor,
       suggestedPrompts: widget.suggestedPrompts,
       privacyNotice: widget.privacyNotice,

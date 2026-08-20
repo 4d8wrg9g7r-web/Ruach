@@ -1,4 +1,4 @@
-import type { LauncherPosition } from "@prisma/client";
+import type { LauncherPosition, WidgetDisplayStyle } from "@prisma/client";
 import { rawDb, tenantDb } from "../client";
 
 export async function createWidget(params: {
@@ -43,6 +43,7 @@ export async function updateWidget(
     inputPlaceholder: string;
     launcherLabel: string;
     launcherPosition: LauncherPosition;
+    displayStyle: WidgetDisplayStyle;
     primaryColor: string;
     logoUrl: string | null;
     suggestedPrompts: string[];
