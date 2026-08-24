@@ -70,12 +70,19 @@ const PUBLIC_PREFIXES = [
   "/prayer",
   // Uploaded logos, rendered on public prayer-wall/widget-embed pages with no session.
   "/uploads",
+  // Static marketing assets (e.g. the homepage's "Built with" church logo) --
+  // served via next/image, whose server-side fetch needs the raw bytes, not a
+  // 307-to-login. Same category as /uploads above, just build-time instead of
+  // user-uploaded.
+  "/brand",
 ];
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
   if (PUBLIC_ROOT_IMAGE_PATTERN.test(pathname)) return true;
-  return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return PUBLIC_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
 }
 
 export default auth((req) => {

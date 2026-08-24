@@ -11,7 +11,52 @@ export function timeAgo(date: Date): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export interface GroupedByText<T> {
+  /** Original-casing text of the most recent occurrence -- what actually renders. */
+  display: string;
+  count: number;
+  /** The most recent original item, for outcome/id/etc. fields callers still need. */
+  mostRecent: T;
+}
+
+/**
+ * Collapses visitor questions/gaps that are effectively the same text asked more
+ * than once into a single row with a count, keeping the most recent occurrence's
+ * exact wording and any other fields (outcome, id) it carries. Without this, a
+ * handful of common questions asked repeatedly bury the genuinely new ones under
+ * duplicate rows once a widget has any real traffic -- see Analytics' "Recent
+ * questions" and "Content gaps" lists, the two places this matters.
+ */
+export function groupRepeatedText<T>(
+  items: T[],
+  getText: (item: T) => string,
+  getDate: (item: T) => Date,
+): GroupedByText<T>[] {
+  const groups = new Map<string, GroupedByText<T>>();
+  for (const item of items) {
+    const text = getText(item);
+    const key = text.trim().toLowerCase().replace(/\s+/g, " ");
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, { display: text, count: 1, mostRecent: item });
+    } else {
+      existing.count += 1;
+      if (getDate(item) > getDate(existing.mostRecent)) {
+        existing.display = text;
+        existing.mostRecent = item;
+      }
+    }
+  }
+  return Array.from(groups.values()).sort(
+    (a, b) => getDate(b.mostRecent).getTime() - getDate(a.mostRecent).getTime(),
+  );
 }
 
 export function greetingForHour(hour: number): string {
@@ -68,7 +113,10 @@ export function formatDurationLabel(seconds: number | null): string | null {
   return minutes < 1 ? "<1 min" : `${minutes} min`;
 }
 
-export const RESOURCE_TYPE_FILTERS: { key: ResourceTypeGroup | "ALL"; label: string }[] = [
+export const RESOURCE_TYPE_FILTERS: {
+  key: ResourceTypeGroup | "ALL";
+  label: string;
+}[] = [
   { key: "ALL", label: "All" },
   { key: "VIDEOS", label: "Videos" },
   { key: "PODCASTS", label: "Podcasts" },

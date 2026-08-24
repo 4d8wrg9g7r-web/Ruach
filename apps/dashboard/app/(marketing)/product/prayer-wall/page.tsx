@@ -1,6 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Bell, CheckCircle2, Eye, EyeOff, Heart, Layers, Lock, ShieldCheck, UserX } from "lucide-react";
+import {
+  Bell,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Heart,
+  Layers,
+  Lock,
+  ShieldCheck,
+  UserX,
+} from "lucide-react";
 import { EyebrowLabel } from "../../../../components/marketing/EyebrowLabel";
 import { FadeIn } from "../../../../components/marketing/FadeIn";
 import { PrayerWallPreview } from "../../../../components/marketing/PrayerWallPreview";
@@ -9,7 +19,8 @@ import { pageMetadata } from "../../../../lib/marketing/page-metadata";
 
 export const metadata: Metadata = pageMetadata({
   title: "Prayer Wall",
-  description: "Give your community a thoughtful way to share prayer requests, respond in prayer, and celebrate answered prayers -- while staying in control of what's public.",
+  description:
+    "Give your community a thoughtful way to share prayer requests, respond in prayer, and celebrate answered prayers -- while staying in control of what's public.",
   path: "/product/prayer-wall",
 });
 
@@ -17,42 +28,50 @@ const SECTIONS = [
   {
     icon: <Heart size={18} />,
     title: "Community prayer",
-    description: "A shared space where the church can see what others are walking through and respond -- not a suggestion box that disappears into an inbox.",
+    description:
+      "A shared space where the church can see what others are walking through and respond -- not a suggestion box that disappears into an inbox.",
   },
   {
     icon: <Eye size={18} />,
     title: "Public, private, and anonymous requests",
-    description: "Every person chooses how visible their request is: shared publicly, kept private for staff, or posted anonymously so their name never appears.",
+    description:
+      "Every person chooses how visible their request is: shared publicly, kept private for staff, or posted anonymously so their name never appears.",
   },
   {
     icon: <ShieldCheck size={18} />,
     title: "Moderation workflow",
-    description: "Nothing reaches the public wall unreviewed. Staff and prayer-team moderators approve, categorize, and manage every request before it's visible.",
+    description:
+      "Nothing reaches the public wall unreviewed. Staff and prayer-team moderators approve, categorize, and manage every request before it's visible.",
   },
   {
     icon: <Heart size={18} />,
     title: "“I Prayed” engagement",
-    description: "A simple, low-pressure way for the community to respond -- letting the person who submitted a request know they weren't overlooked.",
+    description:
+      "A simple, low-pressure way for the community to respond -- letting the person who submitted a request know they weren't overlooked.",
   },
   {
     icon: <CheckCircle2 size={18} />,
     title: "Answered prayer stories",
-    description: "Requests can be marked answered, giving the congregation a place to see and celebrate what God has done together.",
+    description:
+      "Requests can be marked answered, giving the congregation a place to see and celebrate what God has done together.",
   },
   {
     icon: <Bell size={18} />,
     title: "Notifications for prayer teams",
-    description: "New submissions can forward to your prayer team's email, so nothing waits for someone to remember to check the dashboard.",
+    description:
+      "New submissions can forward to your prayer team's email, so nothing waits for someone to remember to check the dashboard.",
   },
   {
     icon: <Layers size={18} />,
     title: "Campus-specific walls",
-    description: "Multi-campus churches can give each campus its own wall, with its own branding and forwarding, alongside a shared church-wide wall.",
+    description:
+      "Multi-campus churches can give each campus its own wall, with its own branding and forwarding, alongside a shared church-wide wall.",
   },
   {
     icon: <Lock size={18} />,
     title: "Privacy and sensitive information",
-    description: "Private requests are visible only to authorized church staff based on your configuration. This is a moderation and access control system, not a medical or legal confidentiality guarantee.",
+    description:
+      "Private requests are visible only to authorized church staff based on your configuration. This is a moderation and access control system, not a medical or legal confidentiality guarantee.",
   },
 ];
 
@@ -66,8 +85,9 @@ export default function PrayerWallMarketingPage() {
             Create a simple place for your church to pray together.
           </h1>
           <p className="mt-5 text-base leading-relaxed text-ink-secondary">
-            Give your community a thoughtful way to share requests, respond in prayer, and celebrate answered
-            prayers&mdash;while your team remains in control of what is public.
+            Give your community a thoughtful way to share requests, respond in
+            prayer, and celebrate answered prayers&mdash;while your team remains
+            in control of what is public.
           </p>
         </FadeIn>
       </section>
@@ -81,8 +101,12 @@ export default function PrayerWallMarketingPage() {
                   <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
                     {section.icon}
                   </span>
-                  <h3 className="mb-1.5 text-sm font-semibold text-ink">{section.title}</h3>
-                  <p className="text-sm leading-relaxed text-ink-secondary">{section.description}</p>
+                  <h3 className="mb-1.5 text-sm font-semibold text-ink">
+                    {section.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-ink-secondary">
+                    {section.description}
+                  </p>
                 </div>
               </FadeIn>
             ))}
@@ -99,7 +123,7 @@ export default function PrayerWallMarketingPage() {
             <div className="flex items-center gap-2 text-xs font-medium text-ink-muted">
               <EyeOff size={13} /> Anonymous by choice
               <span className="mx-1 text-border-strong">&middot;</span>
-              <UserX size={13} /> No public identity required
+              <UserX size={13} /> Your name is never shown publicly
             </div>
             <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink">
               Ready to give your church a place to pray together?
@@ -108,7 +132,10 @@ export default function PrayerWallMarketingPage() {
               <Link href="/signup" className={buttonClasses("primary", "md")}>
                 Start with Ruach
               </Link>
-              <Link href="/pricing" className={buttonClasses("secondary", "md")}>
+              <Link
+                href="/pricing"
+                className={buttonClasses("secondary", "md")}
+              >
                 See pricing
               </Link>
             </div>

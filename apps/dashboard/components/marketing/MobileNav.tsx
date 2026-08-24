@@ -26,11 +26,13 @@ export function MobileNav() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
+            initial={
+              shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }
+            }
             animate={{ opacity: 1, y: 0 }}
             exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="absolute inset-x-0 top-16 border-b border-border bg-[#f7f6f3] px-5 pb-6 pt-2 shadow-panel"
+            className="absolute inset-x-0 top-16 border-b border-border bg-surface px-5 pb-6 pt-2 shadow-lg"
           >
             <nav className="flex flex-col gap-1">
               {NAV_LINKS.map((link) => (
@@ -45,10 +47,18 @@ export function MobileNav() {
               ))}
             </nav>
             <div className="mt-4 flex flex-col gap-2">
-              <Link href="/login" onClick={() => setOpen(false)} className={buttonClasses("secondary", "md")}>
+              <Link
+                href="/login"
+                onClick={() => setOpen(false)}
+                className={buttonClasses("secondary", "md")}
+              >
                 Sign In
               </Link>
-              <Link href="/signup" onClick={() => setOpen(false)} className={buttonClasses("primary", "md")}>
+              <Link
+                href="/signup"
+                onClick={() => setOpen(false)}
+                className={buttonClasses("primary", "md")}
+              >
                 Start free trial
               </Link>
             </div>

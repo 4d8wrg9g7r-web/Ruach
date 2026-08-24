@@ -9,7 +9,8 @@
     "lint": "echo 'lint: not configured for milestone 1'",
     "typecheck": "tsc --noEmit",
     "test": "echo 'apps/dashboard has no unit tests of its own -- see test:e2e (Playwright)'",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:pricing": "tsx scripts/check-pricing-sync.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
