@@ -24,6 +24,12 @@ export interface ChatPipelineInput {
   noResultMessage: string;
   /** Organization.priorityContentType -- null means no priority, plain relevance-score ranking. See Step 7's doc comment for what this actually does to the sort. */
   priorityContentType: ResourceTypeGroup | null;
+  /** Shown in a bare greeting/capability reply ("Hello! I'm here to help you find..."). */
+  organizationName: string;
+  /** WidgetConfiguration.suggestedPrompts -- reused as the greeting reply's follow-up
+   * pill when the org has configured any, so the suggestion stays grounded in this
+   * org's real content instead of a generic placeholder. */
+  suggestedPrompts: string[];
 }
 
 function formatDurationLabel(seconds: number | null): string | null {
@@ -52,6 +58,47 @@ function cleanExcerpt(excerpt: string): string {
     .trim();
 }
 
+/** Lowercase, strip everything but letters/apostrophes/spaces, collapse whitespace --
+ * enough to match "Hey there!!" and "hey there" the same way without accidentally
+ * matching real content ("hi, do you have anything on grief?" still fails every
+ * pattern below since none of them tolerate trailing words after the greeting). */
+function normalizeForSmallTalk(message: string): string {
+  return message
+    .toLowerCase()
+    .replace(/[^a-z' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Deliberately whole-message patterns (^...$), not substring matches -- a real
+// question that happens to start with "hi" must still reach the real pipeline. Kept
+// as a small curated list rather than an AI classification call: greeting phrasing
+// is bounded enough that a fast, free, deterministic check outperforms spending an
+// AI call (and the org's monthly question quota) on "hello".
+const GREETING_PATTERNS: RegExp[] = [
+  /^(hi|hello|hey|hiya|yo|howdy|greetings)( there)?$/,
+  /^(good )?(morning|afternoon|evening)$/,
+  /^how('?s| is| are) (it going|things|you( doing)?)$/,
+  /^what'?s up$/,
+  /^(what can you (do|help( me)? with)|who are you|what are you|what is this)$/,
+];
+
+const THANKS_PATTERNS: RegExp[] = [
+  /^(ok |okay |alright )?(thanks|thank you|thx|ty)( (so|very) much)?$/,
+  /^(great|awesome|perfect|cool|nice)[, ]*thanks$/,
+  /^appreciate (it|that|you)$/,
+];
+
+type SmallTalkKind = "greeting" | "thanks";
+
+function detectSmallTalk(message: string): SmallTalkKind | null {
+  const normalized = normalizeForSmallTalk(message);
+  if (!normalized || normalized.length > 40) return null;
+  if (GREETING_PATTERNS.some((p) => p.test(normalized))) return "greeting";
+  if (THANKS_PATTERNS.some((p) => p.test(normalized))) return "thanks";
+  return null;
+}
+
 function isValidHttpUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -61,10 +108,22 @@ function isValidHttpUrl(url: string): boolean {
   }
 }
 
-function buttonLabelFor(resourceType: string): ResourceRecommendation["buttonLabel"] {
+function buttonLabelFor(
+  resourceType: string,
+): ResourceRecommendation["buttonLabel"] {
   if (resourceType === "PODCAST" || resourceType === "AUDIO") return "Listen";
-  if (resourceType === "ARTICLE" || resourceType === "DOCUMENT" || resourceType === "DEVOTIONAL") return "Read";
-  if (resourceType === "VIDEO" || resourceType === "SERMON" || resourceType === "COURSE") return "Watch";
+  if (
+    resourceType === "ARTICLE" ||
+    resourceType === "DOCUMENT" ||
+    resourceType === "DEVOTIONAL"
+  )
+    return "Read";
+  if (
+    resourceType === "VIDEO" ||
+    resourceType === "SERMON" ||
+    resourceType === "COURSE"
+  )
+    return "Watch";
   return "Open";
 }
 
@@ -77,18 +136,31 @@ function buttonLabelFor(resourceType: string): ResourceRecommendation["buttonLab
  * grief-related sermon alongside the disclaimer, since dismissing the visitor's
  * actual question entirely isn't the only way to take a safety concern seriously.
  */
-const ACUTE_SAFETY_CATEGORIES = new Set(["SELF_HARM", "IMMEDIATE_DANGER", "CHILD_SAFETY", "MEDICAL_EMERGENCY", "THREATS"]);
+const ACUTE_SAFETY_CATEGORIES = new Set([
+  "SELF_HARM",
+  "IMMEDIATE_DANGER",
+  "CHILD_SAFETY",
+  "MEDICAL_EMERGENCY",
+  "THREATS",
+]);
 
 const SAFETY_MESSAGES: Record<string, string> = {
   SELF_HARM:
     "It sounds like you might be going through something really heavy right now. I'm not able to provide crisis support, but please reach out to a crisis line or someone you trust right away.",
-  IMMEDIATE_DANGER: "If you or someone else is in immediate danger, please contact local emergency services right now.",
-  ABUSE: "What you're describing matters and deserves real support. Please consider reaching out to a local support organization or someone you trust.",
-  THREATS: "This sounds serious. Please contact local authorities or someone you trust right away.",
-  MEDICAL_EMERGENCY: "This sounds like it could be a medical emergency. Please contact emergency services right away.",
-  MENTAL_HEALTH_CRISIS: "It sounds like you're going through a lot right now. Please reach out to a mental health crisis line or someone you trust.",
-  CHILD_SAFETY: "What you're describing is serious. Please contact local authorities or a child-safety organization right away.",
-  OTHER_HIGH_RISK: "This sounds like something that needs more support than I can offer here. Please reach out to someone you trust.",
+  IMMEDIATE_DANGER:
+    "If you or someone else is in immediate danger, please contact local emergency services right now.",
+  ABUSE:
+    "What you're describing matters and deserves real support. Please consider reaching out to a local support organization or someone you trust.",
+  THREATS:
+    "This sounds serious. Please contact local authorities or someone you trust right away.",
+  MEDICAL_EMERGENCY:
+    "This sounds like it could be a medical emergency. Please contact emergency services right away.",
+  MENTAL_HEALTH_CRISIS:
+    "It sounds like you're going through a lot right now. Please reach out to a mental health crisis line or someone you trust.",
+  CHILD_SAFETY:
+    "What you're describing is serious. Please contact local authorities or a child-safety organization right away.",
+  OTHER_HIGH_RISK:
+    "This sounds like something that needs more support than I can offer here. Please reach out to someone you trust.",
 };
 
 /**
@@ -116,7 +188,45 @@ export class ChatPipeline {
         ...base,
         responseType: "ERROR",
         acknowledgment: null,
-        answer: "I'm having trouble reading that message. Could you try rephrasing it?",
+        answer:
+          "I'm having trouble reading that message. Could you try rephrasing it?",
+        resources: [],
+        followUpQuestion: null,
+        suggestedActions: [],
+        safetyCategory: null,
+      });
+    }
+
+    // Step 1.5: small talk. A bare "hi" or "thanks" run through the full pipeline
+    // (safety classification, retrieval, ranking) always landed on zero resources and
+    // came back as NO_RESULTS -- calm on the surface, but it's the same "I couldn't
+    // find anything" copy a real failed content search gets, which reads as cold and
+    // is flatly wrong for "thanks!". Short-circuiting here, before any AI/retrieval
+    // calls, both fixes the tone and keeps a friendly "hello" from spending the org's
+    // question quota or skewing Analytics' no-match rate and content-gap list (both
+    // driven off responseType -- see ResponseTypeSchema's GREETING comment).
+    const smallTalk = detectSmallTalk(message);
+    if (smallTalk === "greeting") {
+      const suggestedPrompt =
+        input.suggestedPrompts[0] ?? "What resources do you have?";
+      return ChatResponseSchema.parse({
+        ...base,
+        responseType: "GREETING",
+        acknowledgment: null,
+        answer: `Hello! I'm here to help you find sermons, articles, and other resources from ${input.organizationName}, or point you toward next steps like giving or getting in touch. What are you looking for today?`,
+        resources: [],
+        followUpQuestion: suggestedPrompt,
+        suggestedActions: [],
+        safetyCategory: null,
+      });
+    }
+    if (smallTalk === "thanks") {
+      return ChatResponseSchema.parse({
+        ...base,
+        responseType: "GREETING",
+        acknowledgment: null,
+        answer:
+          "You're welcome! Let me know if there's anything else I can help you find.",
         resources: [],
         followUpQuestion: null,
         suggestedActions: [],
@@ -126,8 +236,12 @@ export class ChatPipeline {
 
     // Step 2: safety classification.
     const safety = await this.aiProvider.classifySafety(message);
-    const safetyMessage = SAFETY_MESSAGES[safety.category] ?? SAFETY_MESSAGES.OTHER_HIGH_RISK;
-    if (safety.category !== "ORDINARY" && ACUTE_SAFETY_CATEGORIES.has(safety.category)) {
+    const safetyMessage =
+      SAFETY_MESSAGES[safety.category] ?? SAFETY_MESSAGES.OTHER_HIGH_RISK;
+    if (
+      safety.category !== "ORDINARY" &&
+      ACUTE_SAFETY_CATEGORIES.has(safety.category)
+    ) {
       return ChatResponseSchema.parse({
         ...base,
         responseType: "SAFETY_RESPONSE",
@@ -152,18 +266,29 @@ export class ChatPipeline {
     // feel dismissive layered under a safety disclaimer, and the existing blended
     // safety+resource flow below already handles that case.
     if (!isNonAcuteSafetyConcern) {
-      const links = await organizationalLinkService.listActiveOrganizationalLinks(input.organizationId);
+      const links =
+        await organizationalLinkService.listActiveOrganizationalLinks(
+          input.organizationId,
+        );
       if (links.length > 0) {
         const match = await this.aiProvider.matchLink(
           message,
-          links.map((link) => ({ id: link.id, label: link.label, description: link.description })),
+          links.map((link) => ({
+            id: link.id,
+            label: link.label,
+            description: link.description,
+          })),
         );
         // OrganizationalLink.url is format-validated at creation (Zod .url()), but
         // guard here too rather than trust that invariant blindly -- a malformed url
         // must fall through to the normal pipeline, not crash the response via
         // ChatResponseSchema's z.string().url().
-        const matchedLink = match.matchedLinkId ? links.find((link) => link.id === match.matchedLinkId) : undefined;
-        const hasValidUrl = matchedLink ? isValidHttpUrl(matchedLink.url) : false;
+        const matchedLink = match.matchedLinkId
+          ? links.find((link) => link.id === match.matchedLinkId)
+          : undefined;
+        const hasValidUrl = matchedLink
+          ? isValidHttpUrl(matchedLink.url)
+          : false;
         if (matchedLink && hasValidUrl) {
           return ChatResponseSchema.parse({
             ...base,
@@ -172,7 +297,9 @@ export class ChatPipeline {
             answer: `Here's ${matchedLink.label}.`,
             resources: [],
             followUpQuestion: null,
-            suggestedActions: [{ type: "LINK", label: matchedLink.label, url: matchedLink.url }],
+            suggestedActions: [
+              { type: "LINK", label: matchedLink.label, url: matchedLink.url },
+            ],
             safetyCategory: null,
           });
         }
@@ -180,10 +307,15 @@ export class ChatPipeline {
     }
 
     // Step 3: intent extraction.
-    const intent = await this.aiProvider.extractIntent(message, input.recentMessages);
+    const intent = await this.aiProvider.extractIntent(
+      message,
+      input.recentMessages,
+    );
 
     // Step 4: query generation (kept simple for milestone 1: message + extracted topics).
-    const queryText = [message, intent.primaryTopic, ...intent.secondaryTopics].filter(Boolean).join(" ");
+    const queryText = [message, intent.primaryTopic, ...intent.secondaryTopics]
+      .filter(Boolean)
+      .join(" ");
 
     // Step 5: retrieval -- request more candidates than we'll display.
     const candidates = await this.retrievalProvider.search({
@@ -198,7 +330,11 @@ export class ChatPipeline {
     // websiteId also enforces campus scoping here -- a resource scoped to campus A
     // never reaches campus B's widget, regardless of what retrieval returned.
     const candidateIds = candidates.map((c) => c.resourceId);
-    const validResources = await resourceService.getResourcesByIds(input.organizationId, candidateIds, input.websiteId);
+    const validResources = await resourceService.getResourcesByIds(
+      input.organizationId,
+      candidateIds,
+      input.websiteId,
+    );
     const scoreByResourceId = new Map(candidates.map((c) => [c.resourceId, c]));
 
     // Step 7: ranking. When the org has set a priority content type, every matching-
@@ -209,52 +345,82 @@ export class ChatPipeline {
     // two. Only ties within the same priority bucket (both matching, or both not)
     // fall through to relevance score, then transcript presence, same as before.
     const ranked = validResources
-      .map((resource) => ({ resource, score: scoreByResourceId.get(resource.id) }))
-      .filter((r): r is { resource: typeof validResources[number]; score: NonNullable<typeof r.score> } => Boolean(r.score))
+      .map((resource) => ({
+        resource,
+        score: scoreByResourceId.get(resource.id),
+      }))
+      .filter(
+        (
+          r,
+        ): r is {
+          resource: (typeof validResources)[number];
+          score: NonNullable<typeof r.score>;
+        } => Boolean(r.score),
+      )
       .sort((a, b) => {
         if (input.priorityContentType) {
-          const aMatches = resourceTypeGroup(a.resource.resourceType) === input.priorityContentType ? 1 : 0;
-          const bMatches = resourceTypeGroup(b.resource.resourceType) === input.priorityContentType ? 1 : 0;
+          const aMatches =
+            resourceTypeGroup(a.resource.resourceType) ===
+            input.priorityContentType
+              ? 1
+              : 0;
+          const bMatches =
+            resourceTypeGroup(b.resource.resourceType) ===
+            input.priorityContentType
+              ? 1
+              : 0;
           if (aMatches !== bMatches) return bMatches - aMatches;
         }
-        if (b.score.relevanceScore !== a.score.relevanceScore) return b.score.relevanceScore - a.score.relevanceScore;
-        return (b.resource.cleanTranscript ? 1 : 0) - (a.resource.cleanTranscript ? 1 : 0);
+        if (b.score.relevanceScore !== a.score.relevanceScore)
+          return b.score.relevanceScore - a.score.relevanceScore;
+        return (
+          (b.resource.cleanTranscript ? 1 : 0) -
+          (a.resource.cleanTranscript ? 1 : 0)
+        );
       })
       .slice(0, input.maxRecommendations);
 
     // Step 8: response generation -- the model only ever produces acknowledgment/
     // answer/followUpQuestion text. It never sees or influences resourceId, title,
     // url, thumbnail, etc.
-    const conversational = await this.aiProvider.generateConversationalResponse({
-      message,
-      intent,
-      candidates: ranked.map((r) => ({
-        title: r.resource.title,
-        primaryTopic: r.resource.primaryTopic,
-        summary: r.resource.summary,
-      })),
-    });
+    const conversational = await this.aiProvider.generateConversationalResponse(
+      {
+        message,
+        intent,
+        candidates: ranked.map((r) => ({
+          title: r.resource.title,
+          primaryTopic: r.resource.primaryTopic,
+          summary: r.resource.summary,
+        })),
+      },
+    );
 
     // Step 9: structured response. Every trusted field is read directly off the
     // validated database row (brief §35) -- relevanceExplanation is the only
     // resource-level field the model contributes, and even that is derived from
     // deterministic candidate titles, not free text about the resource.
-    const resources: ResourceRecommendation[] = ranked.map(({ resource, score }) => ({
-      resourceId: resource.id,
-      title: resource.title,
-      resourceType: resource.resourceType,
-      provider: resource.sourceProvider,
-      creatorName: resource.creatorName,
-      speakerName: resource.speakerName,
-      seriesTitle: resource.seriesTitle,
-      publishedAt: resource.publishedAt ? resource.publishedAt.toISOString() : null,
-      durationLabel: formatDurationLabel(resource.durationSeconds),
-      thumbnailUrl: resource.thumbnailUrl,
-      publicUrl: resource.publicUrl,
-      embedUrl: resource.embedUrl,
-      buttonLabel: buttonLabelFor(resource.resourceType),
-      relevanceExplanation: (score.matchedExcerpt && cleanExcerpt(score.matchedExcerpt)) || `Matches what you're looking for.`,
-    }));
+    const resources: ResourceRecommendation[] = ranked.map(
+      ({ resource, score }) => ({
+        resourceId: resource.id,
+        title: resource.title,
+        resourceType: resource.resourceType,
+        provider: resource.sourceProvider,
+        creatorName: resource.creatorName,
+        speakerName: resource.speakerName,
+        seriesTitle: resource.seriesTitle,
+        publishedAt: resource.publishedAt
+          ? resource.publishedAt.toISOString()
+          : null,
+        durationLabel: formatDurationLabel(resource.durationSeconds),
+        thumbnailUrl: resource.thumbnailUrl,
+        publicUrl: resource.publicUrl,
+        embedUrl: resource.embedUrl,
+        buttonLabel: buttonLabelFor(resource.resourceType),
+        relevanceExplanation:
+          (score.matchedExcerpt && cleanExcerpt(score.matchedExcerpt)) ||
+          `Matches what you're looking for.`,
+      }),
+    );
 
     if (isNonAcuteSafetyConcern) {
       // Blended response: the safety disclaimer leads (as acknowledgment, shown
@@ -266,7 +432,8 @@ export class ChatPipeline {
         ...base,
         responseType: "SAFETY_RESPONSE",
         acknowledgment: safetyMessage,
-        answer: resources.length > 0 ? conversational.answer : input.noResultMessage,
+        answer:
+          resources.length > 0 ? conversational.answer : input.noResultMessage,
         resources,
         followUpQuestion: conversational.followUpQuestion,
         suggestedActions: [],

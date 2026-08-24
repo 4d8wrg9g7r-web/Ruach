@@ -1,9 +1,17 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { conversationService, organizationService, websiteService, widgetService } from "@ruach/database";
+import {
+  conversationService,
+  organizationService,
+  websiteService,
+  widgetService,
+} from "@ruach/database";
 import { ChatPipeline, getAIProvider } from "@ruach/ai";
 import { LocalRetrievalProvider } from "@ruach/retrieval";
-import { ChatRequestSchema, ResourceTypeGroupSchema } from "@ruach/shared-types";
+import {
+  ChatRequestSchema,
+  ResourceTypeGroupSchema,
+} from "@ruach/shared-types";
 import { checkRateLimit, getClientIp } from "../../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -22,7 +30,10 @@ const IP_LIMIT = { max: 60, windowMs: 10 * 60 * 1000 };
  * belonging to org B, and the only thing enforcing that is organizationId resolved
  * from publicWidgetId here, threaded through every downstream call.
  */
-export async function POST(req: NextRequest, context: { params: Promise<{ publicWidgetId: string }> }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ publicWidgetId: string }> },
+) {
   const { publicWidgetId } = await context.params;
   const widget = await widgetService.getWidgetByPublicId(publicWidgetId);
   if (!widget) {
@@ -31,7 +42,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
 
   const host = req.nextUrl.searchParams.get("host");
   if (host && !websiteService.isDomainAllowed(widget.website, host)) {
-    return NextResponse.json({ error: "Domain not authorized for this widget" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Domain not authorized for this widget" },
+      { status: 403 },
+    );
   }
 
   const body = await req.json().catch(() => null);
@@ -43,20 +57,39 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
 
   // Rejected here, before any conversation/AI work, so an over-limit request never
   // reaches the OpenAI call that actually costs money.
-  const sessionCheck = checkRateLimit(`session:${widget.id}:${sessionId}`, SESSION_LIMIT.max, SESSION_LIMIT.windowMs);
+  const sessionCheck = checkRateLimit(
+    `session:${widget.id}:${sessionId}`,
+    SESSION_LIMIT.max,
+    SESSION_LIMIT.windowMs,
+  );
   if (!sessionCheck.allowed) {
     return NextResponse.json(
-      { error: "You've sent a lot of messages recently. Please wait a bit before trying again." },
-      { status: 429, headers: { "Retry-After": String(sessionCheck.retryAfterSeconds) } },
+      {
+        error:
+          "You've sent a lot of messages recently. Please wait a bit before trying again.",
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(sessionCheck.retryAfterSeconds) },
+      },
     );
   }
   const clientIp = getClientIp(req.headers);
   if (clientIp) {
-    const ipCheck = checkRateLimit(`ip:${widget.id}:${clientIp}`, IP_LIMIT.max, IP_LIMIT.windowMs);
+    const ipCheck = checkRateLimit(
+      `ip:${widget.id}:${clientIp}`,
+      IP_LIMIT.max,
+      IP_LIMIT.windowMs,
+    );
     if (!ipCheck.allowed) {
       return NextResponse.json(
-        { error: "Too many requests from this network. Please try again later." },
-        { status: 429, headers: { "Retry-After": String(ipCheck.retryAfterSeconds) } },
+        {
+          error: "Too many requests from this network. Please try again later.",
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(ipCheck.retryAfterSeconds) },
+        },
       );
     }
   }
@@ -67,7 +100,11 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
     sessionId,
   });
 
-  const recentMessages = await conversationService.getRecentMessages(widget.organizationId, conversation.id, 6);
+  const recentMessages = await conversationService.getRecentMessages(
+    widget.organizationId,
+    conversation.id,
+    6,
+  );
 
   await conversationService.appendMessage({
     organizationId: widget.organizationId,
@@ -80,11 +117,20 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
   // Organization.priorityContentType), so re-validate against the real enum here --
   // a stale/invalid value degrades to "no priority" rather than reaching
   // ChatPipeline with something it doesn't recognize.
-  const organization = await organizationService.getOrganization(widget.organizationId);
-  const priorityContentTypeParsed = ResourceTypeGroupSchema.safeParse(organization?.priorityContentType);
-  const priorityContentType = priorityContentTypeParsed.success ? priorityContentTypeParsed.data : null;
+  const organization = await organizationService.getOrganization(
+    widget.organizationId,
+  );
+  const priorityContentTypeParsed = ResourceTypeGroupSchema.safeParse(
+    organization?.priorityContentType,
+  );
+  const priorityContentType = priorityContentTypeParsed.success
+    ? priorityContentTypeParsed.data
+    : null;
 
-  const pipeline = new ChatPipeline(getAIProvider(), new LocalRetrievalProvider());
+  const pipeline = new ChatPipeline(
+    getAIProvider(),
+    new LocalRetrievalProvider(),
+  );
   const response = await pipeline.respond({
     organizationId: widget.organizationId,
     widgetId: widget.id,
@@ -96,6 +142,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ public
     maxRecommendations: widget.maxRecommendations,
     noResultMessage: widget.noResultMessage,
     priorityContentType,
+    organizationName: organization?.name ?? widget.website.name,
+    suggestedPrompts: widget.suggestedPrompts,
   });
 
   await conversationService.appendMessage({
