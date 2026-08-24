@@ -4,8 +4,11 @@ import { noIndexMetadata } from "../../lib/no-index-metadata";
 
 export const metadata: Metadata = noIndexMetadata;
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Wind } from "lucide-react";
 import { signIn } from "../../auth";
 import { SubmitButton } from "../../components/SubmitButton";
+import { ValidatedForm } from "../../components/ValidatedForm";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 
@@ -33,9 +36,20 @@ export default async function LoginPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
+      <Link
+        href="/"
+        className="mb-8 flex items-center gap-2 self-start rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+      >
+        <Wind size={20} strokeWidth={1.75} className="text-accent" />
+        <span className="text-sm font-semibold uppercase tracking-[0.18em] text-ink">
+          Ruach
+        </span>
+      </Link>
       <h1 className="mb-6 text-2xl font-semibold text-ink">Sign in to Ruach</h1>
       {params.error && (
-        <p className="mb-4 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">Invalid email or password.</p>
+        <p className="mb-4 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
+          Invalid email or password.
+        </p>
       )}
       {params.reset && (
         <p className="mb-4 rounded-md bg-success-bg px-3 py-2 text-sm text-success">
@@ -43,17 +57,27 @@ export default async function LoginPage({
         </p>
       )}
       <Card>
-        <form action={loginAction} className="flex flex-col gap-3">
+        <ValidatedForm action={loginAction} className="flex flex-col gap-3">
           <label className="text-sm font-medium text-ink-secondary">
             Email
-            <Input name="email" type="email" required className="mt-1 block w-full" />
+            <Input
+              name="email"
+              type="email"
+              required
+              className="mt-1 block w-full"
+            />
           </label>
           <label className="text-sm font-medium text-ink-secondary">
             Password
-            <Input name="password" type="password" required className="mt-1 block w-full" />
+            <Input
+              name="password"
+              type="password"
+              required
+              className="mt-1 block w-full"
+            />
           </label>
           <SubmitButton pendingLabel="Signing in...">Sign in</SubmitButton>
-        </form>
+        </ValidatedForm>
       </Card>
       <p className="mt-4 flex items-center justify-between text-sm text-ink-secondary">
         <a href="/forgot-password" className="text-accent hover:underline">

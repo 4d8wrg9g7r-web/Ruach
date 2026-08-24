@@ -27,7 +27,12 @@
   --success-background: #e8f0e8;
   --warning: #a56d2d;
   --warning-background: #f5ead7;
-  --danger: #a2574c;
+  /* Pulled more saturated/red than the rest of this warm-monochrome palette on
+     purpose -- the original #a2574c sat close enough to --accent's own warm brown
+     that a destructive action (e.g. deleting a prayer request) didn't read as
+     clearly different from a routine one next to it. Still warm-toned, not a cold
+     alert red, so it doesn't clash with the rest of the palette. */
+  --danger: #b23a26;
   --danger-background: #f5e4e1;
 
   /* Space-separated RGB channels of the colors above -- Tailwind's `bg-accent/70`-style
@@ -37,7 +42,7 @@
   --accent-rgb: 184 123 56;
   --success-rgb: 97 129 103;
   --warning-rgb: 165 109 45;
-  --danger-rgb: 162 87 76;
+  --danger-rgb: 178 58 38;
 }
 
 body {

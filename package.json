@@ -18,6 +18,7 @@
     "db:seed": "pnpm --filter @ruach/database db:seed",
     "db:studio": "pnpm --filter @ruach/database prisma studio",
     "tenant-check": "bash scripts/check-tenant-scoping.sh",
+    "pricing-check": "pnpm --filter @ruach/dashboard check:pricing",
     "deploy:prod": "bash scripts/deploy-prod.sh"
   },
   "devDependencies": {
