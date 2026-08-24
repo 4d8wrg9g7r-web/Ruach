@@ -147,26 +147,37 @@ export function planHasFeature(planKey: string, feature: FeatureFlag): boolean {
 }
 
 /** Throws a friendly, user-facing error if `current` is already at or past `max` (null max = unlimited, never throws). */
-export function assertUnderCap(current: number, max: number | null, label: string): void {
+export function assertUnderCap(
+  current: number,
+  max: number | null,
+  label: string,
+): void {
   if (max !== null && current >= max) {
-    throw new Error(`You've reached your plan's ${label} limit (${max}). Upgrade to add more.`);
+    throw new Error(
+      `You've reached your plan's ${label} limit (${max}). Upgrade to add more.`,
+    );
   }
 }
 
-/** How many more of something can be created before hitting `max` (null = unlimited). Used to slice a bulk batch down to what the plan allows, rather than throwing -- see the bulk-approve enqueue action. */
 /**
  * Bulk-operation worker-pool size for resource-pipeline.ts's mapWithConcurrency --
- * Multi-Site+ orgs (priorityIndexing feature) get a larger pool, so their own large
+ * Multi-Site+ orgs (priorityIndexing feature, displayed as "Faster bulk imports" --
+ * renamed in an Aug 2026 marketing-accuracy pass, "Priority indexing" read as
+ * queue-jumping, which doesn't exist) get a larger pool, so their own large
  * batches finish faster in wall-clock time. There's no shared cross-tenant queue to
  * "jump ahead" in (every org's jobs already run independently via next/server's
- * after()), so this is the honest, concrete version of "priority indexing": your
- * bulk jobs get more concurrent workers, not a higher spot in someone else's line.
+ * after()) -- this is the honest, concrete version: your bulk jobs get more
+ * concurrent workers, not a higher spot in someone else's line.
  */
 export function bulkConcurrency(planKey: string): number {
   return planHasFeature(planKey, "priorityIndexing") ? 10 : 5;
 }
 
-export function remainingCapacity(current: number, max: number | null): number | null {
+/** How many more of something can be created before hitting `max` (null = unlimited). Used to slice a bulk batch down to what the plan allows, rather than throwing -- see the bulk-approve enqueue action. */
+export function remainingCapacity(
+  current: number,
+  max: number | null,
+): number | null {
   if (max === null) return null;
   return Math.max(0, max - current);
 }
@@ -175,7 +186,8 @@ export function remainingCapacity(current: number, max: number | null): number |
 export function getPlanKeyByStripePriceId(priceId: string): PlanKey | null {
   for (const key of Object.keys(PLANS) as PlanKey[]) {
     const plan = PLANS[key];
-    if (plan.priceIdMonthly === priceId || plan.priceIdYearly === priceId) return key;
+    if (plan.priceIdMonthly === priceId || plan.priceIdYearly === priceId)
+      return key;
   }
   return null;
 }
@@ -198,12 +210,19 @@ export interface UsageSummary {
 }
 
 /** "Queries used" = visitor questions sent to any widget this calendar month. */
-export async function getCurrentUsage(organizationId: string, planKey: string): Promise<UsageSummary> {
+export async function getCurrentUsage(
+  organizationId: string,
+  planKey: string,
+): Promise<UsageSummary> {
   const periodStart = startOfCurrentMonth();
   const periodEnd = startOfNextMonth();
 
   const queriesUsed = await tenantDb.conversationMessage.count({
-    where: { organizationId, role: "USER", createdAt: { gte: periodStart, lt: periodEnd } },
+    where: {
+      organizationId,
+      role: "USER",
+      createdAt: { gte: periodStart, lt: periodEnd },
+    },
   });
 
   return { plan: getPlan(planKey), queriesUsed, periodStart, periodEnd };

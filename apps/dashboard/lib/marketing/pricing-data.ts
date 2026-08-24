@@ -42,6 +42,7 @@ export const MARKETING_PLANS: MarketingPlan[] = [
       "1,500 AI questions per month",
       "Public Prayer Wall",
       "10 widget display styles",
+      "Scheduled content syncing",
       "Basic branding",
       "Basic analytics",
       "Email support",
@@ -67,7 +68,6 @@ export const MARKETING_PLANS: MarketingPlan[] = [
       "Remove Ruach branding",
       "Advanced customization",
       "Advanced analytics",
-      "Scheduled content syncing",
       "Prayer categories",
       "Prayer-team notifications",
       "Internal prayer notes",
@@ -94,7 +94,7 @@ export const MARKETING_PLANS: MarketingPlan[] = [
       "Campus-specific Prayer Walls",
       "Roles and permissions",
       "Organization-wide analytics",
-      "Priority indexing",
+      "Faster bulk imports",
       "Guided onboarding",
       "Priority support",
     ],
@@ -129,6 +129,15 @@ export const MARKETING_PLANS: MarketingPlan[] = [
  * (Multi-Site+), which is the plan a PRAYER_MODERATOR role can actually be assigned
  * on from the Team page, not multipleModerators (Growth+), which only affects who's
  * allowed to moderate if such a role already existed on the account.
+ *
+ * "Scheduled content sync" is [true,true,true,true] deliberately, not an oversight
+ * -- it was advertised Growth+ while actually being ungated in code for every plan
+ * (caught in an Aug 2026 marketing-accuracy pass); confirmed with the business that
+ * the code's behavior is the intended one, so this row now matches it rather than
+ * the other way around. "Faster bulk imports" is priorityIndexing under a clearer
+ * name (same pass) -- see billing-service.ts's bulkConcurrency for what it actually
+ * does; "Priority indexing" read as queue-jumping ahead of other tenants, which
+ * isn't a real concept here.
  */
 export const COMPARISON_ROWS: ComparisonRow[] = [
   { label: "Websites (campuses)", values: ["1", "3", "10", "Unlimited"] },
@@ -153,14 +162,14 @@ export const COMPARISON_ROWS: ComparisonRow[] = [
   { label: "Internal prayer notes", values: [false, true, true, true] },
   { label: "Advanced widget customization", values: [false, true, true, true] },
   { label: "Remove Ruach branding", values: [false, true, true, true] },
-  { label: "Scheduled content sync", values: [false, true, true, true] },
+  { label: "Scheduled content sync", values: [true, true, true, true] },
   {
     label: "Campus-scoped content & Prayer Walls",
     values: [false, false, true, true],
   },
   { label: "Organization-wide analytics", values: [false, false, true, true] },
   { label: "Additional moderator roles", values: [false, false, true, true] },
-  { label: "Priority indexing", values: [false, false, true, true] },
+  { label: "Faster bulk imports", values: [false, false, true, true] },
   { label: "Guided onboarding", values: [true, true, true, true] },
   {
     label: "Support level",

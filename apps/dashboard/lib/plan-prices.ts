@@ -9,9 +9,11 @@ async function formatPrice(priceId: string | null): Promise<string | null> {
     const price = await stripe.prices.retrieve(priceId);
     if (typeof price.unit_amount !== "number") return null;
     const amount = price.unit_amount / 100;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: price.currency.toUpperCase(), maximumFractionDigits: 0 }).format(
-      amount,
-    );
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: price.currency.toUpperCase(),
+      maximumFractionDigits: 0,
+    }).format(amount);
   } catch (err) {
     console.error(`Failed to fetch Stripe price ${priceId}:`, err);
     return null;
@@ -30,7 +32,7 @@ const FEATURE_LABELS: Record<billingService.FeatureFlag, string> = {
   campusScopedContentLibraries: "Campus-specific content libraries",
   campusScopedPrayerWalls: "Campus-specific prayer walls",
   orgWideAnalytics: "Organization-wide analytics",
-  priorityIndexing: "Priority resource indexing",
+  priorityIndexing: "Faster bulk imports",
   guidedOnboarding: "Guided setup",
 };
 
@@ -54,8 +56,17 @@ export async function getFormattedPlans(): Promise<PlanPickerOption[]> {
   return Promise.all(
     billingService.PAID_PLAN_KEYS.map(async (key) => {
       const plan = billingService.PLANS[key];
-      const [priceMonthly, priceYearly] = await Promise.all([formatPrice(plan.priceIdMonthly), formatPrice(plan.priceIdYearly)]);
-      return { key, name: plan.name, features: formatPlanFeatures(plan), priceMonthly, priceYearly };
+      const [priceMonthly, priceYearly] = await Promise.all([
+        formatPrice(plan.priceIdMonthly),
+        formatPrice(plan.priceIdYearly),
+      ]);
+      return {
+        key,
+        name: plan.name,
+        features: formatPlanFeatures(plan),
+        priceMonthly,
+        priceYearly,
+      };
     }),
   );
 }
