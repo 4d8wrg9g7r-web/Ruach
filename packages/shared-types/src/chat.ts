@@ -7,6 +7,11 @@ export const ResponseTypeSchema = z.enum([
   "NO_RESULTS",
   "ACTION_RESPONSE",
   "SAFETY_RESPONSE",
+  // Small talk (a bare "hi", "thanks", "what can you do?") -- distinct from
+  // NO_RESULTS specifically so Analytics' no-match rate and content-gap list, both
+  // driven off responseType, stop counting a friendly "hello" as a failed content
+  // search. See ChatPipeline's detectSmallTalk.
+  "GREETING",
   "ERROR",
 ]);
 export type ResponseType = z.infer<typeof ResponseTypeSchema>;
@@ -34,7 +39,9 @@ export const ResourceRecommendationSchema = z.object({
   buttonLabel: z.enum(["Watch", "Listen", "Read", "Open"]),
   relevanceExplanation: z.string(),
 });
-export type ResourceRecommendation = z.infer<typeof ResourceRecommendationSchema>;
+export type ResourceRecommendation = z.infer<
+  typeof ResourceRecommendationSchema
+>;
 
 export const SuggestedActionSchema = z.object({
   type: z.string(),

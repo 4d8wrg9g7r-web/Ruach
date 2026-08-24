@@ -30,6 +30,12 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    date: "2026-08-24",
+    headline: "Added a warm reply for greetings and small talk",
+    detail:
+      'A visitor who just says "hi" or "thanks" used to get the same "I couldn\'t find that" message as a failed search. The assistant now replies warmly, explains what it can help with, and suggests a real question to try -- pulled from your configured suggested questions when you\'ve set any.',
+  },
+  {
     date: "2026-08-12",
     headline: "Fixed a crash on an invalid link in resource import",
     detail:
@@ -39,7 +45,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: "2026-08-11",
     headline: "Added content priority for chat answers",
     detail:
-      "Choose one resource type -- videos, podcasts, articles, or documents -- to always rank first in the assistant's answers, no matter how closely other resources match. Leave it on \"No priority\" to keep the default relevance-based ranking.",
+      'Choose one resource type -- videos, podcasts, articles, or documents -- to always rank first in the assistant\'s answers, no matter how closely other resources match. Leave it on "No priority" to keep the default relevance-based ranking.',
   },
   {
     date: "2026-08-10",
@@ -51,13 +57,13 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: "2026-08-10",
     headline: "Added Organizational Links for direct-answer questions",
     detail:
-      "Not every question is a content request -- \"where can I find the notes?\" deserves a link, not a recommended sermon. Organizational Links let you add navigational links from the Resources page that the assistant can hand a visitor directly, kept separate from your content library and from the widget's quick-action buttons.",
+      'Not every question is a content request -- "where can I find the notes?" deserves a link, not a recommended sermon. Organizational Links let you add navigational links from the Resources page that the assistant can hand a visitor directly, kept separate from your content library and from the widget\'s quick-action buttons.',
   },
   {
     date: "2026-08-10",
     headline: "Added guided setup wizards",
     detail:
-      "New organizations are now walked through a short setup wizard covering websites, widgets, and content -- plus a second one for Prayer Wall and Testimonies the first time you visit that page. Not ready yet? \"Come back later\" skips it without losing your place.",
+      'New organizations are now walked through a short setup wizard covering websites, widgets, and content -- plus a second one for Prayer Wall and Testimonies the first time you visit that page. Not ready yet? "Come back later" skips it without losing your place.',
   },
   {
     date: "2026-08-10",
