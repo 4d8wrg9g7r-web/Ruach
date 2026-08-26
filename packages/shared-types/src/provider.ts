@@ -20,7 +20,9 @@ export const NormalizedExternalResourceSchema = z.object({
   embedUrl: z.string().url().nullable().default(null),
   captionsAvailable: z.boolean().default(false),
 });
-export type NormalizedExternalResource = z.infer<typeof NormalizedExternalResourceSchema>;
+export type NormalizedExternalResource = z.infer<
+  typeof NormalizedExternalResourceSchema
+>;
 
 export const ProviderValidationResultSchema = z.object({
   valid: z.boolean(),
@@ -28,7 +30,9 @@ export const ProviderValidationResultSchema = z.object({
   externalId: z.string().nullable(),
   reason: z.string().nullable().default(null),
 });
-export type ProviderValidationResult = z.infer<typeof ProviderValidationResultSchema>;
+export type ProviderValidationResult = z.infer<
+  typeof ProviderValidationResultSchema
+>;
 
 export const TranscriptResultSchema = z.object({
   text: z.string().min(1),
@@ -39,6 +43,7 @@ export const TranscriptResultSchema = z.object({
     "LINKED_NOTES",
     "AUTOMATIC_TRANSCRIPTION",
     "METADATA_ONLY",
+    "EXTRACTED_PAGE_TEXT",
   ]),
   language: z.string().nullable().default(null),
 });
@@ -57,4 +62,6 @@ export const ExternalResourceSourceSchema = z.object({
   externalId: z.string().min(1),
   url: z.string().url(),
 });
-export type ExternalResourceSource = z.infer<typeof ExternalResourceSourceSchema>;
+export type ExternalResourceSource = z.infer<
+  typeof ExternalResourceSourceSchema
+>;

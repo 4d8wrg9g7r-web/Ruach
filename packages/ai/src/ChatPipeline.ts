@@ -30,6 +30,13 @@ export interface ChatPipelineInput {
    * pill when the org has configured any, so the suggestion stays grounded in this
    * org's real content instead of a generic placeholder. */
   suggestedPrompts: string[];
+  /** Organization.contactEmail / .publicWebsiteUrl -- both nullable. Handed to a
+   * visitor when their message is a business solicitation rather than a real
+   * question (Step 2.3), and appended to any NO_RESULTS reply so "I couldn't find
+   * that" isn't a dead end when the org has given a real way to follow up. Neither
+   * being set just means that reply has less to offer, never an error. */
+  contactEmail: string | null;
+  publicWebsiteUrl: string | null;
 }
 
 function formatDurationLabel(seconds: number | null): string | null {
@@ -97,6 +104,59 @@ function detectSmallTalk(message: string): SmallTalkKind | null {
   if (GREETING_PATTERNS.some((p) => p.test(normalized))) return "greeting";
   if (THANKS_PATTERNS.some((p) => p.test(normalized))) return "thanks";
   return null;
+}
+
+/** Bounded to keep the per-candidate prompt payload sane -- a full sermon
+ * transcript can run tens of thousands of characters, and the factual-answer use
+ * case (a service time, a staff name) is almost always answerable from the first
+ * couple thousand characters of a real page's body text regardless. */
+const MAX_SOURCE_EXCERPT_LENGTH = 3000;
+
+function boundedExcerpt(text: string | null): string | null {
+  if (!text) return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  return trimmed.length > MAX_SOURCE_EXCERPT_LENGTH
+    ? `${trimmed.slice(0, MAX_SOURCE_EXCERPT_LENGTH)}...`
+    : trimmed;
+}
+
+/** "Reach out to us at X" / "visit Y" / both / neither -- neither configured still
+ * reads as a complete, polite sentence rather than a dangling fragment. */
+function contactParts(
+  contactEmail: string | null,
+  publicWebsiteUrl: string | null,
+): string[] {
+  const parts: string[] = [];
+  if (contactEmail) parts.push(`at ${contactEmail}`);
+  if (publicWebsiteUrl) parts.push(`through ${publicWebsiteUrl}`);
+  return parts;
+}
+
+function buildContactLine(
+  contactEmail: string | null,
+  publicWebsiteUrl: string | null,
+): string {
+  const parts = contactParts(contactEmail, publicWebsiteUrl);
+  if (parts.length === 0)
+    return "you're welcome to reach out to the church directly through this website.";
+  return `you can reach the church directly ${parts.join(" or ")}.`;
+}
+
+/**
+ * Appended to the NO_RESULTS message, but only when the org actually configured
+ * something -- with neither set, this is an empty string rather than a generic
+ * fallback sentence, which would read as a dangling non-answer here (unlike
+ * buildContactLine's generic fallback, which works fine mid-sentence in the
+ * solicitation reply but not as a bare standalone sentence tacked onto this one).
+ */
+function noResultContactSuffix(
+  contactEmail: string | null,
+  publicWebsiteUrl: string | null,
+): string {
+  const parts = contactParts(contactEmail, publicWebsiteUrl);
+  if (parts.length === 0) return "";
+  return ` You're welcome to reach out to us directly ${parts.join(" or ")} for specifics.`;
 }
 
 function isValidHttpUrl(url: string): boolean {
@@ -255,54 +315,84 @@ export class ChatPipeline {
     }
     const isNonAcuteSafetyConcern = safety.category !== "ORDINARY";
 
-    // Step 2.5: organizational-link matching. "Where can I find the notes?" should
-    // get a direct link, not a ministry-toned resource recommendation -- deliberately
-    // separate from ActionLink (the widget's always-visible quick-action buttons,
-    // e.g. Give/Contact): OrganizationalLink rows are never shown as buttons, they
-    // only ever surface here, when a visitor's question specifically calls for one.
-    // This is a cheaper check that runs before intent extraction/retrieval and
-    // short-circuits the rest of the pipeline on a match. Skipped entirely for any
-    // non-ORDINARY safety category (even non-acute) -- a bare link response would
-    // feel dismissive layered under a safety disclaimer, and the existing blended
-    // safety+resource flow below already handles that case.
+    // Step 2.3/2.5: solicitation check + organizational-link matching, run
+    // concurrently. "Hi, I'm a local contractor offering a free quote..." isn't a
+    // request for church content -- run through the normal pipeline, it finds no
+    // matching resource and comes back as a cold, generic NO_RESULTS message, which
+    // reads as broken to whoever's actually reading these transcripts. Caught here
+    // and answered with the church's own contact info instead -- polite, doesn't
+    // evaluate or engage with the pitch, just redirects to a human channel.
+    // "Where can I find the notes?" should get a direct link, not a ministry-toned
+    // resource recommendation -- deliberately separate from ActionLink (the
+    // widget's always-visible quick-action buttons, e.g. Give/Contact):
+    // OrganizationalLink rows are never shown as buttons, they only ever surface
+    // here, when a visitor's question specifically calls for one.
+    // classifyRelevance and matchLink are independent AI calls with no data
+    // dependency on each other -- running them sequentially cost every ordinary
+    // message a full extra round-trip for no reason, so they're kicked off
+    // together and only one is ever actually needed (the other's result is simply
+    // unused on whichever branch doesn't match). Both skipped for any non-ORDINARY
+    // safety category (even non-acute for the link case) -- never let a secondary
+    // classification override the safety response, and a bare link response would
+    // feel dismissive layered under a safety disclaimer, which the existing blended
+    // safety+resource flow below already handles.
     if (!isNonAcuteSafetyConcern) {
+      const relevancePromise = this.aiProvider.classifyRelevance(message);
       const links =
         await organizationalLinkService.listActiveOrganizationalLinks(
           input.organizationId,
         );
-      if (links.length > 0) {
-        const match = await this.aiProvider.matchLink(
-          message,
-          links.map((link) => ({
-            id: link.id,
-            label: link.label,
-            description: link.description,
-          })),
-        );
-        // OrganizationalLink.url is format-validated at creation (Zod .url()), but
-        // guard here too rather than trust that invariant blindly -- a malformed url
-        // must fall through to the normal pipeline, not crash the response via
-        // ChatResponseSchema's z.string().url().
-        const matchedLink = match.matchedLinkId
-          ? links.find((link) => link.id === match.matchedLinkId)
-          : undefined;
-        const hasValidUrl = matchedLink
-          ? isValidHttpUrl(matchedLink.url)
-          : false;
-        if (matchedLink && hasValidUrl) {
-          return ChatResponseSchema.parse({
-            ...base,
-            responseType: "ACTION_RESPONSE",
-            acknowledgment: null,
-            answer: `Here's ${matchedLink.label}.`,
-            resources: [],
-            followUpQuestion: null,
-            suggestedActions: [
-              { type: "LINK", label: matchedLink.label, url: matchedLink.url },
-            ],
-            safetyCategory: null,
-          });
-        }
+      const matchPromise =
+        links.length > 0
+          ? this.aiProvider.matchLink(
+              message,
+              links.map((link) => ({
+                id: link.id,
+                label: link.label,
+                description: link.description,
+              })),
+            )
+          : Promise.resolve({ matchedLinkId: null });
+
+      const [relevance, match] = await Promise.all([
+        relevancePromise,
+        matchPromise,
+      ]);
+
+      if (relevance.isSolicitation) {
+        return ChatResponseSchema.parse({
+          ...base,
+          responseType: "SOLICITATION",
+          acknowledgment: null,
+          answer: `Thanks for reaching out! I'm not able to evaluate business proposals here, but ${buildContactLine(input.contactEmail, input.publicWebsiteUrl)}`,
+          resources: [],
+          followUpQuestion: null,
+          suggestedActions: [],
+          safetyCategory: null,
+        });
+      }
+
+      // OrganizationalLink.url is format-validated at creation (Zod .url()), but
+      // guard here too rather than trust that invariant blindly -- a malformed url
+      // must fall through to the normal pipeline, not crash the response via
+      // ChatResponseSchema's z.string().url().
+      const matchedLink = match.matchedLinkId
+        ? links.find((link) => link.id === match.matchedLinkId)
+        : undefined;
+      const hasValidUrl = matchedLink ? isValidHttpUrl(matchedLink.url) : false;
+      if (matchedLink && hasValidUrl) {
+        return ChatResponseSchema.parse({
+          ...base,
+          responseType: "ACTION_RESPONSE",
+          acknowledgment: null,
+          answer: `Here's ${matchedLink.label}.`,
+          resources: [],
+          followUpQuestion: null,
+          suggestedActions: [
+            { type: "LINK", label: matchedLink.label, url: matchedLink.url },
+          ],
+          safetyCategory: null,
+        });
       }
     }
 
@@ -391,6 +481,7 @@ export class ChatPipeline {
           title: r.resource.title,
           primaryTopic: r.resource.primaryTopic,
           summary: r.resource.summary,
+          sourceExcerpt: boundedExcerpt(r.resource.cleanTranscript),
         })),
       },
     );
@@ -446,7 +537,9 @@ export class ChatPipeline {
         ...base,
         responseType: "NO_RESULTS",
         acknowledgment: null,
-        answer: input.noResultMessage,
+        answer:
+          input.noResultMessage +
+          noResultContactSuffix(input.contactEmail, input.publicWebsiteUrl),
         resources: [],
         followUpQuestion: conversational.followUpQuestion,
         suggestedActions: [],

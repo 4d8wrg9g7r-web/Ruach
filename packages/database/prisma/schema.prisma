@@ -195,6 +195,16 @@ model Organization {
   // the auto-redirect never fires again, but PrayerWallModerationPage still shows a
   // persistent card linking back into the wizard for as long as neither is enabled.
   prayerTestimonyWizardSeenAt    DateTime?
+  // Org-wide public contact info -- distinct from Website.primaryDomain (a
+  // security/allowlist value, not necessarily meant for display) and from
+  // prayerRequestForwardingEmails (internal staff notification, never visitor-
+  // facing). Surfaced by ChatPipeline for a genuine "how do I reach the church"
+  // moment: a visitor's factual question the indexed content doesn't answer, or a
+  // message that isn't a real content question at all (a business solicitation --
+  // see ChatPipeline's classifyRelevance step). Both nullable; either being unset
+  // just means that fallback has less to offer, never an error.
+  contactEmail                   String?
+  publicWebsiteUrl               String?
   createdAt                      DateTime            @default(now())
   updatedAt                      DateTime            @updatedAt
 
@@ -393,6 +403,11 @@ enum TranscriptSource {
   LINKED_NOTES
   AUTOMATIC_TRANSCRIPTION
   METADATA_ONLY
+  // GenericUrlProvider's getTranscript -- the page's own visible body text (About/
+  // Staff/Service-Times pages and the like), regex-extracted from HTML, not an
+  // audio/video transcript. Distinct from METADATA_ONLY: that means "just the
+  // og:title/og:description we already had," this means "the actual page content."
+  EXTRACTED_PAGE_TEXT
 }
 
 model Resource {

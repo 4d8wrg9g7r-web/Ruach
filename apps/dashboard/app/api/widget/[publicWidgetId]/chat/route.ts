@@ -144,6 +144,8 @@ export async function POST(
     priorityContentType,
     organizationName: organization?.name ?? widget.website.name,
     suggestedPrompts: widget.suggestedPrompts,
+    contactEmail: organization?.contactEmail ?? null,
+    publicWebsiteUrl: organization?.publicWebsiteUrl ?? null,
   });
 
   await conversationService.appendMessage({

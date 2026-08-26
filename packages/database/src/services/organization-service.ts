@@ -1,4 +1,8 @@
-import { BillingInterval, OrganizationRole, SubscriptionStatus } from "@prisma/client";
+import {
+  BillingInterval,
+  OrganizationRole,
+  SubscriptionStatus,
+} from "@prisma/client";
 import { rawDb, tenantDb } from "../client";
 
 export async function createOrganizationWithOwner(params: {
@@ -39,13 +43,18 @@ export async function createOrganizationFromAccessCode(params: {
       data: { name: params.name, slug: params.slug, planKey: "free" },
     });
     await tx.organizationMember.create({
-      data: { organizationId: organization.id, userId: params.ownerUserId, role: OrganizationRole.OWNER },
+      data: {
+        organizationId: organization.id,
+        userId: params.ownerUserId,
+        role: OrganizationRole.OWNER,
+      },
     });
     const claimed = await tx.freeTierAccessCode.updateMany({
       where: { id: params.accessCodeId, usedAt: null },
       data: { usedByUserId: params.ownerUserId, usedAt: new Date() },
     });
-    if (claimed.count === 0) throw new Error("This access code has already been used.");
+    if (claimed.count === 0)
+      throw new Error("This access code has already been used.");
     return organization;
   });
 }
@@ -80,7 +89,11 @@ export async function createOrganizationFromCheckout(params: {
       },
     });
     await tx.organizationMember.create({
-      data: { organizationId: organization.id, userId: params.ownerUserId, role: OrganizationRole.OWNER },
+      data: {
+        organizationId: organization.id,
+        userId: params.ownerUserId,
+        role: OrganizationRole.OWNER,
+      },
     });
     return organization;
   });
@@ -99,10 +112,15 @@ export async function applySubscriptionToOrganization(
     cancelAtPeriodEnd?: boolean;
   },
 ) {
-  return rawDb.organization.update({ where: { id: organizationId }, data: params });
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: params,
+  });
 }
 
-export async function getOrganizationByStripeCustomerId(stripeCustomerId: string) {
+export async function getOrganizationByStripeCustomerId(
+  stripeCustomerId: string,
+) {
   return rawDb.organization.findUnique({ where: { stripeCustomerId } });
 }
 
@@ -112,12 +130,21 @@ export async function listAllOrganizations() {
 }
 
 /** Dedup marker for the usage-warning cron so the same 75%/90% threshold email isn't sent more than once per billing period -- see usage-warnings.ts for how this is compared against the current period's start. */
-export async function recordUsageWarningSent(organizationId: string, threshold: "75" | "90") {
-  const field = threshold === "75" ? "usageWarning75SentAt" : "usageWarning90SentAt";
-  return rawDb.organization.update({ where: { id: organizationId }, data: { [field]: new Date() } });
+export async function recordUsageWarningSent(
+  organizationId: string,
+  threshold: "75" | "90",
+) {
+  const field =
+    threshold === "75" ? "usageWarning75SentAt" : "usageWarning90SentAt";
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: { [field]: new Date() },
+  });
 }
 
-export async function getOrganizationByStripeSubscriptionId(stripeSubscriptionId: string) {
+export async function getOrganizationByStripeSubscriptionId(
+  stripeSubscriptionId: string,
+) {
   return rawDb.organization.findUnique({ where: { stripeSubscriptionId } });
 }
 
@@ -156,8 +183,12 @@ export async function getOrganization(organizationId: string) {
  * to its organization. Same boundary as widgetService.getWidgetByPublicId -- there is
  * no session yet to fall back on. Uses rawDb intentionally.
  */
-export async function getOrganizationByPublicPrayerWallId(publicPrayerWallId: string) {
-  const organization = await rawDb.organization.findUnique({ where: { publicPrayerWallId } });
+export async function getOrganizationByPublicPrayerWallId(
+  publicPrayerWallId: string,
+) {
+  const organization = await rawDb.organization.findUnique({
+    where: { publicPrayerWallId },
+  });
   if (!organization || !organization.prayerWallEnabled) return null;
   return organization;
 }
@@ -170,27 +201,60 @@ export async function getOrganizationByPublicPrayerWallId(publicPrayerWallId: st
  * staff member before using this; calling it for an arbitrary/unauthenticated visitor
  * would let them see a disabled wall's contents, defeating the enabled flag entirely.
  */
-export async function getOrganizationByPublicPrayerWallIdForPreview(publicPrayerWallId: string) {
+export async function getOrganizationByPublicPrayerWallIdForPreview(
+  publicPrayerWallId: string,
+) {
   return rawDb.organization.findUnique({ where: { publicPrayerWallId } });
 }
 
 export async function dismissOnboardingChecklist(organizationId: string) {
-  return rawDb.organization.update({ where: { id: organizationId }, data: { onboardingChecklistDismissedAt: new Date() } });
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: { onboardingChecklistDismissedAt: new Date() },
+  });
 }
 
 /** Called once, whether the setup wizard was completed or skipped -- either way, don't auto-redirect there again. */
 export async function markOnboardingWizardSeen(organizationId: string) {
-  return rawDb.organization.update({ where: { id: organizationId }, data: { onboardingWizardSeenAt: new Date() } });
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: { onboardingWizardSeenAt: new Date() },
+  });
 }
 
 /** "Come back later" on the Prayer Wall / Testimonies wizard -- stops the auto-redirect, but PrayerWallModerationPage keeps a manual way back in until the org actually enables one of the two. */
 export async function markPrayerTestimonyWizardSeen(organizationId: string) {
-  return rawDb.organization.update({ where: { id: organizationId }, data: { prayerTestimonyWizardSeenAt: new Date() } });
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: { prayerTestimonyWizardSeenAt: new Date() },
+  });
 }
 
 /** null clears the priority, back to plain relevance-score ranking. See schema.prisma's doc comment on Organization.priorityContentType for what this actually does in ChatPipeline. */
-export async function setPriorityContentType(organizationId: string, priorityContentType: string | null) {
-  return rawDb.organization.update({ where: { id: organizationId }, data: { priorityContentType } });
+export async function setPriorityContentType(
+  organizationId: string,
+  priorityContentType: string | null,
+) {
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: { priorityContentType },
+  });
+}
+
+/** Both nullable/independent -- an org can set one without the other. Read by
+ * ChatPipeline for the solicitation-response fallback and the factual-answer
+ * fallback line; see schema.prisma's doc comment on these two columns. */
+export async function setPublicContactInfo(
+  organizationId: string,
+  params: { contactEmail: string | null; publicWebsiteUrl: string | null },
+) {
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: {
+      contactEmail: params.contactEmail,
+      publicWebsiteUrl: params.publicWebsiteUrl,
+    },
+  });
 }
 
 export async function enablePrayerWall(
@@ -211,8 +275,12 @@ export async function enablePrayerWall(
       prayerRequestForwardingEmails: params.forwardingEmails,
       prayerWallBrandColor: params.brandColor,
       prayerWallLogoUrl: params.logoUrl,
-      ...(params.testimoniesEnabled !== undefined ? { testimoniesEnabled: params.testimoniesEnabled } : {}),
-      ...(params.testimoniesPageName !== undefined ? { testimoniesPageName: params.testimoniesPageName } : {}),
+      ...(params.testimoniesEnabled !== undefined
+        ? { testimoniesEnabled: params.testimoniesEnabled }
+        : {}),
+      ...(params.testimoniesPageName !== undefined
+        ? { testimoniesPageName: params.testimoniesPageName }
+        : {}),
     },
   });
 }
