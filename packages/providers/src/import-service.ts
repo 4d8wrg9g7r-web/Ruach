@@ -1,7 +1,11 @@
 import { importJobService, resourceService } from "@ruach/database";
-import type { NormalizedExternalResource, ResourceProviderTypeValue } from "@ruach/shared-types";
+import type {
+  NormalizedExternalResource,
+  ResourceProviderTypeValue,
+} from "@ruach/shared-types";
 import { extractCandidateLinks } from "./link-discovery";
 import { detectProviderFromUrl, getResourceProvider } from "./registry";
+import type { ResourceProvider } from "./ResourceProvider";
 
 export interface ImportResult {
   resource: Awaited<ReturnType<typeof resourceService.getResource>>;
@@ -11,6 +15,14 @@ export interface ImportResult {
 async function persistNormalizedResource(
   organizationId: string,
   normalized: NormalizedExternalResource,
+  // The single-URL path below already has a live provider instance that just ran
+  // getResource() -- passed through so GenericUrlProvider's getTranscript can reuse
+  // that fetch instead of hitting the same URL again. Bulk imports (YouTube/RSS
+  // channel or feed) have no such instance per item and fall back to a fresh
+  // getResourceProvider() lookup, same as before; those providers' getTranscript
+  // hits a captions API by id, not a page refetch, so there's nothing to reuse there
+  // anyway.
+  existingProvider?: ResourceProvider,
 ): Promise<ImportResult> {
   const existing = await resourceService.findResourceBySource(
     organizationId,
@@ -18,7 +30,10 @@ async function persistNormalizedResource(
     normalized.externalId,
   );
   if (existing) {
-    return { resource: await resourceService.getResource(organizationId, existing.id), created: false };
+    return {
+      resource: await resourceService.getResource(organizationId, existing.id),
+      created: false,
+    };
   }
 
   const created = await resourceService.createResource({
@@ -50,7 +65,10 @@ async function persistNormalizedResource(
   // description -- recorded as pending, unfetched rows (brief §22-23). Nothing is
   // fetched and nothing feeds AI categorization until a human approves each one on
   // the resource review screen; see resourceService.approveSourceDocument.
-  for (const url of extractCandidateLinks(normalized.description, normalized.title)) {
+  for (const url of extractCandidateLinks(
+    normalized.description,
+    normalized.title,
+  )) {
     await resourceService.addSourceDocument({
       organizationId,
       resourceId: created.id,
@@ -62,7 +80,8 @@ async function persistNormalizedResource(
     });
   }
 
-  const provider = getResourceProvider(normalized.sourceProvider);
+  const provider =
+    existingProvider ?? getResourceProvider(normalized.sourceProvider);
   if (provider.getTranscript) {
     const transcript = await provider.getTranscript({
       provider: normalized.sourceProvider,
@@ -70,7 +89,12 @@ async function persistNormalizedResource(
       url: normalized.publicUrl,
     });
     if (transcript) {
-      await resourceService.setTranscript(organizationId, created.id, transcript.text, transcript.source);
+      await resourceService.setTranscript(
+        organizationId,
+        created.id,
+        transcript.text,
+        transcript.source,
+      );
       await resourceService.addSourceDocument({
         organizationId,
         resourceId: created.id,
@@ -83,7 +107,10 @@ async function persistNormalizedResource(
     }
   }
 
-  return { resource: await resourceService.getResource(organizationId, created.id), created: true };
+  return {
+    resource: await resourceService.getResource(organizationId, created.id),
+    created: true,
+  };
 }
 
 /**
@@ -93,9 +120,13 @@ async function persistNormalizedResource(
  * screen. Duplicate detection is by (organizationId, sourceProvider, externalId), never
  * by title (brief §18).
  */
-export async function importResourceFromUrl(organizationId: string, url: string): Promise<ImportResult> {
+export async function importResourceFromUrl(
+  organizationId: string,
+  url: string,
+): Promise<ImportResult> {
   const detected = detectProviderFromUrl(url);
-  const providerType: ResourceProviderTypeValue = detected?.provider ?? "GENERIC_URL";
+  const providerType: ResourceProviderTypeValue =
+    detected?.provider ?? "GENERIC_URL";
 
   const importJob = await importJobService.createImportJob({
     organizationId,
@@ -124,7 +155,11 @@ export async function importResourceFromUrl(organizationId: string, url: string)
       url,
     });
 
-    const result = await persistNormalizedResource(organizationId, normalized);
+    const result = await persistNormalizedResource(
+      organizationId,
+      normalized,
+      provider,
+    );
 
     await importJobService.recordImportJobItem({
       organizationId,
@@ -133,11 +168,17 @@ export async function importResourceFromUrl(organizationId: string, url: string)
       sourceUrl: url,
       success: true,
     });
-    await importJobService.completeImportJob(organizationId, importJob.id, { successCount: 1, failureCount: 0 });
+    await importJobService.completeImportJob(organizationId, importJob.id, {
+      successCount: 1,
+      failureCount: 0,
+    });
 
     return result;
   } catch (err) {
-    await importJobService.completeImportJob(organizationId, importJob.id, { successCount: 0, failureCount: 1 });
+    await importJobService.completeImportJob(organizationId, importJob.id, {
+      successCount: 0,
+      failureCount: 1,
+    });
     throw err;
   }
 }
@@ -179,9 +220,14 @@ async function runBulkImport(
 
   for (const normalized of items) {
     try {
-      const result = await persistNormalizedResource(organizationId, normalized);
+      const result = await persistNormalizedResource(
+        organizationId,
+        normalized,
+      );
       if (result.resource) {
-        (result.created ? createdResourceIds : existingResourceIds).push(result.resource.id);
+        (result.created ? createdResourceIds : existingResourceIds).push(
+          result.resource.id,
+        );
       }
       await importJobService.recordImportJobItem({
         organizationId,
@@ -207,7 +253,13 @@ async function runBulkImport(
     failureCount,
   });
 
-  return { importJobId: importJob.id, totalItems: items.length, createdResourceIds, existingResourceIds, failureCount };
+  return {
+    importJobId: importJob.id,
+    totalItems: items.length,
+    createdResourceIds,
+    existingResourceIds,
+    failureCount,
+  };
 }
 
 /**
@@ -217,10 +269,15 @@ async function runBulkImport(
  * so YouTube API round trips plus N sequential database writes, since transcripts
  * are never fetched for YouTube (metadata-only, brief §14/docs/youtube-integration.md).
  */
-export async function importYouTubeChannel(organizationId: string, channelUrl: string): Promise<BulkImportResult> {
+export async function importYouTubeChannel(
+  organizationId: string,
+  channelUrl: string,
+): Promise<BulkImportResult> {
   const provider = getResourceProvider("YOUTUBE");
   if (!provider.listResources) {
-    throw new Error("The active YouTube provider does not support channel import.");
+    throw new Error(
+      "The active YouTube provider does not support channel import.",
+    );
   }
   const videos = await provider.listResources({ organizationId, channelUrl });
   return runBulkImport(organizationId, "YOUTUBE", "CHANNEL", videos);
@@ -232,7 +289,10 @@ export async function importYouTubeChannel(organizationId: string, channelUrl: s
  * is a public document, fetched through the same SSRF-guarded fetcher as generic
  * URL import.
  */
-export async function importRSSFeed(organizationId: string, feedUrl: string): Promise<BulkImportResult> {
+export async function importRSSFeed(
+  organizationId: string,
+  feedUrl: string,
+): Promise<BulkImportResult> {
   const provider = getResourceProvider("RSS");
   if (!provider.listResources) {
     throw new Error("The active RSS provider does not support feed import.");

@@ -1,4 +1,7 @@
-import type { ExtractedIntent, SafetyClassification } from "@ruach/shared-types";
+import type {
+  ExtractedIntent,
+  SafetyClassification,
+} from "@ruach/shared-types";
 import type {
   AIProvider,
   CategorizationInput,
@@ -7,13 +10,54 @@ import type {
   ConversationalResponseOutput,
   LinkCandidate,
   LinkMatchOutput,
+  RelevanceClassification,
 } from "./AIProvider";
 
 /** Dropped from both the message and link text before overlap scoring -- common enough to inflate the score of an unrelated link without meaning anything ("where can I find the page about the thing"). */
 const MATCH_STOPWORDS = new Set([
-  "a", "an", "the", "is", "are", "was", "were", "do", "does", "did", "can", "could", "would", "should",
-  "where", "what", "when", "who", "how", "i", "you", "your", "we", "our", "to", "for", "of", "in", "on",
-  "at", "and", "or", "find", "get", "go", "see", "check", "out", "please", "me", "it", "that", "this",
+  "a",
+  "an",
+  "the",
+  "is",
+  "are",
+  "was",
+  "were",
+  "do",
+  "does",
+  "did",
+  "can",
+  "could",
+  "would",
+  "should",
+  "where",
+  "what",
+  "when",
+  "who",
+  "how",
+  "i",
+  "you",
+  "your",
+  "we",
+  "our",
+  "to",
+  "for",
+  "of",
+  "in",
+  "on",
+  "at",
+  "and",
+  "or",
+  "find",
+  "get",
+  "go",
+  "see",
+  "check",
+  "out",
+  "please",
+  "me",
+  "it",
+  "that",
+  "this",
 ]);
 
 function matchTokens(text: string): Set<string> {
@@ -26,16 +70,51 @@ function matchTokens(text: string): Set<string> {
   );
 }
 
-const CRISIS_KEYWORDS: Array<{ pattern: RegExp; category: SafetyClassification["category"] }> = [
+/** Deterministic stand-in for the real classifier's judgment call -- covers the
+ * shapes e2e fixtures actually exercise (a self-introduction + pitch, an opt-out
+ * line), not a general solicitation detector. */
+const SOLICITATION_KEYWORDS = [
+  /\bfree (quote|bid|estimate|consultation)\b/i,
+  /\b(reply|text|respond with) stop to opt[\s-]?out\b/i,
+  /\bi (represent|work for|own) [a-z0-9 &.,'-]+ (and|,)/i,
+  /\bwe (provide|offer|specialize in) [a-z0-9 ]+ services\b/i,
+  /\bbusiness development (rep|representative)\b/i,
+  /\bpartnership opportunity\b/i,
+];
+
+/** "does the message plausibly want a specific fact (a time, a name, a place)" -- deliberately loose, only used to pick which of the mock's two response shapes to use. */
+const FACTUAL_QUESTION_PATTERN =
+  /\b(what time|when|who is|where is|where'?s|do you have .*(service|program)|is there )\b/i;
+
+const CRISIS_KEYWORDS: Array<{
+  pattern: RegExp;
+  category: SafetyClassification["category"];
+}> = [
   {
-    pattern: /\b(kill myself|suicid|end my life|(don'?t|do not|not) want(ing)? to live)\b/i,
+    pattern:
+      /\b(kill myself|suicid|end my life|(don'?t|do not|not) want(ing)? to live)\b/i,
     category: "SELF_HARM",
   },
-  { pattern: /\b(hurt myself|self[\s-]?harm|cutting myself)\b/i, category: "SELF_HARM" },
-  { pattern: /\b(being abused|domestic violence|he hits me|she hits me)\b/i, category: "ABUSE" },
-  { pattern: /\b(overdose|can'?t breathe|chest pain|heart attack)\b/i, category: "MEDICAL_EMERGENCY" },
-  { pattern: /\b(child (is )?being (abused|hurt|touched))\b/i, category: "CHILD_SAFETY" },
-  { pattern: /\b(threat(en(ing)?)? to kill|going to hurt (him|her|them))\b/i, category: "THREATS" },
+  {
+    pattern: /\b(hurt myself|self[\s-]?harm|cutting myself)\b/i,
+    category: "SELF_HARM",
+  },
+  {
+    pattern: /\b(being abused|domestic violence|he hits me|she hits me)\b/i,
+    category: "ABUSE",
+  },
+  {
+    pattern: /\b(overdose|can'?t breathe|chest pain|heart attack)\b/i,
+    category: "MEDICAL_EMERGENCY",
+  },
+  {
+    pattern: /\b(child (is )?being (abused|hurt|touched))\b/i,
+    category: "CHILD_SAFETY",
+  },
+  {
+    pattern: /\b(threat(en(ing)?)? to kill|going to hurt (him|her|them))\b/i,
+    category: "THREATS",
+  },
 ];
 
 /** Fixed vocabulary matching the seed library's topics -- deterministic, no network calls. */
@@ -76,7 +155,10 @@ export class MockAIProvider implements AIProvider {
     return { category: "ORDINARY" };
   }
 
-  async extractIntent(message: string, _recentMessages: string[]): Promise<ExtractedIntent> {
+  async extractIntent(
+    message: string,
+    _recentMessages: string[],
+  ): Promise<ExtractedIntent> {
     const topics = findMatchingTopics(message);
     return {
       primaryTopic: topics[0] ?? null,
@@ -87,15 +169,22 @@ export class MockAIProvider implements AIProvider {
     };
   }
 
-  async generateCategorization(input: CategorizationInput): Promise<CategorizationOutput> {
-    const combinedText = [input.title, input.description ?? "", ...input.sourceDocuments.map((d) => d.text)].join(
-      "\n",
+  async generateCategorization(
+    input: CategorizationInput,
+  ): Promise<CategorizationOutput> {
+    const combinedText = [
+      input.title,
+      input.description ?? "",
+      ...input.sourceDocuments.map((d) => d.text),
+    ].join("\n");
+    const transcriptDoc = input.sourceDocuments.find(
+      (d) => d.sourceType === "TRANSCRIPT",
     );
-    const transcriptDoc = input.sourceDocuments.find((d) => d.sourceType === "TRANSCRIPT");
     const topics = findMatchingTopics(combinedText);
     const confidenceBase = transcriptDoc ? 0.85 : 0.6;
 
-    const summarySource = transcriptDoc?.text ?? input.description ?? input.title;
+    const summarySource =
+      transcriptDoc?.text ?? input.description ?? input.title;
 
     return {
       summary: {
@@ -117,7 +206,9 @@ export class MockAIProvider implements AIProvider {
         sourceExcerpt: null,
       },
       questionsAnswered: {
-        value: topics.slice(0, 2).map((topic) => `What does this resource say about ${topic}?`),
+        value: topics
+          .slice(0, 2)
+          .map((topic) => `What does this resource say about ${topic}?`),
         confidenceScore: confidenceBase - 0.15,
         sourceDocumentId: null,
         sourceExcerpt: null,
@@ -137,7 +228,9 @@ export class MockAIProvider implements AIProvider {
     };
   }
 
-  async generateConversationalResponse(input: ConversationalResponseInput): Promise<ConversationalResponseOutput> {
+  async generateConversationalResponse(
+    input: ConversationalResponseInput,
+  ): Promise<ConversationalResponseOutput> {
     if (input.candidates.length === 0) {
       return {
         acknowledgment: "I looked through what's available here.",
@@ -146,17 +239,40 @@ export class MockAIProvider implements AIProvider {
       };
     }
 
-    const topicPhrase = input.intent.primaryTopic ? ` about ${input.intent.primaryTopic}` : "";
     const top = input.candidates[0]!;
-    const reason = top.primaryTopic ? ` -- it speaks directly to ${top.primaryTopic.toLowerCase()}` : "";
+
+    // FACTUAL mode: a real source excerpt exists and the question reads as wanting a
+    // concrete fact -- quote from the excerpt directly rather than the generic
+    // "might be a good place to start" recommendation framing, same split the real
+    // provider's prompt makes.
+    if (top.sourceExcerpt && FACTUAL_QUESTION_PATTERN.test(input.message)) {
+      return {
+        acknowledgment: "",
+        answer: truncate(top.sourceExcerpt, 300),
+        followUpQuestion: null,
+      };
+    }
+
+    const topicPhrase = input.intent.primaryTopic
+      ? ` about ${input.intent.primaryTopic}`
+      : "";
+    const reason = top.primaryTopic
+      ? ` -- it speaks directly to ${top.primaryTopic.toLowerCase()}`
+      : "";
     return {
       acknowledgment: `It sounds like you're looking for something${topicPhrase}.`,
       answer: `"${top.title}" might be a good place to start${reason}.`,
-      followUpQuestion: input.candidates.length > 1 ? "Would you like something shorter, or a full teaching?" : null,
+      followUpQuestion:
+        input.candidates.length > 1
+          ? "Would you like something shorter, or a full teaching?"
+          : null,
     };
   }
 
-  async matchLink(message: string, links: LinkCandidate[]): Promise<LinkMatchOutput> {
+  async matchLink(
+    message: string,
+    links: LinkCandidate[],
+  ): Promise<LinkMatchOutput> {
     const messageTokens = matchTokens(message);
     if (messageTokens.size === 0) return { matchedLinkId: null };
 
@@ -186,5 +302,13 @@ export class MockAIProvider implements AIProvider {
       }
     }
     return { matchedLinkId: best?.id ?? null };
+  }
+
+  async classifyRelevance(message: string): Promise<RelevanceClassification> {
+    return {
+      isSolicitation: SOLICITATION_KEYWORDS.some((pattern) =>
+        pattern.test(message),
+      ),
+    };
   }
 }

@@ -12,6 +12,11 @@ export const ResponseTypeSchema = z.enum([
   // driven off responseType, stop counting a friendly "hello" as a failed content
   // search. See ChatPipeline's detectSmallTalk.
   "GREETING",
+  // A business pitch/sales solicitation directed at the church (see ChatPipeline's
+  // classifyRelevance step), not a genuine visitor question -- same reasoning as
+  // GREETING above: excluded from responseType-driven analytics so a vendor's cold
+  // outreach doesn't read as a content gap either.
+  "SOLICITATION",
   "ERROR",
 ]);
 export type ResponseType = z.infer<typeof ResponseTypeSchema>;
