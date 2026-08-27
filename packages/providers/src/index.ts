@@ -13,5 +13,5 @@ export { parseVttToText } from "./vtt";
 export { assertSafeUrl, safeFetch, UnsafeUrlError } from "./ssrf-guard";
 export { extractCandidateLinks } from "./link-discovery";
 export { extractReadableText } from "./html-text";
-export { importResourceFromUrl, importYouTubeChannel, importRSSFeed } from "./import-service";
-export type { ImportResult, BulkImportResult } from "./import-service";
+export { importResourceFromUrl, importYouTubeChannel, importRSSFeed, refreshResourceTranscript } from "./import-service";
+export type { ImportResult, BulkImportResult, TranscriptRefreshResult, TranscriptRefreshStatus } from "./import-service";

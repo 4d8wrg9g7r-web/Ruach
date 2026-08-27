@@ -19,7 +19,8 @@
     "db:studio": "pnpm --filter @ruach/database prisma studio",
     "tenant-check": "bash scripts/check-tenant-scoping.sh",
     "pricing-check": "pnpm --filter @ruach/dashboard check:pricing",
-    "deploy:prod": "bash scripts/deploy-prod.sh"
+    "deploy:prod": "bash scripts/deploy-prod.sh",
+    "backfill:page-text": "pnpm --filter @ruach/providers backfill:page-text"
   },
   "devDependencies": {
     "prettier": "^3.3.3",
