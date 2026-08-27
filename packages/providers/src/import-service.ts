@@ -113,6 +113,53 @@ async function persistNormalizedResource(
   };
 }
 
+export type TranscriptRefreshStatus = "updated" | "unchanged" | "no-text" | "unsupported" | "not-found";
+
+export interface TranscriptRefreshResult {
+  status: TranscriptRefreshStatus;
+  characters?: number;
+}
+
+/**
+ * Re-run transcript extraction for a resource that already exists.
+ *
+ * The import path only extracts on creation, so a resource imported before its provider
+ * gained getTranscript() keeps whatever it had (for a GENERIC_URL page, an og:description
+ * blurb at best) forever -- and re-importing the URL hits dedup and changes nothing. This
+ * is the one way to fill that gap, used both by the backfill script and by the
+ * per-resource refresh action in the dashboard.
+ *
+ * Deliberately does NOT re-run categorization: that costs an AI call per resource and is
+ * the caller's decision, not a side effect of fetching text.
+ */
+export async function refreshResourceTranscript(
+  organizationId: string,
+  resourceId: string,
+): Promise<TranscriptRefreshResult> {
+  const resource = await resourceService.getResource(organizationId, resourceId);
+  if (!resource) return { status: "not-found" };
+
+  const provider = getResourceProvider(resource.sourceProvider);
+  if (!provider.getTranscript) return { status: "unsupported" };
+
+  const transcript = await provider.getTranscript({
+    provider: resource.sourceProvider,
+    externalId: resource.externalId,
+    url: resource.publicUrl,
+  });
+  if (!transcript) return { status: "no-text" };
+
+  const text = transcript.text.trim();
+  if (text.length === 0) return { status: "no-text" };
+  if (text === resource.cleanTranscript?.trim()) {
+    return { status: "unchanged", characters: text.length };
+  }
+
+  await resourceService.setTranscript(organizationId, resourceId, transcript.text, transcript.source);
+  await resourceService.upsertTranscriptSourceDocument(organizationId, resourceId, transcript.text);
+  return { status: "updated", characters: text.length };
+}
+
 /**
  * Single-URL import (brief §29 "Individual URL workflow"): detect provider, validate,
  * fetch normalized metadata + transcript, persist as a draft Resource with its source

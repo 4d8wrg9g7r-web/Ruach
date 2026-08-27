@@ -86,6 +86,34 @@ export async function countActiveResources(organizationId: string) {
   return tenantDb.resource.count({ where: { organizationId, status: "ACTIVE" } });
 }
 
+/**
+ * Resources whose provider could supply body text but which have none stored.
+ *
+ * getTranscript() only ever runs when a resource is first created
+ * (import-service.persistNormalizedResource returns early on a duplicate), so anything
+ * imported before a provider learned to extract text -- every GENERIC_URL page imported
+ * before EXTRACTED_PAGE_TEXT existed -- has metadata alone, and the assistant has
+ * nothing to answer factual questions from. Re-importing the same URL does not fix it:
+ * dedup short-circuits ahead of extraction. This is the query behind that backfill; see
+ * importService.refreshResourceTranscript.
+ *
+ * ARCHIVED is excluded deliberately -- refetching pages for content the org has retired
+ * would be wasted outbound requests.
+ */
+export async function listResourcesMissingTranscript(
+  organizationId: string,
+  sourceProvider: ResourceProviderType = "GENERIC_URL",
+) {
+  return tenantDb.resource.findMany({
+    where: {
+      organizationId,
+      sourceProvider,
+      status: { not: "ARCHIVED" },
+      OR: [{ cleanTranscript: null }, { cleanTranscript: "" }],
+    },
+  });
+}
+
 export async function setTranscript(
   organizationId: string,
   resourceId: string,
@@ -198,6 +226,40 @@ export async function addSourceDocument(params: {
   const { includedInAnalysis = true, ...rest } = params;
   return tenantDb.resourceSourceDocument.create({
     data: { ...rest, includedInAnalysis },
+  });
+}
+
+/**
+ * Store freshly-extracted transcript text as this resource's TRANSCRIPT source
+ * document, replacing the text of the existing one rather than adding a second.
+ *
+ * Updated in place (not delete-and-recreate) because GeneratedMetadataEvidence rows
+ * point at the source document, and dropping it would take the categorization's
+ * provenance trail with it.
+ */
+export async function upsertTranscriptSourceDocument(
+  organizationId: string,
+  resourceId: string,
+  text: string,
+) {
+  const existing = await tenantDb.resourceSourceDocument.findFirst({
+    where: { organizationId, resourceId, sourceType: "TRANSCRIPT" },
+  });
+  if (existing) {
+    await tenantDb.resourceSourceDocument.updateMany({
+      where: { id: existing.id, organizationId, resourceId },
+      data: { originalText: text, cleanText: text },
+    });
+    return;
+  }
+  await addSourceDocument({
+    organizationId,
+    resourceId,
+    sourceType: "TRANSCRIPT",
+    originalText: text,
+    cleanText: text,
+    discoveredAutomatically: true,
+    approvedByUser: true,
   });
 }
 

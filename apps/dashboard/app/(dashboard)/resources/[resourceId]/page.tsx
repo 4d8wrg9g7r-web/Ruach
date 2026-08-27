@@ -4,13 +4,14 @@ import Link from "next/link";
 import { ArrowLeft, Calendar, CheckCircle2, Clock, ExternalLink, RefreshCw, User, X, XCircle } from "lucide-react";
 import { auditService, billingService, resourceService, websiteService } from "@ruach/database";
 import { CategorizationService, getAIProvider } from "@ruach/ai";
-import { extractReadableText, safeFetch, UnsafeUrlError } from "@ruach/providers";
+import { extractReadableText, refreshResourceTranscript, safeFetch, UnsafeUrlError } from "@ruach/providers";
 import { LocalRetrievalProvider } from "@ruach/retrieval";
+import { AutoSubmitSelect } from "../../../../components/AutoSubmitSelect";
 import { Badge } from "../../../../components/ui/Badge";
 import { buttonClasses } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
 import { EmptyState } from "../../../../components/ui/EmptyState";
-import { Select, Textarea } from "../../../../components/ui/Input";
+import { Textarea } from "../../../../components/ui/Input";
 import { confidenceLevel, resourceStatusLabel, resourceStatusTone } from "../../../../lib/format";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../../lib/session";
 
@@ -31,6 +32,54 @@ async function setTranscriptAction(resourceId: string, formData: FormData) {
     originalText: transcript,
     cleanText: transcript,
     approvedByUser: true,
+  });
+  revalidatePath(`/resources/${resourceId}`);
+}
+
+/**
+ * Re-fetch the page and store its visible body text.
+ *
+ * Text extraction only runs when a resource is first imported, so anything imported
+ * before GenericUrlProvider learned to read page bodies has metadata alone -- and
+ * re-importing the URL hits duplicate detection and changes nothing. This is the
+ * per-resource counterpart to `pnpm backfill:page-text`, as useful for a page whose
+ * content has since changed as for one that never had text.
+ *
+ * Outcomes other than success are expected (a JS-rendered page this regex extractor
+ * can't see into, a link that has since died), so they redirect back with ?linkError=
+ * like approveLinkedDocumentAction rather than hitting the error boundary.
+ */
+async function refreshPageTextAction(resourceId: string) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  let errorMessage: string | null = null;
+  try {
+    const result = await refreshResourceTranscript(organization.id, resourceId);
+    if (result.status === "no-text") {
+      errorMessage = "No readable text found on that page.";
+    } else if (result.status === "unsupported") {
+      errorMessage = "This resource's provider can't extract page text.";
+    } else if (result.status === "not-found") {
+      errorMessage = "Resource not found.";
+    }
+  } catch (err) {
+    errorMessage = err instanceof UnsafeUrlError ? err.message : "Couldn't reach that page.";
+  }
+
+  if (errorMessage) {
+    redirect(`/resources/${resourceId}?linkError=${encodeURIComponent(errorMessage)}`);
+  }
+
+  const user = await getCurrentUser();
+  await auditService.recordAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user?.id,
+    action: "resource.page_text_refreshed",
+    targetType: "Resource",
+    targetId: resourceId,
   });
   revalidatePath(`/resources/${resourceId}`);
 }
@@ -194,7 +243,12 @@ export default async function ResourceDetailPage({
   const resource = await resourceService.getResource(organization.id, resourceId);
   if (!resource) notFound();
 
+  // Only providers that read a page body offer this -- YouTube/Vimeo transcripts come
+  // from a captions API keyed by id, where re-fetching is a different job.
+  const canRefreshPageText = resource.sourceProvider === "GENERIC_URL";
+
   const boundSetTranscript = setTranscriptAction.bind(null, resourceId);
+  const boundRefreshPageText = refreshPageTextAction.bind(null, resourceId);
   const boundCategorize = categorizeAction.bind(null, resourceId);
   const boundApprove = approveAction.bind(null, resourceId);
   const boundReject = rejectAction.bind(null, resourceId);
@@ -298,26 +352,46 @@ export default async function ResourceDetailPage({
                   await boundSetCampus(String(formData.get("websiteId") ?? ""));
                 }}
               >
-                <Select name="websiteId" defaultValue={resource.websiteId ?? ""} onChange={(e) => e.currentTarget.form?.requestSubmit()}>
-                  <option value="">All campuses (org-wide)</option>
-                  {websites.map((website) => (
-                    <option key={website.id} value={website.id}>
-                      {website.name}
-                    </option>
-                  ))}
-                </Select>
+                {/* Must be the client AutoSubmitSelect, not ui/Select: this page is a Server
+                    Component, and handing an onChange function to a client component throws
+                    "Event handlers cannot be passed to Client Component props" -- which took
+                    the whole page to the error boundary for any org with 2+ campuses. */}
+                <AutoSubmitSelect
+                  name="websiteId"
+                  defaultValue={resource.websiteId ?? ""}
+                  options={[
+                    { value: "", label: "All campuses (org-wide)" },
+                    ...websites.map((website) => ({ value: website.id, label: website.name })),
+                  ]}
+                  className="block w-full rounded-sm border border-border-strong bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                />
               </form>
             </Card>
           )}
 
           <Card padding="none" className="p-4">
-            <h2 className="mb-3 text-sm font-semibold text-ink">Transcript</h2>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-ink">Transcript</h2>
+              {canRefreshPageText && (
+                <form action={boundRefreshPageText}>
+                  <button type="submit" className={`${buttonClasses("ghost", "sm")} gap-1.5`} title="Re-read this page and store its current text">
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Re-fetch page text
+                  </button>
+                </form>
+              )}
+            </div>
             {resource.cleanTranscript ? (
               <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-md bg-surface-muted p-3 text-sm text-ink-secondary">
                 {resource.cleanTranscript}
               </div>
             ) : (
               <form action={boundSetTranscript} className="flex flex-col gap-2">
+                {canRefreshPageText && (
+                  <p className="text-sm text-ink-secondary">
+                    This page was imported before Ruach could read page text. Use &ldquo;Re-fetch page text&rdquo; above to pull it in, or paste a transcript below.
+                  </p>
+                )}
                 <Textarea name="transcript" rows={5} placeholder="Paste a transcript..." />
                 <button type="submit" className={`${buttonClasses("secondary", "sm")} self-start`}>
                   Save transcript
