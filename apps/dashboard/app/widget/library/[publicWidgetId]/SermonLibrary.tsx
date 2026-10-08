@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, BookOpen, MessageCircle, Search, Send, X } from "lucide-react";
+import { ArrowUpRight, BookOpen, ChevronDown, MessageCircle, Search, Send, SlidersHorizontal, X } from "lucide-react";
 import {
   EMPTY_LIBRARY_FILTERS,
   RESOURCE_TYPE_LABELS,
@@ -124,6 +124,10 @@ function FilterSelect({
 
 export function SermonLibrary(props: SermonLibraryProps) {
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_LIBRARY_FILTERS);
+  // Open by default where there's room; on a phone the six dropdowns would push the
+  // results a full screen down, so they start collapsed there. Measured inside the
+  // iframe, so it follows the embed's own width, not the host page's.
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState("");
@@ -148,6 +152,10 @@ export function SermonLibrary(props: SermonLibraryProps) {
       setSessionId(crypto.randomUUID());
     }
   }, [props.publicWidgetId]);
+
+  useEffect(() => {
+    if (window.matchMedia?.("(max-width: 640px)").matches) setFiltersOpen(false);
+  }, []);
 
   const results = useMemo(() => filterLibraryItems(props.items, filters), [props.items, filters]);
   const facets = useMemo(() => buildLibraryFacets(props.items, filters), [props.items, filters]);
@@ -223,6 +231,8 @@ export function SermonLibrary(props: SermonLibraryProps) {
   }
 
   const hasFilters = activeChips.length > 0;
+  // Dropdown filters only -- the search box stays visible either way.
+  const activeFilterCount = activeChips.filter((chip) => chip.key !== "query").length;
   const brandTint = hexToRgba(props.primaryColor, 0.08);
 
   return (
@@ -367,18 +377,32 @@ export function SermonLibrary(props: SermonLibraryProps) {
       )}
 
       <section aria-label="Filter messages" className="mb-4">
-        <label className="relative mb-3 block">
-          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-          <input
-            type="search"
-            value={filters.query}
-            onChange={(e) => update({ query: e.target.value })}
-            placeholder="Search by title, speaker, topic or verse"
-            aria-label="Search messages"
-            className="w-full rounded-md border border-border-strong bg-surface py-2.5 pl-9 pr-3 text-sm outline-none"
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mb-3 flex gap-2">
+          <label className="relative block min-w-0 flex-1">
+            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+            <input
+              type="search"
+              value={filters.query}
+              onChange={(e) => update({ query: e.target.value })}
+              placeholder="Search by title, speaker, topic or verse"
+              aria-label="Search messages"
+              className="w-full rounded-md border border-border-strong bg-surface py-2.5 pl-9 pr-3 text-sm outline-none"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+            aria-controls="ruach-library-filters"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-strong bg-surface px-3 text-sm font-medium text-ink-secondary hover:text-ink"
+            style={activeFilterCount > 0 ? { borderColor: props.primaryColor, color: props.primaryColor } : undefined}
+          >
+            <SlidersHorizontal size={15} />
+            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            <ChevronDown size={15} className={`transition-transform duration-180 ${filtersOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+        <div id="ruach-library-filters" className={`${filtersOpen ? "grid" : "hidden"} grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4`}>
           <FilterSelect label="Speaker" allLabel="All speakers" value={filters.speaker} options={facets.speakers} onChange={(speaker) => update({ speaker })} primaryColor={props.primaryColor} />
           <FilterSelect label="Subject" allLabel="All subjects" value={filters.topic} options={facets.topics} onChange={(topic) => update({ topic })} primaryColor={props.primaryColor} />
           <FilterSelect label="Scripture" allLabel="All books" value={filters.book} options={facets.books} onChange={(book) => update({ book })} primaryColor={props.primaryColor} />
