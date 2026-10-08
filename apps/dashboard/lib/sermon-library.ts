@@ -1,6 +1,6 @@
 import { revalidateTag, unstable_cache } from "next/cache";
 import { organizationService, resourceService, widgetService } from "@ruach/database";
-import { LIBRARY_RESOURCE_TYPES, type LibraryItem } from "@ruach/shared-types";
+import type { LibraryItem, ResourceTypeValue } from "@ruach/shared-types";
 
 /**
  * Data loading for the public sermon library embed (/widget/library/[publicWidgetId]).
@@ -55,6 +55,7 @@ export function getLibraryWidget(publicWidgetId: string) {
         suggestedPrompts: widget.suggestedPrompts,
         primaryColor: widget.primaryColor,
         showPlatformBranding: widget.showPlatformBranding,
+        libraryResourceTypes: widget.libraryResourceTypes as ResourceTypeValue[],
         website: {
           primaryDomain: widget.website.primaryDomain,
           allowedDomains: widget.website.allowedDomains,
@@ -67,21 +68,31 @@ export function getLibraryWidget(publicWidgetId: string) {
   )();
 }
 
-/** One campus's catalog. websiteId comes from the resolved widget above, never from the request. */
-export function getLibraryCatalog(organizationId: string, websiteId: string | null): Promise<LibraryItem[]> {
+/**
+ * One campus's catalog, limited to the resource types the widget's library shows.
+ * websiteId and resourceTypes come from the resolved widget above, never from the
+ * request.
+ */
+export function getLibraryCatalog(
+  organizationId: string,
+  websiteId: string | null,
+  resourceTypes: ResourceTypeValue[],
+): Promise<LibraryItem[]> {
+  const types = [...new Set(resourceTypes)].sort();
   return unstable_cache(
     async () => {
+      if (types.length === 0) return [];
       const rows = await resourceService.listLibraryResources({
         organizationId,
         websiteId,
-        resourceTypes: [...LIBRARY_RESOURCE_TYPES],
+        resourceTypes: types,
         limit: LIBRARY_ITEM_LIMIT,
       });
       return rows.map(
         (row): LibraryItem => ({
           id: row.id,
           title: row.title,
-          resourceType: row.resourceType as LibraryItem["resourceType"],
+          resourceType: row.resourceType,
           speakerName: row.speakerName?.trim() || null,
           seriesTitle: row.seriesTitle?.trim() || null,
           publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
@@ -92,10 +103,11 @@ export function getLibraryCatalog(organizationId: string, websiteId: string | nu
           // primaryTopic is usually also in topics; the facet builder dedupes per item.
           topics: [...(row.primaryTopic ? [row.primaryTopic] : []), ...row.topics].filter((t) => t.trim()),
           scriptures: row.scriptures.filter((s) => s.trim()),
+          messageTypes: row.messageTypes.filter((t) => t.trim()),
         }),
       );
     },
-    ["sermon-library-catalog", organizationId, websiteId ?? "org"],
+    ["sermon-library-catalog", organizationId, websiteId ?? "org", types.join(",")],
     { revalidate: CACHE_SECONDS, tags: [catalogTag(organizationId)] },
   )();
 }

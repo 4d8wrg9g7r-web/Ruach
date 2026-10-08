@@ -218,6 +218,32 @@ async function setCampusAction(resourceId: string, websiteId: string) {
   invalidateLibraryCatalog(organization.id);
 }
 
+const MAX_MESSAGE_TYPES = 10;
+const MAX_MESSAGE_TYPE_LENGTH = 40;
+
+async function setMessageTypesAction(resourceId: string, formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  // Checked existing types plus anything typed into "Add new" (comma-separated),
+  // deduped case-insensitively so "youth" doesn't sit beside an existing "Youth".
+  const raw = [
+    ...formData.getAll("messageType").map(String),
+    ...String(formData.get("newMessageTypes") ?? "").split(","),
+  ];
+  const byKey = new Map<string, string>();
+  for (const value of raw) {
+    const cleaned = value.trim().replace(/\s+/g, " ").slice(0, MAX_MESSAGE_TYPE_LENGTH);
+    const key = cleaned.toLowerCase();
+    if (cleaned && !byKey.has(key)) byKey.set(key, cleaned);
+  }
+  await resourceService.setMessageTypes(organization.id, resourceId, [...byKey.values()].slice(0, MAX_MESSAGE_TYPES));
+  revalidatePath(`/resources/${resourceId}`);
+  invalidateLibraryCatalog(organization.id);
+}
+
 async function rejectAction(resourceId: string) {
   "use server";
   const organization = await getCurrentOrganization();
@@ -257,9 +283,17 @@ export default async function ResourceDetailPage({
   const boundApprove = approveAction.bind(null, resourceId);
   const boundReject = rejectAction.bind(null, resourceId);
   const boundSetCampus = setCampusAction.bind(null, resourceId);
+  const boundSetMessageTypes = setMessageTypesAction.bind(null, resourceId);
 
   const canScopeCampus = billingService.planHasFeature(organization.planKey, "campusScopedContentLibraries");
   const websites = canScopeCampus ? await websiteService.listWebsites(organization.id) : [];
+  const messageTypeOptions = await resourceService.listMessageTypeOptions(organization.id);
+  // Types already on this resource always show, even if spelled differently from the org's list.
+  const selectedMessageTypeKeys = new Set(resource.messageTypes.map((t) => t.toLowerCase()));
+  const messageTypeChoices = [
+    ...messageTypeOptions,
+    ...resource.messageTypes.filter((t) => !messageTypeOptions.some((o) => o.toLowerCase() === t.toLowerCase())),
+  ];
 
   const pendingLinks = resource.sourceDocuments.filter(
     (doc) => doc.sourceType === "WEB_PAGE" && doc.discoveredAutomatically && !doc.approvedByUser,
@@ -372,6 +406,44 @@ export default async function ResourceDetailPage({
               </form>
             </Card>
           )}
+
+          <Card padding="none" className="p-4">
+            <h2 className="mb-1 text-sm font-semibold text-ink">Message types</h2>
+            <p className="mb-3 text-xs text-ink-muted">
+              Your own categories, like Sunday Service, Guest Speaker or Youth. Visitors can filter by them in the sermon
+              library embed.
+            </p>
+            <form action={boundSetMessageTypes} className="flex flex-col gap-3">
+              {messageTypeChoices.length > 0 && (
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {messageTypeChoices.map((type) => (
+                    <label key={type} className="inline-flex items-center gap-1.5 text-sm text-ink-secondary">
+                      <input
+                        type="checkbox"
+                        name="messageType"
+                        value={type}
+                        defaultChecked={selectedMessageTypeKeys.has(type.toLowerCase())}
+                        className="h-4 w-4 accent-[var(--accent)]"
+                      />
+                      {type}
+                    </label>
+                  ))}
+                </div>
+              )}
+              <label className="text-xs text-ink-secondary">
+                Add new
+                <input
+                  name="newMessageTypes"
+                  placeholder="e.g. Guest Speaker, Youth"
+                  maxLength={200}
+                  className="mt-1 block w-full rounded-sm border border-border-strong bg-surface px-3.5 py-2 text-sm text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                />
+              </label>
+              <button type="submit" className={`${buttonClasses("secondary", "sm")} w-fit`}>
+                Save message types
+              </button>
+            </form>
+          </Card>
 
           <Card padding="none" className="p-4">
             <div className="mb-3 flex items-center justify-between gap-3">

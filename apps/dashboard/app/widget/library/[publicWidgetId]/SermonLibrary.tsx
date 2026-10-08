@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, BookOpen, MessageCircle, Search, Send, X } from "lucide-react";
 import {
   EMPTY_LIBRARY_FILTERS,
-  LIBRARY_TYPE_LABELS,
+  RESOURCE_TYPE_LABELS,
   buildLibraryFacets,
   filterLibraryItems,
   normalizeKey,
@@ -13,7 +13,7 @@ import {
   type FacetOption,
   type LibraryFilters,
   type LibraryItem,
-  type LibraryResourceType,
+  type ResourceTypeValue,
 } from "@ruach/shared-types";
 import { hexToRgba } from "../../../../lib/color";
 
@@ -51,8 +51,11 @@ function formatDuration(seconds: number | null): string | null {
   return minutes % 60 === 0 ? `${hours} hr` : `${hours} hr ${minutes % 60} min`;
 }
 
-function buttonLabel(type: LibraryResourceType): string {
-  return type === "AUDIO" || type === "PODCAST" ? "Listen" : type === "DEVOTIONAL" ? "Read" : "Watch";
+function buttonLabel(type: ResourceTypeValue): string {
+  if (type === "AUDIO" || type === "PODCAST") return "Listen";
+  if (type === "DEVOTIONAL" || type === "ARTICLE") return "Read";
+  if (type === "DOCUMENT" || type === "OTHER") return "Open";
+  return "Watch";
 }
 
 /**
@@ -158,7 +161,8 @@ export function SermonLibrary(props: SermonLibraryProps) {
     if (filters.topic) chips.push({ key: "topic", label: labelFor(facets.topics, filters.topic) });
     if (filters.book) chips.push({ key: "book", label: labelFor(facets.books, filters.book) });
     if (filters.verse) chips.push({ key: "verse", label: labelFor(facets.verses, filters.verse) });
-    if (filters.type) chips.push({ key: "type", label: LIBRARY_TYPE_LABELS[filters.type] });
+    if (filters.messageType) chips.push({ key: "messageType", label: labelFor(facets.messageTypes, filters.messageType) });
+    if (filters.type) chips.push({ key: "type", label: RESOURCE_TYPE_LABELS[filters.type] });
     if (filters.series) chips.push({ key: "series", label: `Series: ${labelFor(facets.series, filters.series)}` });
     return chips;
   }, [filters, facets]);
@@ -374,19 +378,20 @@ export function SermonLibrary(props: SermonLibraryProps) {
             className="w-full rounded-md border border-border-strong bg-surface py-2.5 pl-9 pr-3 text-sm outline-none"
           />
         </label>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <FilterSelect label="Speaker" allLabel="All speakers" value={filters.speaker} options={facets.speakers} onChange={(speaker) => update({ speaker })} primaryColor={props.primaryColor} />
           <FilterSelect label="Subject" allLabel="All subjects" value={filters.topic} options={facets.topics} onChange={(topic) => update({ topic })} primaryColor={props.primaryColor} />
           <FilterSelect label="Scripture" allLabel="All books" value={filters.book} options={facets.books} onChange={(book) => update({ book })} primaryColor={props.primaryColor} />
           {filters.book && (
             <FilterSelect label="Key verse" allLabel="Any verse" value={filters.verse} options={facets.verses} onChange={(verse) => update({ verse })} primaryColor={props.primaryColor} />
           )}
+          <FilterSelect label="Message type" allLabel="All message types" value={filters.messageType} options={facets.messageTypes} onChange={(messageType) => update({ messageType })} primaryColor={props.primaryColor} />
           <FilterSelect
-            label="Message type"
-            allLabel="All types"
+            label="Format"
+            allLabel="All formats"
             value={filters.type}
             options={facets.types}
-            onChange={(type) => update({ type: type as LibraryResourceType | null })}
+            onChange={(type) => update({ type: type as ResourceTypeValue | null })}
             primaryColor={props.primaryColor}
           />
           <FilterSelect label="Series" allLabel="All series" value={filters.series} options={facets.series} onChange={(series) => update({ series })} primaryColor={props.primaryColor} />
@@ -440,7 +445,7 @@ export function SermonLibrary(props: SermonLibraryProps) {
               </a>
               <div className="flex flex-1 flex-col p-4">
                 <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-ink-muted">
-                  {[LIBRARY_TYPE_LABELS[item.resourceType], formatDate(item.publishedAt), formatDuration(item.durationSeconds)]
+                  {[RESOURCE_TYPE_LABELS[item.resourceType], formatDate(item.publishedAt), formatDuration(item.durationSeconds)]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
@@ -459,8 +464,19 @@ export function SermonLibrary(props: SermonLibraryProps) {
                   )}
                 </p>
                 {item.summary && <p className="mt-2 line-clamp-3 text-sm text-ink-secondary">{item.summary}</p>}
-                {(item.scriptures.length > 0 || item.topics.length > 0) && (
+                {(item.scriptures.length > 0 || item.topics.length > 0 || item.messageTypes.length > 0) && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
+                    {item.messageTypes.slice(0, 2).map((messageType) => (
+                      <button
+                        key={`m-${messageType}`}
+                        type="button"
+                        onClick={() => update({ messageType: normalizeKey(messageType) })}
+                        className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                        style={{ backgroundColor: hexToRgba(props.primaryColor, 0.12), color: props.primaryColor }}
+                      >
+                        {messageType}
+                      </button>
+                    ))}
                     {item.scriptures.slice(0, 3).map((ref) => (
                       <button
                         key={`v-${ref}`}

@@ -349,6 +349,9 @@ model WidgetConfiguration {
   allowInlinePlayback       Boolean            @default(true)
   showPlatformBranding      Boolean            @default(true)
   conversationRetentionDays Int                @default(30)
+  // Which resource types the sermon library embed (/widget/library) lists for this
+  // widget. Chat is unaffected -- it still searches every ACTIVE resource.
+  libraryResourceTypes      ResourceType[]     @default([SERMON, VIDEO, AUDIO, PODCAST, DEVOTIONAL])
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
@@ -452,6 +455,11 @@ model Resource {
   audiences         String[] @default([])
   lifeSituations    String[] @default([])
   keyTakeaways      String[] @default([])
+  // Staff-defined categories ("Sunday Service", "Guest Speaker", "Youth") shown as the
+  // sermon library embed's Message type filter. Free-form per org: the option list
+  // is just the distinct values across the org's resources, so a tag nobody uses
+  // anymore simply disappears.
+  messageTypes      String[] @default([])
 
   searchDocument String?
   contentHash    String?

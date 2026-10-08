@@ -20,6 +20,7 @@ function item(overrides: Partial<LibraryItem> & { id: string }): LibraryItem {
     summary: null,
     topics: [],
     scriptures: [],
+    messageTypes: [],
     ...overrides,
   };
 }
@@ -32,6 +33,7 @@ const CATALOG: LibraryItem[] = [
     seriesTitle: "Unshaken",
     topics: ["Anxiety", "Peace"],
     scriptures: ["Philippians 4:6-7", "Mark 4:39"],
+    messageTypes: ["Sunday Service"],
   }),
   item({
     id: "b",
@@ -41,6 +43,7 @@ const CATALOG: LibraryItem[] = [
     topics: ["Love"],
     scriptures: ["1 Corinthians 13:4-8", "1 John 4:8"],
     resourceType: "VIDEO",
+    messageTypes: ["Guest Speaker", "sunday service"],
   }),
   item({
     id: "c",
@@ -95,6 +98,18 @@ describe("filterLibraryItems", () => {
     expect(filterLibraryItems(CATALOG, { ...EMPTY_LIBRARY_FILTERS, series: "unshaken" })).toHaveLength(2);
     expect(filterLibraryItems(CATALOG, { ...EMPTY_LIBRARY_FILTERS, query: "storm peace" }).map((r) => r.id)).toEqual([
       "a",
+    ]);
+  });
+});
+
+describe("message types", () => {
+  it("filters and counts staff-defined message types case-insensitively", () => {
+    const result = filterLibraryItems(CATALOG, { ...EMPTY_LIBRARY_FILTERS, messageType: "sunday service" });
+    expect(result.map((r) => r.id)).toEqual(["a", "b"]);
+    const facets = buildLibraryFacets(CATALOG, EMPTY_LIBRARY_FILTERS);
+    expect(facets.messageTypes).toEqual([
+      { value: "sunday service", label: "Sunday Service", count: 2 },
+      { value: "guest speaker", label: "Guest Speaker", count: 1 },
     ]);
   });
 });

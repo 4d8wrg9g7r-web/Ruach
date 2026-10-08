@@ -16,12 +16,15 @@ resize to fit its content.
 
 ## What it shows
 
-- Resources with status `ACTIVE` and type SERMON, VIDEO, AUDIO, PODCAST or DEVOTIONAL
-  (`LIBRARY_RESOURCE_TYPES` in `packages/shared-types/src/library.ts`).
+- Resources with status `ACTIVE` whose type is enabled for that widget
+  (`WidgetConfiguration.libraryResourceTypes`, set under "What the library shows" on the
+  widget page; defaults to SERMON, VIDEO, AUDIO, PODCAST, DEVOTIONAL). Chat is unaffected.
 - **Multi-campus:** the same rule as chat. A widget belongs to one campus (Website), so
   its library lists org-wide resources plus that campus's own, never another campus's.
 - Filters: speaker, subject (`primaryTopic` + `topics`), scripture book then key verse
-  (`scriptures`), message type (`resourceType`), series, and keyword search. Option
+  (`scriptures`), message type (`Resource.messageTypes`, staff-defined tags set on the
+  resource page), format (`resourceType`), series, and keyword search. Any filter with
+  fewer than two options is hidden. Option
   counts are faceted: each dropdown counts against every *other* active filter.
 - Chat: posts to the existing `/api/widget/[publicWidgetId]/chat`, so it uses the same
   `ChatPipeline`, conversation log, rate limits and usage meter as the assistant widget.

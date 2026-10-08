@@ -35,7 +35,7 @@ export default async function SermonLibraryPage({
     );
   }
 
-  const items = await getLibraryCatalog(widget.organizationId, widget.websiteId);
+  const items = await getLibraryCatalog(widget.organizationId, widget.websiteId, widget.libraryResourceTypes);
 
   return (
     <SermonLibrary

@@ -9,25 +9,34 @@
  * reason: the same code runs in the client component and in unit tests.
  */
 
-/** Resource types that read as "a message" on a sermon page. Articles, documents,
- * courses and generic web pages stay out -- they're still answerable through the
- * chat assistant, just not listed in the archive. YouTube/Vimeo imports land as
- * VIDEO and RSS podcasts as PODCAST, so both have to be included alongside SERMON. */
-export const LIBRARY_RESOURCE_TYPES = ["SERMON", "VIDEO", "AUDIO", "PODCAST", "DEVOTIONAL"] as const;
-export type LibraryResourceType = (typeof LIBRARY_RESOURCE_TYPES)[number];
+import type { ResourceTypeValue } from "./resource";
 
-export const LIBRARY_TYPE_LABELS: Record<LibraryResourceType, string> = {
+/** Resource types that read as "a message" on a sermon page -- the default for
+ * WidgetConfiguration.libraryResourceTypes, which staff can change per widget.
+ * Articles, documents, courses and generic web pages are off by default but still
+ * answerable through the chat assistant. YouTube/Vimeo imports land as VIDEO and RSS
+ * podcasts as PODCAST, so both have to be included alongside SERMON. */
+export const DEFAULT_LIBRARY_RESOURCE_TYPES = ["SERMON", "VIDEO", "AUDIO", "PODCAST", "DEVOTIONAL"] as const;
+
+/** Shown to visitors as the embed's Format filter and to staff as the toggle labels. */
+export const RESOURCE_TYPE_LABELS: Record<ResourceTypeValue, string> = {
   SERMON: "Sermon",
   VIDEO: "Video",
   AUDIO: "Audio",
   PODCAST: "Podcast",
   DEVOTIONAL: "Devotional",
+  ARTICLE: "Article",
+  DOCUMENT: "Document",
+  COURSE: "Course",
+  OTHER: "Other",
 };
+
+const RESOURCE_TYPES = Object.keys(RESOURCE_TYPE_LABELS) as ResourceTypeValue[];
 
 export interface LibraryItem {
   id: string;
   title: string;
-  resourceType: LibraryResourceType;
+  resourceType: ResourceTypeValue;
   speakerName: string | null;
   seriesTitle: string | null;
   /** ISO string -- the catalog crosses a cache + server/client boundary as JSON. */
@@ -39,6 +48,8 @@ export interface LibraryItem {
   summary: string | null;
   topics: string[];
   scriptures: string[];
+  /** Staff-defined categories (Resource.messageTypes) -- the Message type filter. */
+  messageTypes: string[];
 }
 
 export interface LibraryFilters {
@@ -47,7 +58,9 @@ export interface LibraryFilters {
   topic: string | null;
   book: string | null;
   verse: string | null;
-  type: LibraryResourceType | null;
+  messageType: string | null;
+  /** The resource type ("format": Sermon, Video, Podcast...). */
+  type: ResourceTypeValue | null;
   series: string | null;
 }
 
@@ -57,6 +70,7 @@ export const EMPTY_LIBRARY_FILTERS: LibraryFilters = {
   topic: null,
   book: null,
   verse: null,
+  messageType: null,
   type: null,
   series: null,
 };
@@ -76,6 +90,7 @@ export interface LibraryFacets {
   /** Only populated once a book is chosen -- a flat list of every verse across a
    * whole library is too long to be useful as a dropdown. */
   verses: FacetOption[];
+  messageTypes: FacetOption[];
   types: FacetOption[];
   series: FacetOption[];
 }
@@ -147,6 +162,7 @@ function matchesQuery(item: LibraryItem, query: string): boolean {
     item.summary ?? "",
     ...item.topics,
     ...item.scriptures,
+    ...item.messageTypes,
   ]
     .join(" ")
     .toLowerCase();
@@ -171,6 +187,8 @@ function matchesFilter(item: LibraryItem, key: FilterKey, filters: LibraryFilter
       );
     case "verse":
       return !filters.verse || item.scriptures.some((ref) => normalizeKey(ref) === filters.verse);
+    case "messageType":
+      return !filters.messageType || item.messageTypes.some((t) => normalizeKey(t) === filters.messageType);
     case "type":
       return !filters.type || item.resourceType === filters.type;
     case "series":
@@ -178,7 +196,7 @@ function matchesFilter(item: LibraryItem, key: FilterKey, filters: LibraryFilter
   }
 }
 
-const FILTER_KEYS: FilterKey[] = ["speaker", "topic", "book", "verse", "type", "series"];
+const FILTER_KEYS: FilterKey[] = ["speaker", "topic", "book", "verse", "messageType", "type", "series"];
 
 function matchesAll(item: LibraryItem, filters: LibraryFilters, except?: FilterKey): boolean {
   if (!matchesQuery(item, filters.query)) return false;
@@ -227,6 +245,7 @@ export function buildLibraryFacets(items: LibraryItem[], filters: LibraryFilters
   const topics = new FacetCounter();
   const books = new FacetCounter();
   const verses = new FacetCounter();
+  const messageTypes = new FacetCounter();
   const types = new FacetCounter();
   const series = new FacetCounter();
 
@@ -248,7 +267,10 @@ export function buildLibraryFacets(items: LibraryItem[], filters: LibraryFilters
         })
         .forEach((ref) => verses.add(ref));
     }
-    if (matchesAll(item, filters, "type")) types.add(LIBRARY_TYPE_LABELS[item.resourceType]);
+    if (matchesAll(item, filters, "messageType")) {
+      new Set(item.messageTypes.map((t) => t.trim())).forEach((t) => messageTypes.add(t));
+    }
+    if (matchesAll(item, filters, "type")) types.add(RESOURCE_TYPE_LABELS[item.resourceType]);
     if (item.seriesTitle && matchesAll(item, filters, "series")) series.add(item.seriesTitle);
   }
 
@@ -257,11 +279,12 @@ export function buildLibraryFacets(items: LibraryItem[], filters: LibraryFilters
     topics: topics.byCount(),
     books: books.byBookOrder(),
     verses: verses.byLabel(),
+    messageTypes: messageTypes.byCount(),
     // Type options carry the enum value (not the label) so the filter can match
     // resourceType directly.
     types: types.byCount().map((option) => ({
       ...option,
-      value: LIBRARY_RESOURCE_TYPES.find((t) => normalizeKey(LIBRARY_TYPE_LABELS[t]) === option.value) ?? option.value,
+      value: RESOURCE_TYPES.find((t) => normalizeKey(RESOURCE_TYPE_LABELS[t]) === option.value) ?? option.value,
     })),
     series: series.byCount(),
   };

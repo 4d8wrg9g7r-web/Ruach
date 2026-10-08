@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { z } from "zod";
 import { actionLinkService, billingService, widgetService } from "@ruach/database";
-import { WidgetDisplayStyleSchema } from "@ruach/shared-types";
+import { RESOURCE_TYPE_LABELS, ResourceTypeSchema, WidgetDisplayStyleSchema } from "@ruach/shared-types";
 import { ActionLinkList } from "../../../../components/ActionLinkList";
 import { CopySnippetButton } from "../../../../components/CopySnippetButton";
 import { WidgetCustomizePanel } from "../../../../components/WidgetCustomizePanel";
@@ -82,6 +82,30 @@ async function updateWidgetAction(widgetId: string, formData: FormData) {
   invalidateLibraryWidget(existingWidget.publicWidgetId);
 }
 
+async function updateLibraryTypesAction(widgetId: string, formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  const existingWidget = await widgetService.getWidget(organization.id, widgetId);
+  if (!existingWidget) throw new Error("Widget not found");
+
+  // Anything that isn't a real ResourceType is dropped rather than rejected -- the
+  // form only ever offers valid ones.
+  const libraryResourceTypes = [
+    ...new Set(
+      formData
+        .getAll("libraryResourceType")
+        .map((value) => ResourceTypeSchema.safeParse(value))
+        .flatMap((parsed) => (parsed.success ? [parsed.data] : [])),
+    ),
+  ];
+  await widgetService.updateWidget(organization.id, widgetId, { libraryResourceTypes });
+  revalidatePath(`/widgets/${widgetId}`);
+  invalidateLibraryWidget(existingWidget.publicWidgetId);
+}
+
 async function createActionLinkAction(widgetId: string, formData: FormData) {
   "use server";
   const organization = await getCurrentOrganization();
@@ -147,6 +171,8 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
   const librarySnippet = `<div id="ruach-sermon-library"></div>\n<script src="${appOrigin}/sermon-library.js" data-widget-id="${widget.publicWidgetId}" defer></script>`;
   const libraryIframeSnippet = `<iframe src="${appOrigin}/widget/library/${widget.publicWidgetId}" title="Sermon library" style="width:100%;height:1400px;border:0"></iframe>`;
   const boundUpdateAction = updateWidgetAction.bind(null, widgetId);
+  const boundUpdateLibraryTypes = updateLibraryTypesAction.bind(null, widgetId);
+  const enabledLibraryTypes = new Set<string>(widget.libraryResourceTypes);
   const boundCreateActionLink = createActionLinkAction.bind(null, widgetId);
   const boundToggleActionLinkActive = toggleActionLinkActiveAction.bind(null, widgetId);
   const boundRemoveActionLink = removeActionLinkAction.bind(null, widgetId);
@@ -252,6 +278,29 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
               Preview <ExternalLink size={13} />
             </a>
           </div>
+          <form action={boundUpdateLibraryTypes} className="border-b border-border p-5">
+            <h3 className="mb-1 text-xs font-semibold text-ink">What the library shows</h3>
+            <p className="mb-3 text-xs text-ink-secondary">
+              Choose which kinds of resources appear in the embed. The chat box still searches everything.
+            </p>
+            <div className="mb-3 flex flex-wrap gap-x-4 gap-y-2">
+              {ResourceTypeSchema.options.map((type) => (
+                <label key={type} className="inline-flex items-center gap-1.5 text-sm text-ink-secondary">
+                  <input
+                    type="checkbox"
+                    name="libraryResourceType"
+                    value={type}
+                    defaultChecked={enabledLibraryTypes.has(type)}
+                    className="h-4 w-4 accent-[var(--accent)]"
+                  />
+                  {RESOURCE_TYPE_LABELS[type]}
+                </label>
+              ))}
+            </div>
+            <button type="submit" className={buttonClasses("secondary", "sm")}>
+              Save
+            </button>
+          </form>
           <div className="border-b border-border p-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-xs text-ink-secondary">
