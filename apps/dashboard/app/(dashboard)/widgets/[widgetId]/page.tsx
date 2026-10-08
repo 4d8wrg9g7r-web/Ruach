@@ -264,7 +264,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
               <h2 className="mb-1 text-sm font-semibold text-ink">Sermon library embed</h2>
               <p className="text-sm text-ink-secondary">
                 A searchable message archive for your sermon page, with filters for speaker, subject, scripture,
-                message type and series, plus a box where visitors can describe what they need and get matched to a
+                message type, format and series, plus a box where visitors can describe what they need and get matched to a
                 message. It lists this campus&rsquo;s messages along with your organization-wide ones, and uses this
                 widget&rsquo;s color and suggested prompts.
               </p>
