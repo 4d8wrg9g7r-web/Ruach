@@ -10,6 +10,7 @@ import { unstable_update } from "../../../auth";
 import { AccountForm } from "../../../components/AccountForm";
 import { PrayerWallSettingsForm } from "../../../components/PrayerWallSettingsForm";
 import { PublicContactForm } from "../../../components/PublicContactForm";
+import { QuestionForwardingForm } from "../../../components/QuestionForwardingForm";
 import { Card } from "../../../components/ui/Card";
 import { DEFAULT_PRAYER_WALL_BRAND_COLOR } from "../../../lib/prayer-branding";
 import {
@@ -18,6 +19,7 @@ import {
   requireCurrentUser,
   requireOrgRole,
 } from "../../../lib/session";
+import { parseQuestionForwardingEmails } from "../../../lib/question-forwarding";
 import { saveLogoUpload } from "../../../lib/upload";
 
 const forwardingEmailSchema = z.string().email();
@@ -117,6 +119,31 @@ async function updatePublicContactAction(formData: FormData) {
     targetType: "Organization",
     targetId: organization.id,
     metadata: { contactEmail, publicWebsiteUrl },
+  });
+
+  revalidatePath("/settings");
+}
+
+async function updateQuestionForwardingAction(formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN"]);
+
+  const emails = parseQuestionForwardingEmails(formData);
+  await organizationService.setQuestionForwardingEmails(
+    organization.id,
+    emails,
+  );
+
+  const user = await getCurrentUser();
+  await auditService.recordAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user?.id,
+    action: "organization.question_forwarding_updated",
+    targetType: "Organization",
+    targetId: organization.id,
+    metadata: { emails },
   });
 
   revalidatePath("/settings");
@@ -254,6 +281,23 @@ export default async function SettingsPage() {
           defaultContactEmail={organization.contactEmail ?? ""}
           defaultPublicWebsiteUrl={organization.publicWebsiteUrl ?? ""}
           action={updatePublicContactAction}
+        />
+      </Card>
+
+      <Card padding="md" className="mb-6">
+        <h2 className="mb-1 text-sm font-semibold text-ink">
+          Forwarded questions
+        </h2>
+        <p className="mb-4 text-sm text-ink-secondary">
+          When the assistant can&rsquo;t answer a visitor&rsquo;s question, it
+          offers to forward the conversation to your staff. The visitor leaves
+          their name and email, and these addresses get the transcript so you
+          can reply to them directly. Leave this empty to turn the offer off.
+        </p>
+        <QuestionForwardingForm
+          emails={organization.questionForwardingEmails}
+          hint="Used for every campus unless a campus sets its own addresses on the Websites page."
+          action={updateQuestionForwardingAction}
         />
       </Card>
 

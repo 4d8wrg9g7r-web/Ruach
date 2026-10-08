@@ -5,9 +5,11 @@ import { ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import { auditService, billingService, websiteService } from "@ruach/database";
 import { PrayerWallSettingsForm } from "../../../../components/PrayerWallSettingsForm";
+import { QuestionForwardingForm } from "../../../../components/QuestionForwardingForm";
 import { Card } from "../../../../components/ui/Card";
 import { DEFAULT_PRAYER_WALL_BRAND_COLOR } from "../../../../lib/prayer-branding";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../../lib/session";
+import { parseQuestionForwardingEmails } from "../../../../lib/question-forwarding";
 import { saveLogoUpload } from "../../../../lib/upload";
 
 const forwardingEmailSchema = z.string().email();
@@ -82,6 +84,29 @@ async function enableCampusPrayerWallAction(websiteId: string, formData: FormDat
   if (website.publicPrayerWallId) revalidatePath(`/prayer/${website.publicPrayerWallId}`, "layout");
 }
 
+async function updateCampusQuestionForwardingAction(websiteId: string, formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN"]);
+
+  const emails = parseQuestionForwardingEmails(formData);
+  const updated = await websiteService.setQuestionForwardingEmails(organization.id, websiteId, emails);
+  if (!updated) throw new Error("Website not found");
+
+  const user = await getCurrentUser();
+  await auditService.recordAuditEvent({
+    organizationId: organization.id,
+    actorUserId: user?.id,
+    action: "website.question_forwarding_updated",
+    targetType: "Website",
+    targetId: websiteId,
+    metadata: { emails },
+  });
+
+  revalidatePath(`/websites/${websiteId}`);
+}
+
 export default async function WebsiteDetailPage({ params }: { params: Promise<{ websiteId: string }> }) {
   const { websiteId } = await params;
   const organization = await getCurrentOrganization();
@@ -97,6 +122,7 @@ export default async function WebsiteDetailPage({ params }: { params: Promise<{ 
 
   const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const boundEnable = enableCampusPrayerWallAction.bind(null, websiteId);
+  const boundQuestionForwarding = updateCampusQuestionForwardingAction.bind(null, websiteId);
 
   return (
     <div>
@@ -109,6 +135,23 @@ export default async function WebsiteDetailPage({ params }: { params: Promise<{ 
 
       <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">{website.name}</h1>
       <p className="mb-8 text-sm text-ink-secondary">{website.primaryDomain}</p>
+
+      <Card padding="md" className="mb-6">
+        <h2 className="mb-1 text-sm font-semibold text-ink">Forwarded questions</h2>
+        <p className="mb-4 text-sm text-ink-secondary">
+          Where questions the assistant couldn&rsquo;t answer on {website.name}&rsquo;s chat are sent when a visitor
+          asks to hear from staff.
+        </p>
+        <QuestionForwardingForm
+          emails={website.questionForwardingEmails}
+          hint={
+            organization.questionForwardingEmails.length > 0
+              ? `Leave empty to use your org-wide addresses from Settings (${organization.questionForwardingEmails.join(", ")}).`
+              : "Leave empty to use your org-wide addresses from Settings (none set yet)."
+          }
+          action={boundQuestionForwarding}
+        />
+      </Card>
 
       <Card padding="md">
         <h2 className="mb-1 text-sm font-semibold text-ink">Prayer wall</h2>

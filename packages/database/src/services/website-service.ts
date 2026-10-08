@@ -77,6 +77,24 @@ export async function enablePrayerWall(
   return getWebsite(organizationId, websiteId);
 }
 
+export async function setQuestionForwardingEmails(organizationId: string, websiteId: string, emails: string[]) {
+  const result = await tenantDb.website.updateMany({
+    where: { id: websiteId, organizationId },
+    data: { questionForwardingEmails: emails },
+  });
+  return result.count > 0;
+}
+
+/** Where a forwarded chat question from this campus goes: the campus's own list when
+ * it has one, otherwise the org-wide default. */
+export function questionForwardingRecipients(
+  website: { questionForwardingEmails: string[] },
+  organization: { questionForwardingEmails: string[] } | null,
+): string[] {
+  if (website.questionForwardingEmails.length > 0) return website.questionForwardingEmails;
+  return organization?.questionForwardingEmails ?? [];
+}
+
 export function isDomainAllowed(
   website: { primaryDomain: string; allowedDomains: string[]; stagingDomains: string[] },
   hostname: string,

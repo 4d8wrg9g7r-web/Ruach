@@ -116,3 +116,22 @@ export async function getConversationDetail(organizationId: string, conversation
     },
   });
 }
+
+/** The visitor's own conversation, by the widget + anonymous sessionId the chat route
+ * keys it on, with its transcript in reading order -- used by the widget's
+ * forward-to-staff endpoint, which only knows what the visitor's browser sends. */
+export async function getSessionTranscript(params: {
+  organizationId: string;
+  widgetId: string;
+  sessionId: string;
+}) {
+  return tenantDb.conversation.findFirst({
+    where: {
+      organizationId: params.organizationId,
+      widgetId: params.widgetId,
+      sessionId: params.sessionId,
+    },
+    orderBy: { createdAt: "desc" },
+    include: { messages: { orderBy: { createdAt: "asc" } } },
+  });
+}
