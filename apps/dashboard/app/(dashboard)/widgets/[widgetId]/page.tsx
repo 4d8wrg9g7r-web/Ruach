@@ -12,6 +12,7 @@ import { buttonClasses } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
 import { Input, Select } from "../../../../components/ui/Input";
 import { getCurrentOrganization, requireOrgRole } from "../../../../lib/session";
+import { invalidateLibraryWidget } from "../../../../lib/sermon-library";
 import { saveLogoUpload } from "../../../../lib/upload";
 
 const actionLinkUrlSchema = z.string().url("Enter a full URL, including https://");
@@ -78,6 +79,7 @@ async function updateWidgetAction(widgetId: string, formData: FormData) {
   // Revalidating the wrong path left the real page serving stale cached data
   // after every Publish Changes.
   revalidatePath(`/widget/embed/${existingWidget.publicWidgetId}`);
+  invalidateLibraryWidget(existingWidget.publicWidgetId);
 }
 
 async function createActionLinkAction(widgetId: string, formData: FormData) {
@@ -142,6 +144,8 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
 
   const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const snippet = `<script src="${appOrigin}/widget-loader.js" data-widget-id="${widget.publicWidgetId}" defer></script>`;
+  const librarySnippet = `<div id="ruach-sermon-library"></div>\n<script src="${appOrigin}/sermon-library.js" data-widget-id="${widget.publicWidgetId}" defer></script>`;
+  const libraryIframeSnippet = `<iframe src="${appOrigin}/widget/library/${widget.publicWidgetId}" title="Sermon library" style="width:100%;height:1400px;border:0"></iframe>`;
   const boundUpdateAction = updateWidgetAction.bind(null, widgetId);
   const boundCreateActionLink = createActionLinkAction.bind(null, widgetId);
   const boundToggleActionLinkActive = toggleActionLinkActiveAction.bind(null, widgetId);
@@ -227,6 +231,51 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
           </p>
           <pre className="overflow-x-auto rounded-md bg-black/30 p-3 text-xs text-white/80">{snippet}</pre>
         </div>
+
+        <Card padding="none">
+          <div className="flex items-start justify-between gap-4 border-b border-border p-5">
+            <div>
+              <h2 className="mb-1 text-sm font-semibold text-ink">Sermon library embed</h2>
+              <p className="text-sm text-ink-secondary">
+                A searchable message archive for your sermon page, with filters for speaker, subject, scripture,
+                message type and series, plus a box where visitors can describe what they need and get matched to a
+                message. It lists this campus&rsquo;s messages along with your organization-wide ones, and uses this
+                widget&rsquo;s color and suggested prompts.
+              </p>
+            </div>
+            <a
+              href={`/widget/library/${widget.publicWidgetId}`}
+              target="_blank"
+              rel="noreferrer"
+              className={`${buttonClasses("secondary", "sm")} shrink-0`}
+            >
+              Preview <ExternalLink size={13} />
+            </a>
+          </div>
+          <div className="border-b border-border p-5">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs text-ink-secondary">
+                Paste this where the library should appear on your sermon page (most site builders call this an
+                &ldquo;embed&rdquo; or &ldquo;custom code&rdquo; block):
+              </p>
+              <CopySnippetButton text={librarySnippet} />
+            </div>
+            <pre className="overflow-x-auto rounded-md bg-surface-muted p-3 text-xs text-ink-secondary">{librarySnippet}</pre>
+            <p className="mt-2 text-xs text-ink-muted">
+              Add <code>data-chat=&quot;off&quot;</code> to the script tag to show only the filters.
+            </p>
+          </div>
+          <div className="p-5">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-xs text-ink-secondary">
+                If your site builder doesn&rsquo;t allow scripts, use this iframe instead (it won&rsquo;t resize to fit,
+                so adjust the height):
+              </p>
+              <CopySnippetButton text={libraryIframeSnippet} />
+            </div>
+            <pre className="overflow-x-auto rounded-md bg-surface-muted p-3 text-xs text-ink-secondary">{libraryIframeSnippet}</pre>
+          </div>
+        </Card>
       </WidgetCustomizePanel>
     </div>
   );

@@ -77,6 +77,46 @@ export async function getResourcesByIds(organizationId: string, resourceIds: str
   });
 }
 
+/**
+ * The sermon library embed's whole catalog for one campus, in a single query. Same
+ * campus rule as getResourcesByIds (org-wide + this website's own). Selects only the
+ * card/filter fields -- never transcript/searchDocument, which are by far the
+ * largest columns -- because the result is cached and shipped to the browser, where
+ * all filtering happens (see packages/shared-types/src/library.ts).
+ */
+export async function listLibraryResources(params: {
+  organizationId: string;
+  websiteId: string | null;
+  resourceTypes: ResourceType[];
+  limit: number;
+}) {
+  return tenantDb.resource.findMany({
+    where: {
+      organizationId: params.organizationId,
+      status: "ACTIVE",
+      resourceType: { in: params.resourceTypes },
+      OR: [{ websiteId: null }, ...(params.websiteId ? [{ websiteId: params.websiteId }] : [])],
+    },
+    select: {
+      id: true,
+      title: true,
+      resourceType: true,
+      speakerName: true,
+      seriesTitle: true,
+      publishedAt: true,
+      durationSeconds: true,
+      thumbnailUrl: true,
+      publicUrl: true,
+      summary: true,
+      primaryTopic: true,
+      topics: true,
+      scriptures: true,
+    },
+    orderBy: [{ publishedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    take: params.limit,
+  });
+}
+
 export async function listActiveResources(organizationId: string) {
   return tenantDb.resource.findMany({ where: { organizationId, status: "ACTIVE" } });
 }

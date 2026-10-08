@@ -14,6 +14,7 @@ import { EmptyState } from "../../../../components/ui/EmptyState";
 import { Textarea } from "../../../../components/ui/Input";
 import { confidenceLevel, resourceStatusLabel, resourceStatusTone } from "../../../../lib/format";
 import { getCurrentOrganization, getCurrentUser, requireOrgRole } from "../../../../lib/session";
+import { invalidateLibraryCatalog } from "../../../../lib/sermon-library";
 
 async function setTranscriptAction(resourceId: string, formData: FormData) {
   "use server";
@@ -194,6 +195,7 @@ async function approveAction(resourceId: string) {
   }
   revalidatePath(`/resources/${resourceId}`);
   revalidatePath("/resources");
+  invalidateLibraryCatalog(organization.id);
 }
 
 async function setCampusAction(resourceId: string, websiteId: string) {
@@ -213,6 +215,7 @@ async function setCampusAction(resourceId: string, websiteId: string) {
     await resourceService.setResourceWebsiteScope(organization.id, resourceId, website.id);
   }
   revalidatePath(`/resources/${resourceId}`);
+  invalidateLibraryCatalog(organization.id);
 }
 
 async function rejectAction(resourceId: string) {
@@ -223,6 +226,7 @@ async function rejectAction(resourceId: string) {
 
   await resourceService.archiveResource(organization.id, resourceId);
   revalidatePath("/resources");
+  invalidateLibraryCatalog(organization.id);
   redirect("/resources");
 }
 
