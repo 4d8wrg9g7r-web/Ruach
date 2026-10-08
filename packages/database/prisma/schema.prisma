@@ -352,6 +352,9 @@ model WidgetConfiguration {
   // Which resource types the sermon library embed (/widget/library) lists for this
   // widget. Chat is unaffected -- it still searches every ACTIVE resource.
   libraryResourceTypes      ResourceType[]     @default([SERMON, VIDEO, AUDIO, PODCAST, DEVOTIONAL])
+  // Google Fonts family for the library embed (one of LIBRARY_FONTS in shared-types);
+  // null = Ruach's default font. Plan-gated (advancedWidgetCustomization).
+  libraryFontFamily         String?
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 

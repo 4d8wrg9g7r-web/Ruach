@@ -4,7 +4,13 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { z } from "zod";
 import { actionLinkService, billingService, widgetService } from "@ruach/database";
-import { RESOURCE_TYPE_LABELS, ResourceTypeSchema, WidgetDisplayStyleSchema } from "@ruach/shared-types";
+import {
+  LIBRARY_FONTS,
+  RESOURCE_TYPE_LABELS,
+  ResourceTypeSchema,
+  WidgetDisplayStyleSchema,
+  findLibraryFont,
+} from "@ruach/shared-types";
 import { ActionLinkList } from "../../../../components/ActionLinkList";
 import { CopySnippetButton } from "../../../../components/CopySnippetButton";
 import { WidgetCustomizePanel } from "../../../../components/WidgetCustomizePanel";
@@ -82,7 +88,7 @@ async function updateWidgetAction(widgetId: string, formData: FormData) {
   invalidateLibraryWidget(existingWidget.publicWidgetId);
 }
 
-async function updateLibraryTypesAction(widgetId: string, formData: FormData) {
+async function updateLibrarySettingsAction(widgetId: string, formData: FormData) {
   "use server";
   const organization = await getCurrentOrganization();
   if (!organization) throw new Error("No organization");
@@ -101,7 +107,12 @@ async function updateLibraryTypesAction(widgetId: string, formData: FormData) {
         .flatMap((parsed) => (parsed.success ? [parsed.data] : [])),
     ),
   ];
-  await widgetService.updateWidget(organization.id, widgetId, { libraryResourceTypes });
+  // Same pattern as the Customize form: below plan the saved font is kept, not
+  // cleared, and the embed itself ignores it (see getLibraryWidget).
+  const libraryFontFamily = billingService.planHasFeature(organization.planKey, "advancedWidgetCustomization")
+    ? (findLibraryFont(String(formData.get("libraryFontFamily") ?? ""))?.family ?? null)
+    : existingWidget.libraryFontFamily;
+  await widgetService.updateWidget(organization.id, widgetId, { libraryResourceTypes, libraryFontFamily });
   revalidatePath(`/widgets/${widgetId}`);
   invalidateLibraryWidget(existingWidget.publicWidgetId);
 }
@@ -171,7 +182,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
   const librarySnippet = `<div id="ruach-sermon-library"></div>\n<script src="${appOrigin}/sermon-library.js" data-widget-id="${widget.publicWidgetId}" defer></script>`;
   const libraryIframeSnippet = `<iframe src="${appOrigin}/widget/library/${widget.publicWidgetId}" title="Sermon library" style="width:100%;height:1400px;border:0"></iframe>`;
   const boundUpdateAction = updateWidgetAction.bind(null, widgetId);
-  const boundUpdateLibraryTypes = updateLibraryTypesAction.bind(null, widgetId);
+  const boundUpdateLibrarySettings = updateLibrarySettingsAction.bind(null, widgetId);
   const enabledLibraryTypes = new Set<string>(widget.libraryResourceTypes);
   const boundCreateActionLink = createActionLinkAction.bind(null, widgetId);
   const boundToggleActionLinkActive = toggleActionLinkActiveAction.bind(null, widgetId);
@@ -266,7 +277,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
                 A searchable message archive for your sermon page, with filters for speaker, subject, scripture,
                 message type, format and series, plus a box where visitors can describe what they need and get matched to a
                 message. It lists this campus&rsquo;s messages along with your organization-wide ones, and uses this
-                widget&rsquo;s color and suggested prompts.
+                widget&rsquo;s color, suggested prompts and &ldquo;Powered by Ruach&rdquo; setting.
               </p>
             </div>
             <a
@@ -278,7 +289,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
               Preview <ExternalLink size={13} />
             </a>
           </div>
-          <form action={boundUpdateLibraryTypes} className="border-b border-border p-5">
+          <form action={boundUpdateLibrarySettings} className="border-b border-border p-5">
             <h3 className="mb-1 text-xs font-semibold text-ink">What the library shows</h3>
             <p className="mb-3 text-xs text-ink-secondary">
               Choose which kinds of resources appear in the embed. The chat box still searches everything.
@@ -297,6 +308,27 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
                 </label>
               ))}
             </div>
+            <label className="mb-3 block max-w-xs text-xs font-semibold text-ink">
+              Font
+              <Select
+                name="libraryFontFamily"
+                defaultValue={widget.libraryFontFamily ?? ""}
+                disabled={!entitlements.advancedWidgetCustomization}
+                className="mt-1 block font-normal"
+              >
+                <option value="">Default</option>
+                {LIBRARY_FONTS.map((font) => (
+                  <option key={font.family} value={font.family}>
+                    {font.family}
+                  </option>
+                ))}
+              </Select>
+              <span className="mt-1 block text-xs font-normal text-ink-muted">
+                {entitlements.advancedWidgetCustomization
+                  ? "Pick the font closest to your website's so the library blends in."
+                  : "Upgrade your plan to choose a font."}
+              </span>
+            </label>
             <button type="submit" className={buttonClasses("secondary", "sm")}>
               Save
             </button>

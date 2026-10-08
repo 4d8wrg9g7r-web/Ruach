@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { websiteService } from "@ruach/database";
+import { libraryFontStylesheetUrl } from "@ruach/shared-types";
 import { SermonLibrary } from "./SermonLibrary";
 import { getLibraryCatalog, getLibraryWidget } from "../../../../lib/sermon-library";
 import { noIndexMetadata } from "../../../../lib/no-index-metadata";
@@ -37,17 +38,24 @@ export default async function SermonLibraryPage({
 
   const items = await getLibraryCatalog(widget.organizationId, widget.websiteId, widget.libraryResourceTypes);
 
+  const { font } = widget;
+
   return (
-    <SermonLibrary
-      publicWidgetId={widget.publicWidgetId}
-      organizationName={widget.organizationName}
-      inputPlaceholder={widget.inputPlaceholder}
-      suggestedPrompts={widget.suggestedPrompts}
-      primaryColor={widget.primaryColor}
-      showPlatformBranding={widget.showPlatformBranding}
-      items={items}
-      host={host ?? null}
-      showChat={chat !== "off"}
-    />
+    <>
+      {/* React hoists this into <head>. */}
+      {font && <link rel="stylesheet" href={libraryFontStylesheetUrl(font)} precedence="default" />}
+      <SermonLibrary
+        publicWidgetId={widget.publicWidgetId}
+        organizationName={widget.organizationName}
+        inputPlaceholder={widget.inputPlaceholder}
+        suggestedPrompts={widget.suggestedPrompts}
+        primaryColor={widget.primaryColor}
+        showPlatformBranding={widget.showPlatformBranding}
+        fontFamily={font ? `"${font.family}", ${font.fallback}` : null}
+        items={items}
+        host={host ?? null}
+        showChat={chat !== "off"}
+      />
+    </>
   );
 }

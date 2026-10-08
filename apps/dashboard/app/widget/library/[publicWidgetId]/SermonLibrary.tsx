@@ -24,6 +24,8 @@ interface SermonLibraryProps {
   suggestedPrompts: string[];
   primaryColor: string;
   showPlatformBranding: boolean;
+  /** CSS font-family stack for a staff-chosen font (its stylesheet is loaded by the page), or null for Ruach's font. */
+  fontFamily: string | null;
   items: LibraryItem[];
   host: string | null;
   showChat: boolean;
@@ -236,7 +238,11 @@ export function SermonLibrary(props: SermonLibraryProps) {
   const brandTint = hexToRgba(props.primaryColor, 0.08);
 
   return (
-    <main ref={rootRef} className="mx-auto w-full max-w-6xl bg-surface px-4 py-5 text-ink sm:px-6">
+    <main
+      ref={rootRef}
+      className="mx-auto w-full max-w-6xl bg-surface px-4 py-5 text-ink sm:px-6"
+      style={props.fontFamily ? { fontFamily: props.fontFamily } : undefined}
+    >
       {props.showChat && (
         <section className="mb-6 rounded-lg border border-border p-4 sm:p-5" style={{ backgroundColor: brandTint }}>
           <div className="mb-3 flex items-center gap-2">

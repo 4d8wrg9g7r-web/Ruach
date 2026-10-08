@@ -53,6 +53,7 @@ export async function updateWidget(
     allowInlinePlayback: boolean;
     showPlatformBranding: boolean;
     libraryResourceTypes: ResourceType[];
+    libraryFontFamily: string | null;
     status: "ACTIVE" | "INACTIVE";
   }>,
 ) {

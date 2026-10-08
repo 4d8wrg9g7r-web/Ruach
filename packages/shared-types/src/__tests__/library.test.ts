@@ -3,6 +3,8 @@ import {
   EMPTY_LIBRARY_FILTERS,
   buildLibraryFacets,
   filterLibraryItems,
+  findLibraryFont,
+  libraryFontStylesheetUrl,
   scriptureBook,
   type LibraryItem,
 } from "../library";
@@ -138,5 +140,19 @@ describe("buildLibraryFacets", () => {
     const facets = buildLibraryFacets(CATALOG, { ...EMPTY_LIBRARY_FILTERS, book: "philippians" });
     expect(facets.verses.map((v) => v.label)).toEqual(["Philippians 4:6", "Philippians 4:6-7"]);
     expect(facets.types.map((t) => t.value).sort()).toEqual(["PODCAST", "SERMON"]);
+  });
+});
+
+describe("library fonts", () => {
+  it("only resolves fonts from the fixed list", () => {
+    expect(findLibraryFont("Open Sans")?.fallback).toBe("sans-serif");
+    expect(findLibraryFont("Comic Sans; } body { display:none")).toBeNull();
+    expect(findLibraryFont(null)).toBeNull();
+  });
+
+  it("builds a Google Fonts URL", () => {
+    expect(libraryFontStylesheetUrl(findLibraryFont("Playfair Display")!)).toBe(
+      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap",
+    );
   });
 });

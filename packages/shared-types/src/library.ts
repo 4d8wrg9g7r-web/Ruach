@@ -289,3 +289,39 @@ export function buildLibraryFacets(items: LibraryItem[], filters: LibraryFilters
     series: series.byCount(),
   };
 }
+
+/**
+ * Fonts staff can pick for the library embed (plans with advancedWidgetCustomization).
+ * The embed runs in an iframe, so it can't inherit the church site's own font --
+ * instead it loads the chosen one from Google Fonts. A fixed list (not free text)
+ * keeps the stylesheet URL safe to build and guarantees the font actually exists.
+ * WidgetConfiguration.libraryFontFamily stores the `family` value; null = Ruach's font.
+ */
+export const LIBRARY_FONTS = [
+  { family: "Inter", fallback: "sans-serif" },
+  { family: "Open Sans", fallback: "sans-serif" },
+  { family: "Lato", fallback: "sans-serif" },
+  { family: "Montserrat", fallback: "sans-serif" },
+  { family: "Poppins", fallback: "sans-serif" },
+  { family: "Raleway", fallback: "sans-serif" },
+  { family: "Nunito", fallback: "sans-serif" },
+  { family: "Source Sans 3", fallback: "sans-serif" },
+  { family: "Work Sans", fallback: "sans-serif" },
+  { family: "DM Sans", fallback: "sans-serif" },
+  { family: "Merriweather", fallback: "serif" },
+  { family: "Lora", fallback: "serif" },
+  { family: "Playfair Display", fallback: "serif" },
+  { family: "Libre Baskerville", fallback: "serif" },
+  { family: "EB Garamond", fallback: "serif" },
+] as const;
+
+export type LibraryFont = (typeof LIBRARY_FONTS)[number];
+
+export function findLibraryFont(family: string | null | undefined): LibraryFont | null {
+  if (!family) return null;
+  return LIBRARY_FONTS.find((font) => font.family === family) ?? null;
+}
+
+export function libraryFontStylesheetUrl(font: LibraryFont): string {
+  return `https://fonts.googleapis.com/css2?family=${font.family.replace(/ /g, "+")}:wght@400;500;600;700&display=swap`;
+}

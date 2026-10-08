@@ -1,6 +1,6 @@
 import { revalidateTag, unstable_cache } from "next/cache";
-import { organizationService, resourceService, widgetService } from "@ruach/database";
-import type { LibraryItem, ResourceTypeValue } from "@ruach/shared-types";
+import { billingService, organizationService, resourceService, widgetService } from "@ruach/database";
+import { findLibraryFont, type LibraryItem, type ResourceTypeValue } from "@ruach/shared-types";
 
 /**
  * Data loading for the public sermon library embed (/widget/library/[publicWidgetId]).
@@ -45,6 +45,14 @@ export function getLibraryWidget(publicWidgetId: string) {
       const widget = await widgetService.getWidgetByPublicId(publicWidgetId);
       if (!widget) return null;
       const organization = await organizationService.getOrganization(widget.organizationId);
+      // Plan gates are re-checked here, not only when settings are saved, so an org
+      // that downgrades gets "Powered by Ruach" back and loses its custom font even
+      // though the saved values are kept (they come back if they upgrade again).
+      // Billing webhooks don't invalidate this cache, so a downgrade can take up to
+      // CACHE_SECONDS to show.
+      const planKey = organization?.planKey ?? "essential";
+      const canRemoveBranding = billingService.planHasFeature(planKey, "removeBranding");
+      const canCustomize = billingService.planHasFeature(planKey, "advancedWidgetCustomization");
       return {
         publicWidgetId: widget.publicWidgetId,
         organizationId: widget.organizationId,
@@ -54,7 +62,8 @@ export function getLibraryWidget(publicWidgetId: string) {
         inputPlaceholder: widget.inputPlaceholder,
         suggestedPrompts: widget.suggestedPrompts,
         primaryColor: widget.primaryColor,
-        showPlatformBranding: widget.showPlatformBranding,
+        showPlatformBranding: canRemoveBranding ? widget.showPlatformBranding : true,
+        font: canCustomize ? findLibraryFont(widget.libraryFontFamily) : null,
         libraryResourceTypes: widget.libraryResourceTypes as ResourceTypeValue[],
         website: {
           primaryDomain: widget.website.primaryDomain,
