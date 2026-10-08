@@ -29,6 +29,15 @@ resize to fit its content.
 - Chat: posts to the existing `/api/widget/[publicWidgetId]/chat`, so it uses the same
   `ChatPipeline`, conversation log, rate limits and usage meter as the assistant widget.
 
+## Branding
+
+- Uses the widget's brand color, suggested prompts and input placeholder. No logo.
+- Font: plans with `advancedWidgetCustomization` (Growth and up) pick one of
+  `LIBRARY_FONTS` (shared-types), loaded from Google Fonts. Others get Ruach's font.
+- "Powered by Ruach" shows unless the plan has `removeBranding` and the widget turns it off.
+- Both plan gates are re-checked at render (`getLibraryWidget`), so a downgrade reverts
+  them within the 10-minute cache window while the saved values are kept.
+
 ## Database cost
 
 `apps/dashboard/lib/sermon-library.ts` caches both the widget lookup and the campus
