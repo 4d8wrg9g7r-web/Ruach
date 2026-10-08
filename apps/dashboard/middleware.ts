@@ -37,6 +37,8 @@ const PUBLIC_PATHS = new Set([
   // Public embeddable script -- every installed widget-loader.js tag on a
   // customer's site fetches this with no session.
   "/widget-loader.js",
+  // Same, for the sermon library embed on a church's sermon page.
+  "/sermon-library.js",
 ]);
 
 // Next's per-page opengraph-image/twitter-image routes get a content hash suffix

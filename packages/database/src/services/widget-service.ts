@@ -1,4 +1,4 @@
-import type { LauncherPosition, WidgetDisplayStyle } from "@prisma/client";
+import type { LauncherPosition, ResourceType, WidgetDisplayStyle } from "@prisma/client";
 import { rawDb, tenantDb } from "../client";
 
 export async function createWidget(params: {
@@ -52,6 +52,8 @@ export async function updateWidget(
     maxRecommendations: number;
     allowInlinePlayback: boolean;
     showPlatformBranding: boolean;
+    libraryResourceTypes: ResourceType[];
+    libraryFontFamily: string | null;
     status: "ACTIVE" | "INACTIVE";
   }>,
 ) {

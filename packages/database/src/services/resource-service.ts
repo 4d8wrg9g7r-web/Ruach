@@ -77,6 +77,74 @@ export async function getResourcesByIds(organizationId: string, resourceIds: str
   });
 }
 
+/**
+ * The sermon library embed's whole catalog for one campus, in a single query. Same
+ * campus rule as getResourcesByIds (org-wide + this website's own). Selects only the
+ * card/filter fields -- never transcript/searchDocument, which are by far the
+ * largest columns -- because the result is cached and shipped to the browser, where
+ * all filtering happens (see packages/shared-types/src/library.ts).
+ */
+export async function listLibraryResources(params: {
+  organizationId: string;
+  websiteId: string | null;
+  resourceTypes: ResourceType[];
+  limit: number;
+}) {
+  return tenantDb.resource.findMany({
+    where: {
+      organizationId: params.organizationId,
+      status: "ACTIVE",
+      resourceType: { in: params.resourceTypes },
+      OR: [{ websiteId: null }, ...(params.websiteId ? [{ websiteId: params.websiteId }] : [])],
+    },
+    select: {
+      id: true,
+      title: true,
+      resourceType: true,
+      speakerName: true,
+      seriesTitle: true,
+      publishedAt: true,
+      durationSeconds: true,
+      thumbnailUrl: true,
+      publicUrl: true,
+      summary: true,
+      primaryTopic: true,
+      topics: true,
+      scriptures: true,
+      messageTypes: true,
+    },
+    orderBy: [{ publishedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    take: params.limit,
+  });
+}
+
+/** Staff-set sermon library categories for one resource (see schema.prisma's Resource.messageTypes). */
+export async function setMessageTypes(organizationId: string, resourceId: string, messageTypes: string[]) {
+  return tenantDb.resource.updateMany({
+    where: { id: resourceId, organizationId },
+    data: { messageTypes },
+  });
+}
+
+/**
+ * Every message type in use across the org, for the resource page's picker. Only
+ * rows that actually carry one are read, and only that one column.
+ */
+export async function listMessageTypeOptions(organizationId: string): Promise<string[]> {
+  const rows = await tenantDb.resource.findMany({
+    where: { organizationId, NOT: { messageTypes: { isEmpty: true } } },
+    select: { messageTypes: true },
+  });
+  const byKey = new Map<string, string>();
+  for (const row of rows) {
+    for (const type of row.messageTypes) {
+      const key = type.trim().toLowerCase();
+      if (key && !byKey.has(key)) byKey.set(key, type.trim());
+    }
+  }
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
+}
+
 export async function listActiveResources(organizationId: string) {
   return tenantDb.resource.findMany({ where: { organizationId, status: "ACTIVE" } });
 }
