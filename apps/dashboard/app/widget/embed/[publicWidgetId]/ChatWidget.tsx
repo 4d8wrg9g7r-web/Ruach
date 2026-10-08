@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Lock, Send, X } from "lucide-react";
-import type { ChatResponse } from "@ruach/shared-types";
+import { FORWARD_TO_STAFF_ACTION, type ChatResponse } from "@ruach/shared-types";
 import { hexToRgba } from "../../../../lib/color";
 
 interface ActionLinkDisplay {
@@ -88,6 +88,65 @@ function initials(name: string) {
 
 const VISIBLE_LINK_COUNT = 4;
 
+type ForwardState =
+  | { status: "idle" }
+  | { status: "open"; messageId: string; error?: string }
+  | { status: "sending"; messageId: string }
+  | { status: "sent"; email: string };
+
+/**
+ * Inline form behind a NO_RESULTS reply's "Forward to staff" button. The visitor is
+ * anonymous to the chat, so this is the one place they give a name and email --
+ * staff reply to that address directly (see the /forward route's replyTo).
+ */
+function ForwardForm({
+  primaryColor,
+  isSending,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  primaryColor: string;
+  isSending: boolean;
+  error?: string;
+  onSubmit: (values: { name: string; email: string; note: string }) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const fieldClass =
+    "w-full rounded border border-border-strong bg-surface px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-muted focus:outline-none";
+  return (
+    <form
+      className="mt-3 flex flex-col gap-2 rounded-lg border border-border bg-surface p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ name, email, note });
+      }}
+    >
+      <p className="text-xs text-ink-secondary">Where should our staff reply?</p>
+      <input required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className={fieldClass} />
+      <input required type="email" maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your email" className={fieldClass} />
+      <textarea maxLength={1000} rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything else they should know? (optional)" className={fieldClass} />
+      {error && <p className="text-xs text-danger">{error}</p>}
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={isSending}
+          className="inline-flex items-center gap-1.5 rounded px-3.5 py-2 text-xs font-medium text-white disabled:opacity-60"
+          style={{ backgroundColor: primaryColor }}
+        >
+          {isSending ? "Sending..." : "Send to staff"}
+        </button>
+        <button type="button" onClick={onCancel} className="px-2 py-2 text-xs text-ink-muted hover:text-ink">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export function ChatWidget(props: ChatWidgetProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -95,6 +154,7 @@ export function ChatWidget(props: ChatWidgetProps) {
   const [linksExpanded, setLinksExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [forward, setForward] = useState<ForwardState>({ status: "idle" });
   const scrollRef = useRef<HTMLDivElement>(null);
   const latestMessageRef = useRef<HTMLDivElement>(null);
 
@@ -168,6 +228,42 @@ export function ChatWidget(props: ChatWidgetProps) {
       ]);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function forwardToStaff(messageId: string, values: { name: string; email: string; note: string }) {
+    if (!sessionId) return;
+    setForward({ status: "sending", messageId });
+    try {
+      const hostParam = props.host ? `?host=${encodeURIComponent(props.host)}` : "";
+      const res = await fetch(`/api/widget/${props.publicWidgetId}/forward${hostParam}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          publicWidgetId: props.publicWidgetId,
+          sessionId,
+          name: values.name,
+          email: values.email,
+          note: values.note.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setForward({ status: "open", messageId, error: data?.error ?? "We couldn't forward that right now. Please try again shortly." });
+        return;
+      }
+      setForward({ status: "sent", email: values.email });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "ASSISTANT",
+          text: `Thanks, ${values.name}! I've forwarded our conversation to our staff, and someone will reply to you at ${values.email}.`,
+          sentAt: new Date(),
+        },
+      ]);
+    } catch {
+      setForward({ status: "open", messageId, error: "Something went wrong sending that. Please check your connection and try again." });
     }
   }
 
@@ -324,7 +420,35 @@ export function ChatWidget(props: ChatWidgetProps) {
 
                 {message.response && message.response.suggestedActions.length > 0 && (
                   <div className="mt-3 flex flex-col gap-2">
-                    {message.response.suggestedActions.map((action, index) => (
+                    {message.response.suggestedActions.map((action, index) => {
+                      if (action.type === FORWARD_TO_STAFF_ACTION) {
+                        // Once one conversation is forwarded, every earlier offer is moot.
+                        if (forward.status === "sent") return null;
+                        const isThisMessage = forward.status !== "idle" && forward.messageId === message.id;
+                        if (isThisMessage) {
+                          return (
+                            <ForwardForm
+                              key={`${action.label}-${index}`}
+                              primaryColor={props.primaryColor}
+                              isSending={forward.status === "sending"}
+                              error={forward.status === "open" ? forward.error : undefined}
+                              onSubmit={(values) => forwardToStaff(message.id, values)}
+                              onCancel={() => setForward({ status: "idle" })}
+                            />
+                          );
+                        }
+                        return (
+                          <button
+                            key={`${action.label}-${index}`}
+                            onClick={() => setForward({ status: "open", messageId: message.id })}
+                            className="inline-flex w-fit items-center gap-1.5 rounded px-3.5 py-2 text-xs font-medium text-white"
+                            style={{ backgroundColor: props.primaryColor }}
+                          >
+                            {action.label}
+                          </button>
+                        );
+                      }
+                      return (
                       <a
                         key={`${action.label}-${index}`}
                         href={action.url ?? undefined}
@@ -335,7 +459,8 @@ export function ChatWidget(props: ChatWidgetProps) {
                       >
                         {action.label} <ArrowUpRight size={13} />
                       </a>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

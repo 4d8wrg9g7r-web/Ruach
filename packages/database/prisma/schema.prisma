@@ -344,7 +344,7 @@ model WidgetConfiguration {
   logoUrl                   String?
   suggestedPrompts          String[]           @default([])
   privacyNotice             String             @default("Conversations are anonymous and not linked to your identity.")
-  noResultMessage           String             @default("I couldn't find a resource that directly addresses that yet.")
+  noResultMessage           String             @default("I'm sorry, I'm not sure of the answer to your question. I was built to match you with sermon content.")
   maxRecommendations        Int                @default(3)
   allowInlinePlayback       Boolean            @default(true)
   showPlatformBranding      Boolean            @default(true)
