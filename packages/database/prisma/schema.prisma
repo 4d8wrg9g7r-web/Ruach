@@ -205,6 +205,11 @@ model Organization {
   // just means that fallback has less to offer, never an error.
   contactEmail                   String?
   publicWebsiteUrl               String?
+  // Staff inboxes that receive a chat transcript when a visitor taps "Forward to
+  // staff" on an unanswered question (widget /forward route). The org-wide default;
+  // a campus with its own Website.questionForwardingEmails uses those instead. Empty
+  // means the widget makes no forward offer at all.
+  questionForwardingEmails       String[]            @default([])
   createdAt                      DateTime            @default(now())
   updatedAt                      DateTime            @updatedAt
 
@@ -287,6 +292,9 @@ model Website {
   // Mirrors Organization's testimonies fields for the same reason as above.
   testimoniesEnabled            Boolean       @default(false)
   testimoniesPageName           String        @default("Praise Report")
+  // Per-campus override of Organization.questionForwardingEmails -- non-empty here
+  // means this campus's forwarded chat questions go only to these addresses.
+  questionForwardingEmails      String[]      @default([])
   createdAt                     DateTime      @default(now())
   updatedAt                     DateTime      @updatedAt
 

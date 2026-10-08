@@ -23,7 +23,8 @@ const MAX_TRANSCRIPT_MESSAGES = 30;
 /**
  * Public, unauthenticated endpoint behind ChatWidget's "Forward to staff" button
  * (offered on NO_RESULTS replies -- see ChatPipeline). Emails the visitor's
- * transcript to Organization.contactEmail with replyTo set to the visitor, so a
+ * transcript to the campus's questionForwardingEmails (or the org-wide default --
+ * see websiteService.questionForwardingRecipients) with replyTo set to the visitor, so a
  * staff reply goes straight to them; Ruach never sees the reply. Same tenant
  * boundary as chat/route.ts: organizationId comes only from publicWidgetId, and the
  * conversation is looked up by that widget + the visitor's own sessionId.
@@ -82,7 +83,11 @@ export async function POST(
   const organization = await organizationService.getOrganization(
     widget.organizationId,
   );
-  if (!organization?.contactEmail) {
+  const recipients = websiteService.questionForwardingRecipients(
+    widget.website,
+    organization,
+  );
+  if (recipients.length === 0) {
     return NextResponse.json(
       { error: "Forwarding isn't available for this church yet." },
       { status: 409 },
@@ -110,31 +115,37 @@ export async function POST(
     .join("\n\n");
   const appOrigin = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
+  const text = [
+    `${name} asked a question on the ${campusName} website chat that the assistant couldn't answer, and asked for a member of staff to follow up.`,
+    "",
+    `Name: ${name}`,
+    `Email: ${email}`,
+    `Campus: ${campusName}`,
+    note ? `\nTheir note:\n${note}` : null,
+    "",
+    "Reply to this email to answer them directly.",
+    "",
+    "--- Conversation ---",
+    "",
+    transcript,
+    "",
+    "---",
+    `View it in Ruach: ${appOrigin}/conversations/${conversation.id}`,
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+
   try {
-    await getEmailProvider().sendEmail({
-      to: organization.contactEmail,
-      replyTo: email,
-      subject: `A visitor question from the ${campusName} chat`,
-      text: [
-        `${name} asked a question on the ${campusName} website chat that the assistant couldn't answer, and asked for a member of staff to follow up.`,
-        "",
-        `Name: ${name}`,
-        `Email: ${email}`,
-        `Campus: ${campusName}`,
-        note ? `\nTheir note:\n${note}` : null,
-        "",
-        "Reply to this email to answer them directly.",
-        "",
-        "--- Conversation ---",
-        "",
-        transcript,
-        "",
-        "---",
-        `View it in Ruach: ${appOrigin}/conversations/${conversation.id}`,
-      ]
-        .filter((line) => line !== null)
-        .join("\n"),
-    });
+    await Promise.all(
+      recipients.map((to) =>
+        getEmailProvider().sendEmail({
+          to,
+          replyTo: email,
+          subject: `A visitor question from the ${campusName} chat`,
+          text,
+        }),
+      ),
+    );
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json(

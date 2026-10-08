@@ -38,9 +38,12 @@ export interface ChatPipelineInput {
    * being set just means that reply has less to offer, never an error. */
   contactEmail: string | null;
   publicWebsiteUrl: string | null;
+  /** True when this campus (or the org-wide default) has questionForwardingEmails
+   * set -- only then does a NO_RESULTS reply offer to forward to staff. */
+  canForwardToStaff: boolean;
 }
 
-/** Appended to a NO_RESULTS reply when the org has a contactEmail to forward to --
+/** Appended to a NO_RESULTS reply when there are staff inboxes to forward to --
  * the widget's FORWARD_TO_STAFF action button is what actually carries it out. */
 const FORWARD_OFFER =
   " If you'd like, I can forward this conversation to a member of our staff so that they can answer your question.";
@@ -539,10 +542,9 @@ export class ChatPipeline {
     }
 
     if (ranked.length === 0) {
-      // Forwarding emails the transcript to Organization.contactEmail, so the offer
-      // is only made when there's somewhere to send it -- otherwise fall back to
-      // pointing the visitor at whatever contact info the org did configure.
-      const canForward = Boolean(input.contactEmail);
+      // Only offer forwarding when staff have set somewhere to send it --
+      // otherwise point the visitor at whatever contact info the org configured.
+      const canForward = input.canForwardToStaff;
       return ChatResponseSchema.parse({
         ...base,
         responseType: "NO_RESULTS",

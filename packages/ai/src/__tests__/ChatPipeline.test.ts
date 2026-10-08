@@ -12,7 +12,7 @@ import { MockAIProvider } from "../MockAIProvider";
 
 const emptyRetrieval = { search: async () => [] } as unknown as RetrievalProvider;
 
-function input(overrides: { contactEmail: string | null; publicWebsiteUrl?: string | null }) {
+function input(overrides: { canForwardToStaff: boolean; publicWebsiteUrl?: string | null }) {
   return {
     organizationId: "org_1",
     widgetId: "widget_1",
@@ -27,6 +27,7 @@ function input(overrides: { contactEmail: string | null; publicWebsiteUrl?: stri
     priorityContentType: null,
     organizationName: "Grace Church",
     suggestedPrompts: [],
+    contactEmail: null,
     publicWebsiteUrl: null,
     ...overrides,
   };
@@ -35,8 +36,8 @@ function input(overrides: { contactEmail: string | null; publicWebsiteUrl?: stri
 describe("ChatPipeline NO_RESULTS fallback", () => {
   const pipeline = new ChatPipeline(new MockAIProvider(), emptyRetrieval);
 
-  it("offers to forward to staff when the org has a contact email", async () => {
-    const response = await pipeline.respond(input({ contactEmail: "office@grace.org" }));
+  it("offers to forward to staff when forwarding emails are set", async () => {
+    const response = await pipeline.respond(input({ canForwardToStaff: true }));
     expect(response.responseType).toBe("NO_RESULTS");
     expect(response.answer).toBe(
       "I'm sorry, I'm not sure of the answer to your question. I was built to match you with sermon content. If you'd like, I can forward this conversation to a member of our staff so that they can answer your question.",
@@ -48,7 +49,7 @@ describe("ChatPipeline NO_RESULTS fallback", () => {
 
   it("makes no forward offer when there's nowhere to send it", async () => {
     const response = await pipeline.respond(
-      input({ contactEmail: null, publicWebsiteUrl: "https://grace.org" }),
+      input({ canForwardToStaff: false, publicWebsiteUrl: "https://grace.org" }),
     );
     expect(response.responseType).toBe("NO_RESULTS");
     expect(response.answer).not.toContain("forward");
