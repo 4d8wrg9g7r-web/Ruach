@@ -11,6 +11,8 @@ import type {
   LinkCandidate,
   LinkMatchOutput,
   RelevanceClassification,
+  SpeakerDetectionInput,
+  SpeakerDetectionOutput,
 } from "./AIProvider";
 
 /** Dropped from both the message and link text before overlap scoring -- common enough to inflate the score of an unrelated link without meaning anything ("where can I find the page about the thing"). */
@@ -310,5 +312,17 @@ export class MockAIProvider implements AIProvider {
         pattern.test(message),
       ),
     };
+  }
+
+  /**
+   * Title-suffix convention only ("Message Title | Jane Doe" or "Message Title - Jane
+   * Doe"), and only when the suffix looks like a person's name -- deterministic and
+   * offline, not a substitute for OpenAIProvider's reading of the description.
+   */
+  async detectSpeaker(input: SpeakerDetectionInput): Promise<SpeakerDetectionOutput> {
+    const suffix = input.title.split(/\s[|\u2013\u2014-]\s/).at(-1)?.trim() ?? "";
+    if (suffix === input.title.trim()) return { speakerName: null };
+    const looksLikeName = /^(?:[A-Z][a-z'.-]+)(?: [A-Z][a-z'.-]+){1,3}$/.test(suffix);
+    return { speakerName: looksLikeName ? suffix : null };
   }
 }

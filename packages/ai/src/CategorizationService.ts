@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { resourceService } from "@ruach/database";
 import type { AIProvider } from "./AIProvider";
+import { SpeakerService } from "./SpeakerService";
 
 function buildSearchDocument(params: {
   title: string;
@@ -108,6 +109,18 @@ export class CategorizationService {
         sourceExcerpt: generated.sourceExcerpt,
         confidenceScore: generated.confidenceScore,
       });
+    }
+
+    // YouTube/RSS imports arrive without a speaker; fill it once so new messages show
+    // up under the sermon library's Speaker filter. Runs after applyCategorization so
+    // it adds its SPEAKER line to the fresh search document. A failure here must not
+    // fail categorization -- the speakers cron retries anything left unchecked.
+    if (!resource.speakerName && !resource.speakerCheckedAt) {
+      try {
+        await new SpeakerService(this.aiProvider).detect(organizationId, resourceId);
+      } catch (err) {
+        console.error(`Speaker detection failed for resource ${resourceId}:`, err);
+      }
     }
   }
 }

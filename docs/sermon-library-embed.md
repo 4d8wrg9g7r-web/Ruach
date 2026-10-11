@@ -32,6 +32,20 @@ resize to fit its content.
 - Chat: posts to the existing `/api/widget/[publicWidgetId]/chat`, so it uses the same
   `ChatPipeline`, conversation log, rate limits and usage meter as the assistant widget.
 
+## Speakers
+
+YouTube, Vimeo and RSS imports don't carry a speaker, so `SpeakerService` (`@ruach/ai`)
+reads it from the title, description and start of the transcript (e.g. "… | Mitch
+Horton", "Pastor Mitch talks about…"). It only fills an empty `speakerName`, drops titles
+like Pastor, and reuses an existing speaker's spelling so one person isn't listed twice.
+
+- New resources: runs at the end of categorization.
+- Older resources: `/api/cron/speakers` (every 15 minutes, `CRON_SECRET`) works through
+  up to 150 unchecked resources per run, newest first, and invalidates the library cache
+  for orgs that changed. `Resource.speakerCheckedAt` marks a resource as checked even when
+  no speaker was found, so nothing is asked twice.
+- Staff can correct or clear the speaker on the resource page; clearing it keeps it clear.
+
 ## Branding
 
 - Styled like a modern church site's own message library: pill-shaped search and

@@ -439,6 +439,10 @@ model Resource {
 
   creatorName     String?
   speakerName     String?
+  // When speaker detection (SpeakerService in @ruach/ai) last looked at this resource,
+  // or staff set the speaker by hand. Null = not checked yet, so the speakers cron
+  // picks it up; set even when no speaker was found, so it isn't asked again.
+  speakerCheckedAt DateTime?
   seriesTitle     String?
   publishedAt     DateTime?
   durationSeconds Int?

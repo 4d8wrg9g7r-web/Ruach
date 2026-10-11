@@ -220,6 +220,7 @@ async function setCampusAction(resourceId: string, websiteId: string) {
 
 const MAX_MESSAGE_TYPES = 10;
 const MAX_MESSAGE_TYPE_LENGTH = 40;
+const MAX_SPEAKER_LENGTH = 80;
 
 async function setMessageTypesAction(resourceId: string, formData: FormData) {
   "use server";
@@ -240,6 +241,19 @@ async function setMessageTypesAction(resourceId: string, formData: FormData) {
     if (cleaned && !byKey.has(key)) byKey.set(key, cleaned);
   }
   await resourceService.setMessageTypes(organization.id, resourceId, [...byKey.values()].slice(0, MAX_MESSAGE_TYPES));
+  revalidatePath(`/resources/${resourceId}`);
+  invalidateLibraryCatalog(organization.id);
+}
+
+async function setSpeakerAction(resourceId: string, formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  // Blank clears it, and stops speaker detection from filling it back in.
+  const speakerName = String(formData.get("speakerName") ?? "").trim().replace(/\s+/g, " ").slice(0, MAX_SPEAKER_LENGTH);
+  await resourceService.setSpeakerName(organization.id, resourceId, speakerName || null);
   revalidatePath(`/resources/${resourceId}`);
   invalidateLibraryCatalog(organization.id);
 }
@@ -406,6 +420,27 @@ export default async function ResourceDetailPage({
               </form>
             </Card>
           )}
+
+          <Card padding="none" className="p-4">
+            <h2 className="mb-1 text-sm font-semibold text-ink">Speaker</h2>
+            <p className="mb-3 text-xs text-ink-muted">
+              Shown on this message&rsquo;s card and in the sermon library&rsquo;s Speaker filter. Ruach fills it in from the
+              title and description when your source doesn&rsquo;t provide one; correct it here if it&rsquo;s wrong, or clear it.
+            </p>
+            <form action={setSpeakerAction.bind(null, resource.id)} className="flex flex-wrap items-center gap-2">
+              <input
+                name="speakerName"
+                defaultValue={resource.speakerName ?? ""}
+                placeholder="e.g. Mitch Horton"
+                maxLength={MAX_SPEAKER_LENGTH}
+                aria-label="Speaker"
+                className="block min-w-0 flex-1 rounded-sm border border-border-strong bg-surface px-3.5 py-2 text-sm text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+              />
+              <button type="submit" className={buttonClasses("secondary", "sm")}>
+                Save speaker
+              </button>
+            </form>
+          </Card>
 
           <Card padding="none" className="p-4">
             <h2 className="mb-1 text-sm font-semibold text-ink">Message types</h2>

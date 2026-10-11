@@ -5,7 +5,7 @@ import type {
   SourceDocumentType,
   TranscriptSource,
 } from "@prisma/client";
-import { tenantDb } from "../client";
+import { rawDb, tenantDb } from "../client";
 
 export async function findResourceBySource(
   organizationId: string,
@@ -143,6 +143,66 @@ export async function listMessageTypeOptions(organizationId: string): Promise<st
     }
   }
   return [...byKey.values()].sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Resources speaker detection hasn't looked at yet, newest first, across every org --
+ * for the speakers cron, which has no session. Uses rawDb intentionally (like
+ * contentSourceService's cron listing); each returned row carries its organizationId,
+ * and every follow-up read/write goes through the tenant-scoped helpers below.
+ * ARCHIVED is skipped: nobody sees those in the library.
+ */
+export async function listResourcesNeedingSpeaker(limit: number) {
+  return rawDb.resource.findMany({
+    where: { speakerName: null, speakerCheckedAt: null, status: { not: "ARCHIVED" } },
+    orderBy: [{ publishedAt: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
+    take: limit,
+    select: { id: true, organizationId: true },
+  });
+}
+
+/** Distinct speaker names already on the org's resources, so detection reuses one spelling per person. */
+export async function listSpeakerNames(organizationId: string): Promise<string[]> {
+  const rows = await tenantDb.resource.findMany({
+    where: { organizationId, speakerName: { not: null } },
+    distinct: ["speakerName"],
+    select: { speakerName: true },
+  });
+  return rows.map((row) => row.speakerName!.trim()).filter(Boolean);
+}
+
+/**
+ * Records a detection result. Only fills an empty speaker -- never overwrites one a
+ * provider or staff member set, even if staff changed it while the AI call was in
+ * flight. Returns whether a speaker was written.
+ */
+export async function setDetectedSpeaker(
+  organizationId: string,
+  resourceId: string,
+  speakerName: string | null,
+  searchDocument?: string,
+) {
+  const checkedAt = new Date();
+  if (!speakerName) {
+    await tenantDb.resource.updateMany({
+      where: { id: resourceId, organizationId, speakerName: null },
+      data: { speakerCheckedAt: checkedAt },
+    });
+    return false;
+  }
+  const result = await tenantDb.resource.updateMany({
+    where: { id: resourceId, organizationId, speakerName: null },
+    data: { speakerName, speakerCheckedAt: checkedAt, ...(searchDocument !== undefined ? { searchDocument } : {}) },
+  });
+  return result.count > 0;
+}
+
+/** Staff override from the resource page; null clears it and stops detection from refilling it. */
+export async function setSpeakerName(organizationId: string, resourceId: string, speakerName: string | null) {
+  return tenantDb.resource.updateMany({
+    where: { id: resourceId, organizationId },
+    data: { speakerName, speakerCheckedAt: new Date() },
+  });
 }
 
 export async function listActiveResources(organizationId: string) {
