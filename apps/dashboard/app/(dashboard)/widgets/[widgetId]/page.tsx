@@ -5,11 +5,18 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { z } from "zod";
 import { actionLinkService, billingService, widgetService } from "@ruach/database";
 import {
+  EMPTY_LIBRARY_FILTERS,
+  LIBRARY_FILTER_OPTIONS,
   LIBRARY_FONTS,
   RESOURCE_TYPE_LABELS,
   ResourceTypeSchema,
   WidgetDisplayStyleSchema,
+  buildLibraryFacets,
   findLibraryFont,
+  parseLibraryFilters,
+  type LibraryFacets,
+  type LibraryFilterKey,
+  type ResourceTypeValue,
 } from "@ruach/shared-types";
 import { ActionLinkList } from "../../../../components/ActionLinkList";
 import { CopySnippetButton } from "../../../../components/CopySnippetButton";
@@ -18,8 +25,18 @@ import { buttonClasses } from "../../../../components/ui/Button";
 import { Card } from "../../../../components/ui/Card";
 import { Input, Select } from "../../../../components/ui/Input";
 import { getCurrentOrganization, requireOrgRole } from "../../../../lib/session";
-import { invalidateLibraryWidget } from "../../../../lib/sermon-library";
+import { getLibraryCatalog, invalidateLibraryWidget } from "../../../../lib/sermon-library";
 import { saveLogoUpload } from "../../../../lib/upload";
+
+/** Which facet list backs each filter, for the "hidden until..." hint below. */
+const FILTER_FACETS: Record<LibraryFilterKey, { facet: keyof LibraryFacets; noun: string }> = {
+  speaker: { facet: "speakers", noun: "speakers" },
+  topic: { facet: "topics", noun: "subjects" },
+  scripture: { facet: "books", noun: "books of the Bible" },
+  messageType: { facet: "messageTypes", noun: "message types" },
+  format: { facet: "types", noun: "formats" },
+  series: { facet: "series", noun: "series" },
+};
 
 const actionLinkUrlSchema = z.string().url("Enter a full URL, including https://");
 
@@ -112,7 +129,8 @@ async function updateLibrarySettingsAction(widgetId: string, formData: FormData)
   const libraryFontFamily = billingService.planHasFeature(organization.planKey, "advancedWidgetCustomization")
     ? (findLibraryFont(String(formData.get("libraryFontFamily") ?? ""))?.family ?? null)
     : existingWidget.libraryFontFamily;
-  await widgetService.updateWidget(organization.id, widgetId, { libraryResourceTypes, libraryFontFamily });
+  const libraryFilters = parseLibraryFilters(formData.getAll("libraryFilter"));
+  await widgetService.updateWidget(organization.id, widgetId, { libraryResourceTypes, libraryFontFamily, libraryFilters });
   revalidatePath(`/widgets/${widgetId}`);
   invalidateLibraryWidget(existingWidget.publicWidgetId);
 }
@@ -184,6 +202,14 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
   const boundUpdateAction = updateWidgetAction.bind(null, widgetId);
   const boundUpdateLibrarySettings = updateLibrarySettingsAction.bind(null, widgetId);
   const enabledLibraryTypes = new Set<string>(widget.libraryResourceTypes);
+  const enabledLibraryFilters = new Set<string>(parseLibraryFilters(widget.libraryFilters));
+  // The same cached catalog the embed renders from, so this usually costs no query.
+  // Used to explain a turned-on filter that visitors won't see yet: the embed hides
+  // any dropdown with fewer than two options.
+  const libraryFacets = buildLibraryFacets(
+    await getLibraryCatalog(widget.organizationId, widget.websiteId, widget.libraryResourceTypes as ResourceTypeValue[]),
+    EMPTY_LIBRARY_FILTERS,
+  );
   const boundCreateActionLink = createActionLinkAction.bind(null, widgetId);
   const boundToggleActionLinkActive = toggleActionLinkActiveAction.bind(null, widgetId);
   const boundRemoveActionLink = removeActionLinkAction.bind(null, widgetId);
@@ -274,8 +300,8 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
             <div>
               <h2 className="mb-1 text-sm font-semibold text-ink">Sermon library embed</h2>
               <p className="text-sm text-ink-secondary">
-                A searchable message archive for your sermon page, with filters for speaker, subject, scripture,
-                message type, format and series, plus a box where visitors can describe what they need and get matched to a
+                A searchable message archive for your sermon page, with the filters you choose below (speaker, subject,
+                scripture, message type, format and series), plus a box where visitors can describe what they need and get matched to a
                 message. It lists this campus&rsquo;s messages along with your organization-wide ones, and uses this
                 widget&rsquo;s color, suggested prompts and &ldquo;Powered by Ruach&rdquo; setting.
               </p>
@@ -307,6 +333,33 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
                   {RESOURCE_TYPE_LABELS[type]}
                 </label>
               ))}
+            </div>
+            <h3 className="mb-1 text-xs font-semibold text-ink">Filters</h3>
+            <p className="mb-3 text-xs text-ink-secondary">
+              Choose which dropdowns visitors can filter by. The search box is always shown.
+            </p>
+            <div className="mb-4 flex flex-col gap-2">
+              {LIBRARY_FILTER_OPTIONS.map(({ key, label }) => {
+                const { facet, noun } = FILTER_FACETS[key];
+                const optionCount = libraryFacets[facet].length;
+                return (
+                  <label key={key} className="inline-flex flex-wrap items-center gap-x-1.5 text-sm text-ink-secondary">
+                    <input
+                      type="checkbox"
+                      name="libraryFilter"
+                      value={key}
+                      defaultChecked={enabledLibraryFilters.has(key)}
+                      className="h-4 w-4 accent-[var(--accent)]"
+                    />
+                    {label}
+                    {enabledLibraryFilters.has(key) && optionCount < 2 && (
+                      <span className="text-xs text-ink-muted">
+                        &mdash; hidden until your library has at least two {noun} (it has {optionCount} now)
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
             <label className="mb-3 block max-w-xs text-xs font-semibold text-ink">
               Font

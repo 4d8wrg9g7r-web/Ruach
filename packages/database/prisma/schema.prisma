@@ -355,6 +355,9 @@ model WidgetConfiguration {
   // Google Fonts family for the library embed (one of LIBRARY_FONTS in shared-types);
   // null = Ruach's default font. Plan-gated (advancedWidgetCustomization).
   libraryFontFamily         String?
+  // Which dropdown filters the library embed shows (LIBRARY_FILTER_OPTIONS keys in
+  // shared-types), in display order. Keyword search is always on.
+  libraryFilters            String[]           @default(["speaker", "topic", "scripture", "messageType", "format", "series"])
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
