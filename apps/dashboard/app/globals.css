@@ -59,3 +59,20 @@ body {
 .bg-sidebar-gradient {
   background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-secondary) 60%, var(--sidebar) 100%);
 }
+
+/* The hover lift from the sermon library embed's cards: rises a few pixels and
+   picks up a long soft shadow. Reduced-motion users get the shadow only. */
+.card-lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -20px rgba(34, 34, 34, 0.25);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-lift:hover {
+    transform: none;
+  }
+}

@@ -170,7 +170,7 @@ export default async function PrayerWallModerationPage() {
     <div>
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">Prayer Wall</h1>
+          <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">Prayer Wall</h1>
           <p className="text-sm text-ink-secondary">
             Review, moderate, and respond to every prayer request submitted to {organization.name}
             {!organization.prayerWallEnabled && " (the prayer wall itself is currently disabled -- enable it in Settings)"}.

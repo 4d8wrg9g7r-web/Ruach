@@ -50,8 +50,8 @@ export function ComparisonTable({ rows }: { rows: ComparisonRow[] }) {
 
       <div className="flex flex-col gap-4 md:hidden">
         {PLAN_NAMES.map((name, planIndex) => (
-          <div key={name} className="rounded-lg border border-border bg-surface p-4">
-            <h3 className="mb-3 text-sm font-semibold text-ink">{name}</h3>
+          <div key={name} className="rounded-lg border border-black/[.06] bg-surface card-lift p-4">
+            <h3 className="mb-3 text-sm font-bold text-ink">{name}</h3>
             <dl className="flex flex-col divide-y divide-border">
               {rows.map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 py-2">

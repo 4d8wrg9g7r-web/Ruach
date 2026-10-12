@@ -106,7 +106,7 @@ export default async function SignupPage({
           Ruach
         </span>
       </Link>
-      <h1 className="mb-1 text-2xl font-semibold text-ink">
+      <h1 className="mb-1 text-2xl font-extrabold text-ink">
         Create your account
       </h1>
       <p className="mb-6 text-sm text-ink-secondary">

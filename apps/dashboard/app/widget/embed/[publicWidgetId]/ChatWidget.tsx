@@ -203,7 +203,7 @@ export function ChatWidget(props: ChatWidgetProps) {
       >
         <Avatar logoUrl={props.logoUrl} organizationName={props.organizationName} primaryColor={props.primaryColor} size="md" />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-sm font-semibold text-ink">{props.organizationName}</h1>
+          <h1 className="truncate text-sm font-bold text-ink">{props.organizationName}</h1>
           <p className="truncate text-xs text-ink-muted">We&rsquo;re here to help you find what you need.</p>
         </div>
         <button type="button" onClick={closePanel} aria-label="Close" className="text-ink-muted hover:text-ink">
@@ -219,7 +219,7 @@ export function ChatWidget(props: ChatWidgetProps) {
               href={link.url}
               target="_blank"
               rel="noreferrer"
-              className="block rounded-xl px-4 py-3 text-center text-sm font-semibold transition-opacity duration-180 hover:opacity-90"
+              className="block rounded-full px-5 py-3 text-center text-sm font-semibold transition-opacity duration-180 hover:opacity-90"
               style={
                 index === 0
                   ? { backgroundColor: props.primaryColor, color: "#ffffff" }
@@ -233,7 +233,7 @@ export function ChatWidget(props: ChatWidgetProps) {
             <button
               type="button"
               onClick={() => setLinksExpanded(true)}
-              className="rounded-xl px-4 py-2.5 text-center text-sm font-medium text-ink-muted transition-colors duration-180 hover:text-ink"
+              className="rounded-full px-4 py-2.5 text-center text-sm font-medium text-ink-muted transition-colors duration-180 hover:text-ink"
             >
               or, see more next steps
             </button>
@@ -284,7 +284,7 @@ export function ChatWidget(props: ChatWidgetProps) {
                 {message.response && message.response.resources.length > 0 && (
                   <div className="mt-3 flex flex-col gap-3">
                     {message.response.resources.map((resource) => (
-                      <div key={resource.resourceId} className="shadow-panel overflow-hidden rounded-lg border border-border bg-surface">
+                      <div key={resource.resourceId} className="shadow-panel overflow-hidden rounded-lg border border-black/[.06] bg-surface">
                         {resource.thumbnailUrl && (
                           <div className="relative aspect-video w-full bg-surface-muted">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -292,8 +292,8 @@ export function ChatWidget(props: ChatWidgetProps) {
                           </div>
                         )}
                         <div className="p-3.5">
-                          <p className="text-sm font-semibold text-ink">{resource.title}</p>
-                          <p className="mt-0.5 text-xs text-ink-muted">
+                          <p className="text-[0.95rem] font-extrabold leading-tight text-ink">{resource.title}</p>
+                          <p className="mt-1 text-[0.7rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">
                             {[resource.speakerName, resource.seriesTitle && `Series: ${resource.seriesTitle}`, resource.durationLabel]
                               .filter(Boolean)
                               .join(" · ")}
@@ -311,7 +311,7 @@ export function ChatWidget(props: ChatWidgetProps) {
                             href={resource.publicUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-3 inline-flex items-center gap-1.5 rounded px-3.5 py-2 text-xs font-medium text-white"
+                            className="mt-3 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-white"
                             style={{ backgroundColor: props.primaryColor }}
                           >
                             {resource.buttonLabel} Now <ArrowUpRight size={13} />
@@ -330,7 +330,7 @@ export function ChatWidget(props: ChatWidgetProps) {
                         href={action.url ?? undefined}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex w-fit items-center gap-1.5 rounded px-3.5 py-2 text-xs font-medium text-white"
+                        className="inline-flex w-fit items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-white"
                         style={{ backgroundColor: props.primaryColor }}
                       >
                         {action.label} <ArrowUpRight size={13} />
@@ -345,7 +345,7 @@ export function ChatWidget(props: ChatWidgetProps) {
                     <button
                       onClick={() => sendMessage(message.response!.followUpQuestion!)}
                       style={{ "--brand-color": props.primaryColor } as React.CSSProperties}
-                      className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-[color:var(--brand-color)] hover:text-[color:var(--brand-color)]"
+                      className="rounded-full border-[1.5px] border-black/[.12] px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-[color:var(--brand-color)] hover:text-[color:var(--brand-color)]"
                     >
                       {message.response.followUpQuestion}
                     </button>
@@ -373,7 +373,7 @@ export function ChatWidget(props: ChatWidgetProps) {
                 key={prompt}
                 onClick={() => sendMessage(prompt)}
                 style={{ "--brand-color": props.primaryColor } as React.CSSProperties}
-                className="rounded-full border border-border-strong px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-[color:var(--brand-color)] hover:text-[color:var(--brand-color)]"
+                className="rounded-full border-[1.5px] border-black/[.12] px-3 py-1.5 text-xs text-ink-secondary transition-colors duration-180 hover:border-[color:var(--brand-color)] hover:text-[color:var(--brand-color)]"
               >
                 {prompt}
               </button>
@@ -397,7 +397,7 @@ export function ChatWidget(props: ChatWidgetProps) {
             onBlur={() => setIsInputFocused(false)}
             placeholder={props.inputPlaceholder}
             style={isInputFocused ? { borderColor: props.primaryColor } : undefined}
-            className="flex-1 rounded-full border border-border-strong bg-surface px-4 py-2.5 text-sm text-ink outline-none transition-colors duration-180"
+            className="flex-1 rounded-full border-[1.5px] border-black/[.12] bg-surface px-4 py-2.5 text-sm text-ink outline-none transition-colors duration-180"
           />
           <button
             type="submit"

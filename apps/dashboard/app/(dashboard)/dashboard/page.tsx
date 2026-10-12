@@ -100,7 +100,7 @@ export default async function OverviewPage() {
       <div className="min-w-0 flex-1">
         <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+            <h1 className="text-2xl font-extrabold tracking-tight text-ink">
               {greetingForHour(new Date().getHours())}, {firstName}
             </h1>
             <p className="mt-1 text-sm text-ink-secondary">Here&rsquo;s what&rsquo;s happening with {organization.name}.</p>
@@ -137,7 +137,7 @@ export default async function OverviewPage() {
         <div className="mb-6 grid gap-6 lg:grid-cols-2">
           <Card>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink">Recent Activity</h2>
+              <h2 className="text-sm font-bold text-ink">Recent Activity</h2>
             </div>
             {activity.length === 0 ? (
               <EmptyState description="No activity yet." />
@@ -160,7 +160,7 @@ export default async function OverviewPage() {
 
           <Card>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink">Review Queue</h2>
+              <h2 className="text-sm font-bold text-ink">Review Queue</h2>
               <Link
                 href="/resources?status=REVIEW_REQUIRED"
                 className="rounded-sm text-xs font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
@@ -212,7 +212,7 @@ export default async function OverviewPage() {
 
         <Card padding="none">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="text-sm font-semibold text-ink">Resources</h2>
+            <h2 className="text-sm font-bold text-ink">Resources</h2>
             <Link
               href="/resources"
               className="rounded-sm text-xs font-medium text-accent hover:text-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
@@ -254,7 +254,7 @@ export default async function OverviewPage() {
       <aside className="hidden w-[400px] shrink-0 xl:block">
         <div className="sticky top-8">
           <div className="mb-3">
-            <h2 className="text-sm font-semibold text-ink">Widget Preview</h2>
+            <h2 className="text-sm font-bold text-ink">Widget Preview</h2>
             <p className="text-xs text-ink-muted">This is how your widget looks to visitors.</p>
           </div>
           {previewWidget ? (

@@ -27,7 +27,7 @@ export function OnboardingChecklist({ steps, onDismiss }: OnboardingChecklistPro
     <Card className="mb-8">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-ink">Get started with Ruach</h2>
+          <h2 className="text-sm font-bold text-ink">Get started with Ruach</h2>
           <p className="mt-0.5 text-xs text-ink-muted">
             {doneCount} of {steps.length} steps complete
           </p>

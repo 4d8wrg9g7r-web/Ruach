@@ -40,7 +40,7 @@ export default function PricingPage() {
       <section className="mx-auto max-w-3xl px-5 pb-10 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>Pricing</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">Plans for churches of every size.</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">Plans for churches of every size.</h1>
           <p className="mt-5 text-base leading-relaxed text-ink-secondary">
             Every plan includes the core Ruach experience. Higher plans add scale, customization, and
             organization-wide tools for larger and multi-campus churches.
@@ -62,7 +62,7 @@ export default function PricingPage() {
       <section className="border-t border-border bg-surface-muted/60 py-16">
         <div className="mx-auto max-w-3xl px-5">
           <FadeIn>
-            <h2 className="mb-2 text-2xl font-semibold tracking-tight text-ink">
+            <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-ink">
               Built to remain accessible for churches of different sizes.
             </h2>
           </FadeIn>
@@ -85,7 +85,7 @@ export default function PricingPage() {
         <div className="mx-auto max-w-5xl px-5">
           <FadeIn>
             <div className="mx-auto mb-10 max-w-2xl text-center">
-              <h2 className="text-2xl font-semibold tracking-tight text-ink">Compare plans in detail.</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink">Compare plans in detail.</h2>
             </div>
           </FadeIn>
           <FadeIn delay={0.1}>

@@ -49,7 +49,7 @@ export default function ReleaseNotesPage() {
       <section className="mx-auto max-w-3xl px-5 pb-10 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>Release Notes</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">What&rsquo;s new in Ruach.</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">What&rsquo;s new in Ruach.</h1>
           <p className="mt-4 text-lg text-ink-secondary">Every update to the conversational assistant and Prayer Wall, in one place.</p>
         </FadeIn>
       </section>
@@ -69,7 +69,7 @@ export default function ReleaseNotesPage() {
                         <time dateTime={note.date} className="block text-xs font-medium uppercase tracking-wide text-ink-muted">
                           {DATE_FORMATTER.format(new Date(`${note.date}T00:00:00Z`))}
                         </time>
-                        <h3 className="mt-1 text-lg font-semibold text-ink">{note.headline}</h3>
+                        <h3 className="mt-1 text-lg font-extrabold text-ink">{note.headline}</h3>
                         <p className="mt-2 text-sm leading-relaxed text-ink-secondary">{note.detail}</p>
                       </article>
                     </li>

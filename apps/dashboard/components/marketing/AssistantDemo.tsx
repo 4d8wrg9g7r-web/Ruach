@@ -47,7 +47,7 @@ export function AssistantDemo() {
 
         <motion.div {...stage(1)} className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {RESOURCES.map((resource) => (
-            <div key={resource.title} className="flex items-start gap-2.5 rounded-lg border border-border bg-surface p-3">
+            <div key={resource.title} className="flex items-start gap-2.5 rounded-lg border border-black/[.06] bg-surface card-lift p-3">
               <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
                 <resource.icon size={13} />
               </span>

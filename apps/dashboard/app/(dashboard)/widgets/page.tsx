@@ -47,7 +47,7 @@ export default async function WidgetsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight text-ink">Widgets</h1>
+      <h1 className="mb-6 text-2xl font-extrabold tracking-tight text-ink">Widgets</h1>
 
       {websites.length === 0 ? (
         <p className="text-sm text-ink-secondary">
@@ -62,7 +62,7 @@ export default async function WidgetsPage() {
         </p>
       ) : (
         <Card className="mb-8">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
             <PlusCircle size={15} className="text-accent" /> Create a widget
           </h2>
           <form action={createWidgetAction} className="flex flex-wrap items-end gap-3">

@@ -43,7 +43,7 @@ export default async function ConversationsPage({
     <div>
       <div className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">Conversations</h1>
+          <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">Conversations</h1>
           <p className="text-sm text-ink-secondary">
             Every conversation visitors have had with your widgets -- {total.toLocaleString()} total.
           </p>
@@ -55,7 +55,7 @@ export default async function ConversationsPage({
               name="widgetId"
               defaultValue={widgetId ?? ""}
               options={[{ value: "", label: "All widgets" }, ...widgets.map((w) => ({ value: w.id, label: w.name }))]}
-              className="appearance-none rounded-sm border border-border-strong bg-surface py-2 pl-8 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="appearance-none rounded-full border-[1.5px] border-black/[.12] bg-surface py-2 pl-8 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
             />
           </form>
         )}

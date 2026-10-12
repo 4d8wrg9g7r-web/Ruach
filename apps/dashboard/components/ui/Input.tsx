@@ -13,8 +13,10 @@ import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type T
  * form) can attach a real DOM ref -- every existing call site ignores the ref, so
  * this is purely additive.
  */
-const FIELD_CLASSES =
-  "block w-full rounded-sm border border-border-strong bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60";
+const FIELD_BASE =
+  "block w-full border-[1.5px] border-black/[.12] bg-surface text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-60";
+const FIELD_CLASSES = `${FIELD_BASE} rounded-full px-[1.1em] py-2.5`;
+const TEXTAREA_CLASSES = `${FIELD_BASE} rounded-md px-[1.1em] py-3`;
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className = "", ...props },
@@ -27,7 +29,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   { className = "", ...props },
   ref,
 ) {
-  return <textarea ref={ref} className={`${FIELD_CLASSES} ${className}`} {...props} />;
+  return <textarea ref={ref} className={`${TEXTAREA_CLASSES} ${className}`} {...props} />;
 });
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(

@@ -117,7 +117,7 @@ export default async function HomePage() {
         <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr]">
           <FadeIn>
             <EyebrowLabel>For churches</EyebrowLabel>
-            <h1 className="max-w-xl text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-5xl">
+            <h1 className="max-w-xl text-4xl font-extrabold leading-[1.1] tracking-tight text-ink sm:text-5xl">
               Breathe fresh life into your content.
             </h1>
             <p className="mt-4 max-w-lg text-xl font-medium leading-snug text-ink-secondary">
@@ -158,7 +158,7 @@ export default async function HomePage() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <FadeIn>
               <EyebrowLabel>Why Ruach</EyebrowLabel>
-              <h2 className="max-w-md text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="max-w-md text-3xl font-extrabold tracking-tight text-ink">
                 Your church has already done the hard work.
               </h2>
               <p className="mt-4 max-w-md text-base leading-relaxed text-ink-secondary">
@@ -202,7 +202,7 @@ export default async function HomePage() {
           <FadeIn>
             <div className="mx-auto max-w-2xl text-center">
               <EyebrowLabel>How it works</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink">
                 From archive to conversation.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-secondary">
@@ -227,7 +227,7 @@ export default async function HomePage() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <FadeIn>
               <EyebrowLabel>Fill the gaps</EyebrowLabel>
-              <h2 className="max-w-md text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="max-w-md text-3xl font-extrabold tracking-tight text-ink">
                 Don&rsquo;t have a message on it? Borrow one you trust.
               </h2>
               <p className="mt-4 max-w-md text-base leading-relaxed text-ink-secondary">
@@ -294,7 +294,7 @@ export default async function HomePage() {
           <FadeIn>
             <div className="mx-auto mb-10 max-w-2xl text-center">
               <EyebrowLabel>Trust and guardrails</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink">
                 Grounded in your church. Not the open internet.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-secondary">
@@ -309,8 +309,8 @@ export default async function HomePage() {
 
           <div className="grid gap-6 sm:grid-cols-2">
             <FadeIn>
-              <div className="rounded-lg border border-border bg-surface p-6">
-                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+              <div className="rounded-lg border border-black/[.06] bg-surface card-lift p-6">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
                   <Check size={16} className="text-success" /> Ruach does
                 </h3>
                 <ul className="flex flex-col gap-2.5">
@@ -330,8 +330,8 @@ export default async function HomePage() {
               </div>
             </FadeIn>
             <FadeIn delay={0.1}>
-              <div className="rounded-lg border border-border bg-surface p-6">
-                <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
+              <div className="rounded-lg border border-black/[.06] bg-surface card-lift p-6">
+                <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
                   <X size={16} className="text-danger" /> Ruach does not
                 </h3>
                 <ul className="flex flex-col gap-2.5">
@@ -357,7 +357,7 @@ export default async function HomePage() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <FadeIn>
               <EyebrowLabel>Prayer Wall</EyebrowLabel>
-              <h2 className="max-w-md text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="max-w-md text-3xl font-extrabold tracking-tight text-ink">
                 Make room for your church to pray together.
               </h2>
               <p className="mt-4 max-w-md text-base leading-relaxed text-ink-secondary">
@@ -386,7 +386,7 @@ export default async function HomePage() {
           <FadeIn>
             <div className="mx-auto max-w-2xl text-center">
               <EyebrowLabel>Features</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink">
                 Everything ministry needs, none of the noise.
               </h2>
               <p className="mt-4 text-base leading-relaxed text-ink-secondary">
@@ -411,7 +411,7 @@ export default async function HomePage() {
           <FadeIn>
             <div className="mx-auto mb-10 max-w-2xl text-center">
               <EyebrowLabel>Built for how churches work</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink">
                 Bring together content from the platforms your church already
                 uses.
               </h2>
@@ -432,7 +432,7 @@ export default async function HomePage() {
           <FadeIn>
             <div className="mx-auto mb-12 max-w-2xl text-center">
               <EyebrowLabel>Built to grow with you</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink">
                 Churches of every size.
               </h2>
             </div>
@@ -440,8 +440,8 @@ export default async function HomePage() {
           <div className="grid gap-6 sm:grid-cols-3">
             {AUDIENCES.map((audience, i) => (
               <FadeIn key={audience.name} delay={i * 0.08}>
-                <div className="flex h-full flex-col rounded-lg border border-border bg-surface p-6">
-                  <h3 className="mb-2 text-sm font-semibold text-ink">
+                <div className="flex h-full flex-col rounded-lg border border-black/[.06] bg-surface card-lift p-6">
+                  <h3 className="mb-2 text-sm font-bold text-ink">
                     {audience.name}
                   </h3>
                   <p className="mb-5 flex-1 text-sm leading-relaxed text-ink-secondary">
@@ -466,7 +466,7 @@ export default async function HomePage() {
           <FadeIn>
             <div className="mx-auto mb-12 max-w-2xl text-center">
               <EyebrowLabel>New</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink">
                 We&rsquo;re new. Here&rsquo;s what we&rsquo;re building.
               </h2>
               <div className="mt-5 flex items-center justify-center gap-2 text-sm text-ink-muted">
@@ -507,7 +507,7 @@ export default async function HomePage() {
           <FadeIn>
             <div className="mx-auto mb-12 max-w-2xl text-center">
               <EyebrowLabel>Pricing</EyebrowLabel>
-              <h2 className="text-3xl font-semibold tracking-tight text-ink">
+              <h2 className="text-3xl font-extrabold tracking-tight text-ink">
                 Built to remain accessible for churches of every size.
               </h2>
             </div>
@@ -542,7 +542,7 @@ export default async function HomePage() {
         />
         <div className="relative mx-auto max-w-3xl px-5 text-center">
           <FadeIn>
-            <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
               Your church&rsquo;s content should keep serving people long after
               it is published.
             </h2>

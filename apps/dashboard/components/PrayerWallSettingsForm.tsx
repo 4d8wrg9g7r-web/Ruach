@@ -125,7 +125,7 @@ export function PrayerWallSettingsForm({
 
       <div className="min-w-0">
         <div className="mb-3">
-          <h3 className="text-sm font-semibold text-ink">Preview</h3>
+          <h3 className="text-sm font-bold text-ink">Preview</h3>
           <p className="text-xs text-ink-muted">How the wall looks to visitors.</p>
         </div>
         <PrayerWallPreviewFrame publicPrayerWallId={publicPrayerWallId} previewColor={debouncedColor} previewLogo={previewLogo} />

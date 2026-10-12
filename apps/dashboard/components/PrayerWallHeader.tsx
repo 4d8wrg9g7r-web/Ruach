@@ -49,10 +49,10 @@ export function PrayerWallHeader({
             </span>
           )}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: brandColor }}>
+            <p className="text-[0.75rem] font-semibold uppercase tracking-[0.03em]" style={{ color: brandColor }}>
               Prayer Wall
             </p>
-            <h1 className="text-xl font-semibold tracking-tight text-ink">{organizationName}</h1>
+            <h1 className="text-xl font-extrabold tracking-tight text-ink">{organizationName}</h1>
           </div>
         </div>
         <nav className="flex items-center gap-4 text-sm" style={{ "--brand-color": brandColor } as React.CSSProperties}>

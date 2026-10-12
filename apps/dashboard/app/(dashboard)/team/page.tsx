@@ -128,12 +128,12 @@ export default async function TeamPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">Team</h1>
+      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">Team</h1>
       <p className="mb-8 text-sm text-ink-secondary">Who has access to {organization.name} on Ruach.</p>
 
       {canManage && (
         <Card padding="md" className="mb-6">
-          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-ink">
             <UserPlus size={15} /> Invite a teammate
           </h2>
           <p className="mb-4 text-xs text-ink-muted">
@@ -161,7 +161,7 @@ export default async function TeamPage() {
       )}
 
       <Card padding="md">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Members ({memberRows.length})</h2>
+        <h2 className="mb-4 text-sm font-bold text-ink">Members ({memberRows.length})</h2>
         <TeamMemberList
           members={memberRows}
           currentUserId={user.id}

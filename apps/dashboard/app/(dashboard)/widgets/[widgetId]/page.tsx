@@ -226,7 +226,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
 
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">{widget.name}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">{widget.name}</h1>
           <p className="mt-1 text-sm text-ink-secondary">{widget.website.name}</p>
         </div>
         <a href={`/widget/embed/${widget.publicWidgetId}`} target="_blank" rel="noreferrer" className={buttonClasses("secondary", "sm")}>
@@ -237,7 +237,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
       <WidgetCustomizePanel widget={widget} updateAction={boundUpdateAction} entitlements={entitlements}>
         <Card padding="none">
           <div className="border-b border-border p-5">
-            <h2 className="mb-1 text-sm font-semibold text-ink">Standard Links</h2>
+            <h2 className="mb-1 text-sm font-bold text-ink">Standard Links</h2>
             <p className="text-sm text-ink-secondary">
               Up to 10 quick-action buttons shown alongside the chat when a visitor opens the widget. These are
               shared across every widget in your organization, not just this one. To let the assistant answer
@@ -286,7 +286,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
 
         <div className="shadow-panel overflow-hidden rounded-lg border border-white/10 bg-sidebar p-5">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">Installation</h2>
+            <h2 className="text-sm font-bold text-white">Installation</h2>
             <CopySnippetButton text={snippet} variant="dark" />
           </div>
           <p className="mb-3 text-xs text-white/40">
@@ -298,7 +298,7 @@ export default async function WidgetDetailPage({ params }: { params: Promise<{ w
         <Card padding="none">
           <div className="flex items-start justify-between gap-4 border-b border-border p-5">
             <div>
-              <h2 className="mb-1 text-sm font-semibold text-ink">Sermon library embed</h2>
+              <h2 className="mb-1 text-sm font-bold text-ink">Sermon library embed</h2>
               <p className="text-sm text-ink-secondary">
                 A searchable message archive for your sermon page, with the filters you choose below (speaker, subject,
                 scripture, message type, format and series), plus a box where visitors can describe what they need and get matched to a

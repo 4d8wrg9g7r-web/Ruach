@@ -58,10 +58,10 @@ const config = {
       borderRadius: {
         sm: "8px",
         DEFAULT: "10px",
-        md: "12px",
-        lg: "16px",
-        xl: "20px",
-        "2xl": "24px",
+        md: "14px",
+        lg: "20px",
+        xl: "24px",
+        "2xl": "28px",
       },
       spacing: {
         4.5: "18px",
