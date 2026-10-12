@@ -5,6 +5,7 @@ import {
   buildLibraryFacets,
   filterLibraryItems,
   findLibraryFont,
+  libraryFormat,
   libraryFontStylesheetUrl,
   parseLibraryFilters,
   scriptureBook,
@@ -168,5 +169,40 @@ describe("library filter settings", () => {
   it("keeps known keys in display order and drops the rest", () => {
     expect(parseLibraryFilters(["series", "speaker", "bogus", "speaker", 3])).toEqual(["speaker", "series"]);
     expect(parseLibraryFilters([])).toEqual([]);
+  });
+});
+
+describe("libraryFormat", () => {
+  const yt = (id: string, durationSeconds: number | null, extra: Partial<LibraryItem> = {}) =>
+    item({ id, resourceType: "VIDEO", durationSeconds, publicUrl: `https://www.youtube.com/watch?v=${id}`, ...extra });
+
+  it("treats YouTube videos of three minutes or less as Shorts", () => {
+    expect(libraryFormat(yt("a", 45))).toBe("SHORT");
+    expect(libraryFormat(yt("b", 180))).toBe("SHORT");
+    expect(libraryFormat(yt("c", 181))).toBe("VIDEO");
+    expect(libraryFormat(yt("d", null))).toBe("VIDEO");
+  });
+
+  it("uses a /shorts/ URL or #shorts tag regardless of length", () => {
+    expect(libraryFormat(yt("e", 400, { publicUrl: "https://youtube.com/shorts/e" }))).toBe("SHORT");
+    expect(libraryFormat(yt("f", null, { title: "Faith in a minute #shorts" }))).toBe("SHORT");
+  });
+
+  it("keeps livestreams, non-YouTube videos and other types as they are", () => {
+    expect(libraryFormat(yt("g", 142, { title: "Victory Church Raleigh Livestream" }))).toBe("VIDEO");
+    expect(libraryFormat(yt("h", 60, { publicUrl: "https://vimeo.com/123" }))).toBe("VIDEO");
+    expect(libraryFormat(item({ id: "i", resourceType: "PODCAST", durationSeconds: 60 }))).toBe("PODCAST");
+  });
+
+  it("splits Shorts into their own Format option and filter", () => {
+    const items = [yt("s1", 50), yt("s2", 90), yt("v1", 2400), item({ id: "p", resourceType: "PODCAST" })];
+    const facets = buildLibraryFacets(items, EMPTY_LIBRARY_FILTERS);
+    expect(facets.types.map((t) => [t.value, t.label, t.count])).toEqual([
+      ["SHORT", "Short", 2],
+      ["PODCAST", "Podcast", 1],
+      ["VIDEO", "Video", 1],
+    ]);
+    expect(filterLibraryItems(items, { ...EMPTY_LIBRARY_FILTERS, type: "SHORT" }).map((i) => i.id)).toEqual(["s1", "s2"]);
+    expect(filterLibraryItems(items, { ...EMPTY_LIBRARY_FILTERS, type: "VIDEO" }).map((i) => i.id)).toEqual(["v1"]);
   });
 });
