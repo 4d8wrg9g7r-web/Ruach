@@ -55,6 +55,7 @@ export default async function SermonLibraryPage({
         items={items}
         host={host ?? null}
         showChat={chat !== "off"}
+        enabledFilters={widget.libraryFilters}
       />
     </>
   );

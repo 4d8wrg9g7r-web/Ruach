@@ -12,10 +12,13 @@ export type {
   ConversationalResponseInput,
   ConversationalResponseOutput,
   GeneratedField,
+  SpeakerDetectionInput,
+  SpeakerDetectionOutput,
 } from "./AIProvider";
 export { MockAIProvider } from "./MockAIProvider";
 export { OpenAIProvider } from "./OpenAIProvider";
 export { CategorizationService } from "./CategorizationService";
+export { SpeakerService, normalizeSpeakerName } from "./SpeakerService";
 export { ChatPipeline } from "./ChatPipeline";
 export type { ChatPipelineInput } from "./ChatPipeline";
 

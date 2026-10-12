@@ -54,6 +54,7 @@ export async function updateWidget(
     showPlatformBranding: boolean;
     libraryResourceTypes: ResourceType[];
     libraryFontFamily: string | null;
+    libraryFilters: string[];
     status: "ACTIVE" | "INACTIVE";
   }>,
 ) {

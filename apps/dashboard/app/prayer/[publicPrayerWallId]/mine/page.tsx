@@ -68,7 +68,7 @@ export default async function MyPrayerRequestsPage({ params }: { params: Promise
         isLoggedIn
       />
       <main className="mx-auto max-w-2xl px-6 py-8">
-        <h2 className="mb-1 text-xl font-semibold text-ink">My prayer requests</h2>
+        <h2 className="mb-1 text-xl font-extrabold text-ink">My prayer requests</h2>
         <p className="mb-6 text-sm text-ink-secondary">
           Mark a request answered, or change whether it&rsquo;s visible on the public wall.
         </p>

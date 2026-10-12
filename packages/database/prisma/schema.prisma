@@ -355,6 +355,9 @@ model WidgetConfiguration {
   // Google Fonts family for the library embed (one of LIBRARY_FONTS in shared-types);
   // null = Ruach's default font. Plan-gated (advancedWidgetCustomization).
   libraryFontFamily         String?
+  // Which dropdown filters the library embed shows (LIBRARY_FILTER_OPTIONS keys in
+  // shared-types), in display order. Keyword search is always on.
+  libraryFilters            String[]           @default(["speaker", "topic", "scripture", "messageType", "format", "series"])
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
@@ -436,6 +439,10 @@ model Resource {
 
   creatorName     String?
   speakerName     String?
+  // When speaker detection (SpeakerService in @ruach/ai) last looked at this resource,
+  // or staff set the speaker by hand. Null = not checked yet, so the speakers cron
+  // picks it up; set even when no speaker was found, so it isn't asked again.
+  speakerCheckedAt DateTime?
   seriesTitle     String?
   publishedAt     DateTime?
   durationSeconds Int?

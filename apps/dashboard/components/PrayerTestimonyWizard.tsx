@@ -66,7 +66,7 @@ export function PrayerTestimonyWizard(props: PrayerTestimonyWizardProps) {
     <div>
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">
             Set up Prayer Wall &amp; Testimonies for {props.organizationName}
           </h1>
           <p className="max-w-lg text-sm text-ink-secondary">
@@ -122,7 +122,7 @@ export function PrayerTestimonyWizard(props: PrayerTestimonyWizardProps) {
           >
             <div className="flex items-center gap-2">
               <HeartHandshake size={16} className="text-accent" />
-              <h2 className="text-sm font-semibold text-ink">Enable the Prayer Wall</h2>
+              <h2 className="text-sm font-bold text-ink">Enable the Prayer Wall</h2>
             </div>
             <p className="text-sm text-ink-secondary">
               A public page where visitors can submit prayer requests and, if they choose, post them publicly for
@@ -145,7 +145,7 @@ export function PrayerTestimonyWizard(props: PrayerTestimonyWizardProps) {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Sparkles size={16} className="text-accent" />
-              <h2 className="text-sm font-semibold text-ink">Collect testimonies too?</h2>
+              <h2 className="text-sm font-bold text-ink">Collect testimonies too?</h2>
             </div>
             <p className="text-sm text-ink-secondary">
               &ldquo;Praise reports&rdquo; from your community -- a sub-feature of the same Prayer Wall page, with
@@ -183,7 +183,7 @@ export function PrayerTestimonyWizard(props: PrayerTestimonyWizardProps) {
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <Check size={16} className="text-success" />
-              <h2 className="text-sm font-semibold text-ink">You&rsquo;re set up</h2>
+              <h2 className="text-sm font-bold text-ink">You&rsquo;re set up</h2>
             </div>
             <ul className="flex flex-col gap-1.5 text-sm text-ink">
               <li className="flex items-center gap-1.5">

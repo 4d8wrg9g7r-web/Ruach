@@ -23,13 +23,34 @@ resize to fit its content.
   its library lists org-wide resources plus that campus's own, never another campus's.
 - Filters: speaker, subject (`primaryTopic` + `topics`), scripture book then key verse
   (`scriptures`), message type (`Resource.messageTypes`, staff-defined tags set on the
-  resource page), format (`resourceType`), series, and keyword search. Any filter with
-  fewer than two options is hidden. Option
+  resource page), format (`resourceType`), series, and keyword search. Staff turn each
+  dropdown on or off under "Filters" on the widget page
+  (`WidgetConfiguration.libraryFilters`, all on by default, Speaker included); search is
+  always shown. Any filter with fewer than two options is hidden, and the widget page
+  says so next to a filter that's on but hidden. Option
   counts are faceted: each dropdown counts against every *other* active filter.
 - Chat: posts to the existing `/api/widget/[publicWidgetId]/chat`, so it uses the same
   `ChatPipeline`, conversation log, rate limits and usage meter as the assistant widget.
 
+## Speakers
+
+YouTube, Vimeo and RSS imports don't carry a speaker, so `SpeakerService` (`@ruach/ai`)
+reads it from the title, description and start of the transcript (e.g. "… | Mitch
+Horton", "Pastor Mitch talks about…"). It only fills an empty `speakerName`, drops titles
+like Pastor, and reuses an existing speaker's spelling so one person isn't listed twice.
+
+- New resources: runs at the end of categorization.
+- Older resources: `/api/cron/speakers` (every 15 minutes, `CRON_SECRET`) works through
+  up to 150 unchecked resources per run, newest first, and invalidates the library cache
+  for orgs that changed. `Resource.speakerCheckedAt` marks a resource as checked even when
+  no speaker was found, so nothing is asked twice.
+- Staff can correct or clear the speaker on the resource page; clearing it keeps it clear.
+
 ## Branding
+
+- Styled like a modern church site's own message library: pill-shaped search and
+  dropdowns, 20px-radius cards with a 16:9 thumbnail, a type badge, uppercase meta line
+  and an outline "Watch" button. On phones the dropdowns sit behind a Filters toggle.
 
 - Uses the widget's brand color, suggested prompts and input placeholder. No logo.
 - Font: plans with `advancedWidgetCustomization` (Growth and up) pick one of

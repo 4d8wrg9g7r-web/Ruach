@@ -220,6 +220,7 @@ async function setCampusAction(resourceId: string, websiteId: string) {
 
 const MAX_MESSAGE_TYPES = 10;
 const MAX_MESSAGE_TYPE_LENGTH = 40;
+const MAX_SPEAKER_LENGTH = 80;
 
 async function setMessageTypesAction(resourceId: string, formData: FormData) {
   "use server";
@@ -240,6 +241,19 @@ async function setMessageTypesAction(resourceId: string, formData: FormData) {
     if (cleaned && !byKey.has(key)) byKey.set(key, cleaned);
   }
   await resourceService.setMessageTypes(organization.id, resourceId, [...byKey.values()].slice(0, MAX_MESSAGE_TYPES));
+  revalidatePath(`/resources/${resourceId}`);
+  invalidateLibraryCatalog(organization.id);
+}
+
+async function setSpeakerAction(resourceId: string, formData: FormData) {
+  "use server";
+  const organization = await getCurrentOrganization();
+  if (!organization) throw new Error("No organization");
+  await requireOrgRole(organization.id, ["OWNER", "ADMIN", "CONTENT_MANAGER"]);
+
+  // Blank clears it, and stops speaker detection from filling it back in.
+  const speakerName = String(formData.get("speakerName") ?? "").trim().replace(/\s+/g, " ").slice(0, MAX_SPEAKER_LENGTH);
+  await resourceService.setSpeakerName(organization.id, resourceId, speakerName || null);
   revalidatePath(`/resources/${resourceId}`);
   invalidateLibraryCatalog(organization.id);
 }
@@ -315,7 +329,7 @@ export default async function ResourceDetailPage({
 
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">{resource.title}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">{resource.title}</h1>
           <div className="mt-1.5 flex items-center gap-2">
             <Badge variant={resourceStatusTone(resource.status)}>{resourceStatusLabel(resource.status)}</Badge>
             <span className="text-xs text-ink-muted">{resource.sourceProvider}</span>
@@ -380,7 +394,7 @@ export default async function ResourceDetailPage({
 
           {websites.length > 1 && (
             <Card padding="none" className="p-4">
-              <h2 className="mb-1 text-sm font-semibold text-ink">Campus</h2>
+              <h2 className="mb-1 text-sm font-bold text-ink">Campus</h2>
               <p className="mb-3 text-xs text-ink-muted">
                 Which campus this resource is available to. Org-wide resources are available to every campus&rsquo;s widget.
               </p>
@@ -401,14 +415,35 @@ export default async function ResourceDetailPage({
                     { value: "", label: "All campuses (org-wide)" },
                     ...websites.map((website) => ({ value: website.id, label: website.name })),
                   ]}
-                  className="block w-full rounded-sm border border-border-strong bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="block w-full rounded-full border-[1.5px] border-black/[.12] bg-surface px-[1.1em] py-2.5 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
                 />
               </form>
             </Card>
           )}
 
           <Card padding="none" className="p-4">
-            <h2 className="mb-1 text-sm font-semibold text-ink">Message types</h2>
+            <h2 className="mb-1 text-sm font-bold text-ink">Speaker</h2>
+            <p className="mb-3 text-xs text-ink-muted">
+              Shown on this message&rsquo;s card and in the sermon library&rsquo;s Speaker filter. Ruach fills it in from the
+              title and description when your source doesn&rsquo;t provide one; correct it here if it&rsquo;s wrong, or clear it.
+            </p>
+            <form action={setSpeakerAction.bind(null, resource.id)} className="flex flex-wrap items-center gap-2">
+              <input
+                name="speakerName"
+                defaultValue={resource.speakerName ?? ""}
+                placeholder="e.g. Mitch Horton"
+                maxLength={MAX_SPEAKER_LENGTH}
+                aria-label="Speaker"
+                className="block min-w-0 flex-1 rounded-full border-[1.5px] border-black/[.12] bg-surface px-[1.1em] py-2 text-sm text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+              />
+              <button type="submit" className={buttonClasses("secondary", "sm")}>
+                Save speaker
+              </button>
+            </form>
+          </Card>
+
+          <Card padding="none" className="p-4">
+            <h2 className="mb-1 text-sm font-bold text-ink">Message types</h2>
             <p className="mb-3 text-xs text-ink-muted">
               Your own categories, like Sunday Service, Guest Speaker or Youth. Visitors can filter by them in the sermon
               library embed.
@@ -436,7 +471,7 @@ export default async function ResourceDetailPage({
                   name="newMessageTypes"
                   placeholder="e.g. Guest Speaker, Youth"
                   maxLength={200}
-                  className="mt-1 block w-full rounded-sm border border-border-strong bg-surface px-3.5 py-2 text-sm text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                  className="mt-1 block w-full rounded-full border-[1.5px] border-black/[.12] bg-surface px-[1.1em] py-2 text-sm text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
                 />
               </label>
               <button type="submit" className={`${buttonClasses("secondary", "sm")} w-fit`}>
@@ -447,7 +482,7 @@ export default async function ResourceDetailPage({
 
           <Card padding="none" className="p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold text-ink">Transcript</h2>
+              <h2 className="text-sm font-bold text-ink">Transcript</h2>
               {canRefreshPageText && (
                 <form action={boundRefreshPageText}>
                   <button type="submit" className={`${buttonClasses("ghost", "sm")} gap-1.5`} title="Re-read this page and store its current text">
@@ -477,7 +512,7 @@ export default async function ResourceDetailPage({
           </Card>
 
           <Card padding="none" className="p-4">
-            <h2 className="mb-3 text-sm font-semibold text-ink">Supporting documents</h2>
+            <h2 className="mb-3 text-sm font-bold text-ink">Supporting documents</h2>
             {otherDocuments.length === 0 && pendingLinks.length === 0 ? (
               <EmptyState description="None yet." />
             ) : (
@@ -544,7 +579,7 @@ export default async function ResourceDetailPage({
         <div className="flex flex-col gap-6">
           <Card padding="none" className="p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink">AI Suggestions</h2>
+              <h2 className="text-sm font-bold text-ink">AI Suggestions</h2>
               <form action={boundCategorize}>
                 <button type="submit" className={buttonClasses("secondary", "sm")}>
                   <RefreshCw size={13} /> {resource.primaryTopic ? "Regenerate" : "Generate"}

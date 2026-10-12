@@ -35,7 +35,7 @@ export default function SignupFinishingPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center px-4 text-center">
       <Loader2 size={28} className="mb-4 animate-spin text-accent" />
-      <h1 className="mb-1 text-lg font-semibold text-ink">Setting up your account...</h1>
+      <h1 className="mb-1 text-lg font-extrabold text-ink">Setting up your account...</h1>
       <p className="text-sm text-ink-secondary">This only takes a few seconds. Don&rsquo;t close this page.</p>
     </main>
   );

@@ -28,7 +28,7 @@ export default function WhyRuachPage() {
       <section className="mx-auto max-w-3xl px-5 pb-10 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>Why Ruach</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">
             Technology should support ministry, not compete with it.
           </h1>
         </FadeIn>
@@ -55,7 +55,7 @@ export default function WhyRuachPage() {
               <span className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
                 <Wind size={24} />
               </span>
-              <h2 className="text-2xl font-semibold tracking-tight text-ink">What &ldquo;Ruach&rdquo; means</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink">What &ldquo;Ruach&rdquo; means</h2>
             </div>
 
             <div className="flex flex-col gap-5 text-sm leading-relaxed text-ink-secondary">
@@ -67,8 +67,8 @@ export default function WhyRuachPage() {
                 prepared.
               </p>
 
-              <div className="rounded-lg border border-border bg-surface p-5">
-                <h3 className="mb-1.5 text-sm font-semibold text-ink">Breath: bringing existing content back to life</h3>
+              <div className="rounded-lg border border-black/[.06] bg-surface card-lift p-5">
+                <h3 className="mb-1.5 text-sm font-bold text-ink">Breath: bringing existing content back to life</h3>
                 <p>
                   Churches often have years of sermons, articles, podcasts, ministry pages, and discipleship
                   resources sitting in an archive. Ruach breathes new usefulness into the ministry resources your
@@ -77,8 +77,8 @@ export default function WhyRuachPage() {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-border bg-surface p-5">
-                <h3 className="mb-1.5 text-sm font-semibold text-ink">Wind: moving people toward the right resource</h3>
+              <div className="rounded-lg border border-black/[.06] bg-surface card-lift p-5">
+                <h3 className="mb-1.5 text-sm font-bold text-ink">Wind: moving people toward the right resource</h3>
                 <p>
                   Wind cannot always be seen directly, but its movement can be recognized by what it affects. A
                   visitor arrives with a need or question, and Ruach helps guide them toward something
@@ -87,8 +87,8 @@ export default function WhyRuachPage() {
                 </p>
               </div>
 
-              <div className="rounded-lg border border-border bg-surface p-5">
-                <h3 className="mb-1.5 text-sm font-semibold text-ink">Spirit: pointing beyond technology, handled carefully</h3>
+              <div className="rounded-lg border border-black/[.06] bg-surface card-lift p-5">
+                <h3 className="mb-1.5 text-sm font-bold text-ink">Spirit: pointing beyond technology, handled carefully</h3>
                 <p>
                   Ruach should never imply it speaks for the Holy Spirit, possesses spiritual authority, or replaces
                   discernment, Scripture, pastors, or personal ministry. Ruach is a tool serving the
@@ -107,7 +107,7 @@ export default function WhyRuachPage() {
       <section className="border-t border-border bg-sidebar py-16">
         <div className="mx-auto max-w-2xl px-5 text-center">
           <FadeIn>
-            <h2 className="text-2xl font-semibold tracking-tight text-white">See how Ruach fits your church.</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight text-white">See how Ruach fits your church.</h2>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link href="/how-it-works" className={buttonClasses("primary", "md")}>
                 See how it works

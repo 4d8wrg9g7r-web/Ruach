@@ -134,7 +134,7 @@ export default function FeaturesPage() {
       <section className="mx-auto max-w-3xl px-5 pb-12 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>Features</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">Everything ministry needs.</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">Everything ministry needs.</h1>
           <p className="mt-5 text-base leading-relaxed text-ink-secondary">
             Every Ruach feature, grouped by what it does for your church -- from the conversational assistant to the
             Prayer Wall to team administration.
@@ -147,7 +147,7 @@ export default function FeaturesPage() {
           <div className="flex flex-col gap-14">
             {CATEGORIES.map((category, i) => (
               <FadeIn key={category.title} delay={Math.min(i * 0.05, 0.2)}>
-                <h2 className="mb-5 text-lg font-semibold text-ink">{category.title}</h2>
+                <h2 className="mb-5 text-lg font-extrabold text-ink">{category.title}</h2>
                 <ul className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
                   {category.items.map((item) => (
                     <li key={item.name} className="flex items-start justify-between gap-3 text-sm text-ink-secondary">
@@ -173,7 +173,7 @@ export default function FeaturesPage() {
         <div className="mx-auto max-w-5xl px-5">
           <FadeIn>
             <div className="mx-auto mb-10 max-w-2xl text-center">
-              <h2 className="text-2xl font-semibold tracking-tight text-ink">Compare every plan.</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-ink">Compare every plan.</h2>
             </div>
           </FadeIn>
           <FadeIn delay={0.1}>

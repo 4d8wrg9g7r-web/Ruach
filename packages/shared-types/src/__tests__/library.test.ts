@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_LIBRARY_FILTERS,
   EMPTY_LIBRARY_FILTERS,
   buildLibraryFacets,
   filterLibraryItems,
   findLibraryFont,
   libraryFontStylesheetUrl,
+  parseLibraryFilters,
   scriptureBook,
   type LibraryItem,
 } from "../library";
@@ -154,5 +156,17 @@ describe("library fonts", () => {
     expect(libraryFontStylesheetUrl(findLibraryFont("Playfair Display")!)).toBe(
       "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap",
     );
+  });
+});
+
+describe("library filter settings", () => {
+  it("defaults to every filter, speaker first", () => {
+    expect(DEFAULT_LIBRARY_FILTERS[0]).toBe("speaker");
+    expect(DEFAULT_LIBRARY_FILTERS).toHaveLength(6);
+  });
+
+  it("keeps known keys in display order and drops the rest", () => {
+    expect(parseLibraryFilters(["series", "speaker", "bogus", "speaker", 3])).toEqual(["speaker", "series"]);
+    expect(parseLibraryFilters([])).toEqual([]);
   });
 });

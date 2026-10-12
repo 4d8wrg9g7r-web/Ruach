@@ -369,7 +369,7 @@ export default async function ResourcesPage({
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="text-2xl font-extrabold tracking-tight text-ink">
           {isReviewQueue ? "Review Queue" : "Resources"}
         </h1>
         {isReviewQueue && (
@@ -395,7 +395,7 @@ export default async function ResourcesPage({
       {!isReviewQueue && (
         <Card padding="none" className="mb-8">
           <div className="border-b border-border p-5">
-            <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+            <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-ink">
               <Sparkles size={15} className="text-accent" /> Auto-sync sources
             </h2>
             <p className="text-sm text-ink-secondary">
@@ -415,7 +415,7 @@ export default async function ResourcesPage({
       {!isReviewQueue && (
         <Card padding="none" className="mb-8">
           <div className="border-b border-border p-5">
-            <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+            <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-ink">
               <Link2 size={15} className="text-accent" /> Organizational Links
             </h2>
             <p className="text-sm text-ink-secondary">
@@ -465,7 +465,7 @@ export default async function ResourcesPage({
 
       {!isReviewQueue && (
         <Card padding="md" className="mb-8">
-          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-ink">
             <Sparkles size={15} className="text-accent" /> Content Priority
           </h2>
           <p className="mb-4 text-sm text-ink-secondary">
@@ -481,7 +481,7 @@ export default async function ResourcesPage({
                 { value: "", label: "No priority" },
                 ...PRIORITIZABLE_RESOURCE_TYPE_GROUPS.map((g) => ({ value: g.key, label: g.label })),
               ]}
-              className="rounded-sm border border-border-strong bg-surface py-2 pl-3 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="rounded-full border-[1.5px] border-black/[.12] bg-surface py-2 pl-4 pr-8 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
             />
           </form>
         </Card>
@@ -513,7 +513,7 @@ export default async function ResourcesPage({
               name="q"
               defaultValue={params.q}
               placeholder="Search resources..."
-              className="w-56 rounded-sm border border-border-strong bg-surface py-2 pl-8 pr-3 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="w-56 rounded-full border-[1.5px] border-black/[.12] bg-surface py-2 pl-8 pr-3 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
             />
             <div className="relative">
               <Filter size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
@@ -527,7 +527,7 @@ export default async function ResourcesPage({
                   { value: "DRAFT", label: "Draft" },
                   { value: "ARCHIVED", label: "Rejected" },
                 ]}
-                className="appearance-none rounded-sm border border-border-strong bg-surface py-2 pl-8 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="appearance-none rounded-full border-[1.5px] border-black/[.12] bg-surface py-2 pl-8 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
               />
             </div>
             <label className="flex items-center gap-1.5 text-sm text-ink-secondary">
@@ -536,7 +536,7 @@ export default async function ResourcesPage({
                 name="pageSize"
                 defaultValue={String(pageSize)}
                 options={PAGE_SIZE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
-                className="rounded-sm border border-border-strong bg-surface py-2 pl-2 pr-6 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="rounded-full border-[1.5px] border-black/[.12] bg-surface py-2 pl-4 pr-8 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
               />
             </label>
           </form>
@@ -584,11 +584,11 @@ export default async function ResourcesPage({
                     min={1}
                     max={totalPages}
                     defaultValue={page}
-                    className="w-14 rounded-sm border border-border-strong bg-surface px-2 py-1 text-xs text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
+                    className="w-14 rounded-full border-[1.5px] border-black/[.12] bg-surface px-2 py-1 text-xs text-ink outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40"
                   />
                   <button
                     type="submit"
-                    className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    className="rounded-full border-[1.5px] border-black/[.12] px-3 py-1 hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   >
                     Go
                   </button>
@@ -598,7 +598,7 @@ export default async function ResourcesPage({
                 {page > 1 && (
                   <Link
                     href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page - 1) }).toString()}`}
-                    className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    className="rounded-full border-[1.5px] border-black/[.12] px-3 py-1 hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   >
                     Previous
                   </Link>
@@ -606,7 +606,7 @@ export default async function ResourcesPage({
                 {page < totalPages && (
                   <Link
                     href={`/resources?${new URLSearchParams({ ...Object.fromEntries(baseParams), type: typeFilter, page: String(page + 1) }).toString()}`}
-                    className="rounded-sm border border-border-strong px-2.5 py-1 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    className="rounded-full border-[1.5px] border-black/[.12] px-3 py-1 hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                   >
                     Next
                   </Link>

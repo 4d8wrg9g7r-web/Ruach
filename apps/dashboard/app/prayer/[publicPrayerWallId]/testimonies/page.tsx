@@ -50,7 +50,7 @@ export default async function TestimoniesPage({
           >
             <Sparkles size={24} style={{ color: brandColor }} />
           </span>
-          <h2 className="mb-2 text-2xl font-semibold tracking-tight text-ink">{wall.testimoniesPageName}</h2>
+          <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-ink">{wall.testimoniesPageName}</h2>
           <p className="mx-auto max-w-md text-sm text-ink-secondary">
             Stories from our community about what God has done.
           </p>

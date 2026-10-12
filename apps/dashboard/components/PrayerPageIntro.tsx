@@ -18,7 +18,7 @@ export function PrayerPageIntro({ icon, title, description, brandColor }: Prayer
       >
         {icon}
       </span>
-      <h2 className="mb-1 text-xl font-semibold text-ink">{title}</h2>
+      <h2 className="mb-1 text-xl font-extrabold text-ink">{title}</h2>
       <p className="text-sm text-ink-secondary">{description}</p>
     </div>
   );

@@ -114,7 +114,7 @@ export default async function PrayerWallPage({
           >
             <HeartHandshake size={24} style={{ color: brandColor }} />
           </span>
-          <h2 className="mb-2 text-2xl font-semibold tracking-tight text-ink">Join us in prayer</h2>
+          <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-ink">Join us in prayer</h2>
           <p className="mx-auto max-w-md text-sm text-ink-secondary">
             Browse requests from our community below and click the heart to let someone know you&rsquo;re praying
             for them.

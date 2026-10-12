@@ -107,11 +107,11 @@ export default async function WebsiteDetailPage({ params }: { params: Promise<{ 
         <ArrowLeft size={14} /> Websites
       </Link>
 
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">{website.name}</h1>
+      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">{website.name}</h1>
       <p className="mb-8 text-sm text-ink-secondary">{website.primaryDomain}</p>
 
       <Card padding="md">
-        <h2 className="mb-1 text-sm font-semibold text-ink">Prayer wall</h2>
+        <h2 className="mb-1 text-sm font-bold text-ink">Prayer wall</h2>
         {canScopePrayerWall ? (
           <>
             <p className="mb-4 text-sm text-ink-secondary">

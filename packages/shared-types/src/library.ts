@@ -291,6 +291,32 @@ export function buildLibraryFacets(items: LibraryItem[], filters: LibraryFilters
 }
 
 /**
+ * The dropdown filters staff can turn on or off per widget
+ * (WidgetConfiguration.libraryFilters), in the order the embed shows them. Keyword
+ * search is always on. Key verse isn't listed: it appears under Scripture once a book
+ * is picked, so it follows Scripture's setting.
+ */
+export const LIBRARY_FILTER_OPTIONS = [
+  { key: "speaker", label: "Speaker" },
+  { key: "topic", label: "Subject" },
+  { key: "scripture", label: "Scripture" },
+  { key: "messageType", label: "Message type" },
+  { key: "format", label: "Format" },
+  { key: "series", label: "Series" },
+] as const;
+
+export type LibraryFilterKey = (typeof LIBRARY_FILTER_OPTIONS)[number]["key"];
+
+/** Every filter, Speaker included -- the database default for new and existing widgets. */
+export const DEFAULT_LIBRARY_FILTERS: LibraryFilterKey[] = LIBRARY_FILTER_OPTIONS.map((option) => option.key);
+
+/** Keeps only known keys, deduped, in display order -- for saved or submitted values. */
+export function parseLibraryFilters(values: readonly unknown[]): LibraryFilterKey[] {
+  const wanted = new Set(values);
+  return DEFAULT_LIBRARY_FILTERS.filter((key) => wanted.has(key));
+}
+
+/**
  * Fonts staff can pick for the library embed (plans with advancedWidgetCustomization).
  * The embed runs in an iframe, so it can't inherit the church site's own font --
  * instead it loads the chosen one from Google Fonts. A fixed list (not free text)

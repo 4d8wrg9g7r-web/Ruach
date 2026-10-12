@@ -48,7 +48,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel = "Confir
         onClick={(e) => e.stopPropagation()}
         className="shadow-panel w-full max-w-sm rounded-lg border border-border bg-surface p-6"
       >
-        <h2 id="confirm-dialog-title" className="text-base font-semibold text-ink">
+        <h2 id="confirm-dialog-title" className="text-base font-bold text-ink">
           {title}
         </h2>
         <p id="confirm-dialog-description" className="mt-2 text-sm leading-relaxed text-ink-secondary">

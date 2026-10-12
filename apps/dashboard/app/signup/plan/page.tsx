@@ -55,7 +55,7 @@ export default async function SignupPlanPage({ searchParams }: { searchParams: P
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="mb-1 text-center text-2xl font-semibold text-ink">Choose a plan</h1>
+      <h1 className="mb-1 text-center text-2xl font-extrabold text-ink">Choose a plan</h1>
       <p className="mb-8 text-center text-sm text-ink-secondary">
         Pick a plan for {orgName}. Every plan starts with a {billingService.TRIAL_PERIOD_DAYS}-day free trial &mdash; no
         card required, change or cancel anytime.

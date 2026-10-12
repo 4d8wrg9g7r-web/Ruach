@@ -49,7 +49,7 @@ export default async function AnalyticsPage() {
   if (summary.totalConversations === 0) {
     return (
       <div>
-        <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">
           Analytics
         </h1>
         <p className="mb-8 text-sm text-ink-secondary">
@@ -67,7 +67,7 @@ export default async function AnalyticsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">
+      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">
         Analytics
       </h1>
       <p className="mb-8 text-sm text-ink-secondary">
@@ -95,7 +95,7 @@ export default async function AnalyticsPage() {
       </div>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-4 text-sm font-semibold text-ink">
+        <h2 className="mb-4 text-sm font-bold text-ink">
           Engagement over time
         </h2>
         <EngagementChart data={engagement} />
@@ -103,7 +103,7 @@ export default async function AnalyticsPage() {
 
       {byWebsite.length > 1 && (
         <Card padding="md" className="mb-6">
-          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-bold text-ink">
             <Building2 size={15} className="text-accent" /> By campus
           </h2>
           <p className="mb-4 text-xs text-ink-muted">
@@ -131,7 +131,7 @@ export default async function AnalyticsPage() {
 
       <div className="mb-6 grid grid-cols-2 gap-6">
         <Card padding="md">
-          <h2 className="mb-1 text-sm font-semibold text-ink">Search trends</h2>
+          <h2 className="mb-1 text-sm font-bold text-ink">Search trends</h2>
           <p className="mb-4 text-xs text-ink-muted">
             Topics of the resources most often recommended in reply.
           </p>
@@ -148,7 +148,7 @@ export default async function AnalyticsPage() {
           )}
         </Card>
         <Card padding="md">
-          <h2 className="mb-1 text-sm font-semibold text-ink">
+          <h2 className="mb-1 text-sm font-bold text-ink">
             Most recommended resources
           </h2>
           <p className="mb-4 text-xs text-ink-muted">
@@ -169,7 +169,7 @@ export default async function AnalyticsPage() {
       </div>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-1 text-sm font-semibold text-ink">
+        <h2 className="mb-1 text-sm font-bold text-ink">
           Recent questions
         </h2>
         <p className="mb-4 text-xs text-ink-muted">
@@ -179,7 +179,7 @@ export default async function AnalyticsPage() {
       </Card>
 
       <Card padding="md">
-        <h2 className="mb-1 text-sm font-semibold text-ink">Content gaps</h2>
+        <h2 className="mb-1 text-sm font-bold text-ink">Content gaps</h2>
         <p className="mb-4 text-xs text-ink-muted">
           Questions that came back with no matching resource -- the clearest
           signal of what to import next.

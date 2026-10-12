@@ -56,7 +56,7 @@ export function CancelPlanCard({ planName, periodEndLabel, cancelAtPeriodEnd, on
     <Card padding="md" className="mb-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-ink">Cancel plan</h2>
+          <h2 className="text-sm font-bold text-ink">Cancel plan</h2>
           <p className="text-xs text-ink-muted">
             You&rsquo;ll keep full access to {planName}{periodEndLabel ? ` until ${periodEndLabel}` : ""}, then your
             organization drops to view-only until you resubscribe.

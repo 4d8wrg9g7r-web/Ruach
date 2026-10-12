@@ -206,7 +206,7 @@ export default function FAQPage() {
       <section className="mx-auto max-w-3xl px-5 pb-10 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>FAQ</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">Questions, answered directly.</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">Questions, answered directly.</h1>
         </FadeIn>
       </section>
 
@@ -214,7 +214,7 @@ export default function FAQPage() {
         <div className="mx-auto flex max-w-3xl flex-col gap-14 px-5">
           {CATEGORIES.map((category, i) => (
             <FadeIn key={category.title} delay={Math.min(i * 0.05, 0.2)}>
-              <h2 className="mb-4 text-lg font-semibold text-ink">{category.title}</h2>
+              <h2 className="mb-4 text-lg font-extrabold text-ink">{category.title}</h2>
               <FAQAccordion items={category.items} />
             </FadeIn>
           ))}

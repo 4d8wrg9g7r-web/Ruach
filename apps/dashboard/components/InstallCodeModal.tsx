@@ -48,7 +48,7 @@ export function InstallCodeModal({ snippet, websiteName }: { snippet: string; we
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 id="install-code-modal-title" className="text-sm font-semibold text-ink">
+              <h2 id="install-code-modal-title" className="text-sm font-bold text-ink">
                 Install on {websiteName}
               </h2>
               <button type="button" onClick={() => setIsOpen(false)} aria-label="Close" className="text-ink-muted hover:text-ink">

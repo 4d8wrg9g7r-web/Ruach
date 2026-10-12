@@ -1,6 +1,6 @@
 import { revalidateTag, unstable_cache } from "next/cache";
 import { billingService, organizationService, resourceService, widgetService } from "@ruach/database";
-import { findLibraryFont, type LibraryItem, type ResourceTypeValue } from "@ruach/shared-types";
+import { findLibraryFont, parseLibraryFilters, type LibraryItem, type ResourceTypeValue } from "@ruach/shared-types";
 
 /**
  * Data loading for the public sermon library embed (/widget/library/[publicWidgetId]).
@@ -65,6 +65,7 @@ export function getLibraryWidget(publicWidgetId: string) {
         showPlatformBranding: canRemoveBranding ? widget.showPlatformBranding : true,
         font: canCustomize ? findLibraryFont(widget.libraryFontFamily) : null,
         libraryResourceTypes: widget.libraryResourceTypes as ResourceTypeValue[],
+        libraryFilters: parseLibraryFilters(widget.libraryFilters),
         website: {
           primaryDomain: widget.website.primaryDomain,
           allowedDomains: widget.website.allowedDomains,
@@ -72,7 +73,9 @@ export function getLibraryWidget(publicWidgetId: string) {
         },
       };
     },
-    ["sermon-library-widget", publicWidgetId],
+    // Bump the version when the returned shape changes: entries cached by the previous
+    // deploy would otherwise be served without the new fields for up to CACHE_SECONDS.
+    ["sermon-library-widget-v2", publicWidgetId],
     { revalidate: CACHE_SECONDS, tags: [widgetTag(publicWidgetId)] },
   )();
 }

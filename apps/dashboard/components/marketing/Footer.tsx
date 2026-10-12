@@ -38,7 +38,7 @@ export function Footer() {
           <FooterColumn title="Product" links={PRODUCT_LINKS} />
           <FooterColumn title="Company" links={COMPANY_LINKS} />
           <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">Account</h3>
+            <h3 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">Account</h3>
             <ul className="flex flex-col gap-2">
               <li>
                 <Link href="/login" className="rounded-sm text-sm text-ink-secondary hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent">
@@ -74,7 +74,7 @@ export function Footer() {
 function FooterColumn({ title, links }: { title: string; links: { href: string; label: string }[] }) {
   return (
     <div>
-      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">{title}</h3>
+      <h3 className="mb-3 text-[0.75rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">{title}</h3>
       <ul className="flex flex-col gap-2">
         {links.map((link) => (
           <li key={link.href}>

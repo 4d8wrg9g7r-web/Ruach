@@ -51,7 +51,7 @@ export default async function ForgotPasswordPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 text-2xl font-semibold text-ink">Reset your password</h1>
+      <h1 className="mb-1 text-2xl font-extrabold text-ink">Reset your password</h1>
       <p className="mb-6 text-sm text-ink-secondary">Enter your email and we&rsquo;ll send you a reset link.</p>
       {sp.error && (
         <p className="mb-4 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
