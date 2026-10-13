@@ -48,6 +48,13 @@ export type ResourceRecommendation = z.infer<
   typeof ResourceRecommendationSchema
 >;
 
+/**
+ * SuggestedAction.type for the "forward this conversation to staff" offer on a
+ * NO_RESULTS reply. Not a link (url is null) -- ChatWidget renders it as a button
+ * that opens an inline name/email form posting to the widget's /forward endpoint.
+ */
+export const FORWARD_TO_STAFF_ACTION = "FORWARD_TO_STAFF";
+
 export const SuggestedActionSchema = z.object({
   type: z.string(),
   label: z.string(),
@@ -74,6 +81,17 @@ export const ChatRequestSchema = z.object({
   message: z.string().min(1).max(2000),
 });
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
+
+/** Body for POST /api/widget/[publicWidgetId]/forward -- the visitor's own contact
+ * details, so the staff member who receives the transcript can reply to them. */
+export const ForwardToStaffRequestSchema = z.object({
+  publicWidgetId: z.string().min(1),
+  sessionId: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().max(254),
+  note: z.string().trim().max(1000).optional(),
+});
+export type ForwardToStaffRequest = z.infer<typeof ForwardToStaffRequestSchema>;
 
 /** Output contract for the (mock or real) AI intent-extraction step — brief §33 step 3. */
 export const ExtractedIntentSchema = z.object({

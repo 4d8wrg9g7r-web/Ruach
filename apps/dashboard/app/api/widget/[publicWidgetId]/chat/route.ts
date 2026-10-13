@@ -146,6 +146,9 @@ export async function POST(
     suggestedPrompts: widget.suggestedPrompts,
     contactEmail: organization?.contactEmail ?? null,
     publicWebsiteUrl: organization?.publicWebsiteUrl ?? null,
+    canForwardToStaff:
+      websiteService.questionForwardingRecipients(widget.website, organization)
+        .length > 0,
   });
 
   await conversationService.appendMessage({

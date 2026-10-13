@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Lock, Send, X } from "lucide-react";
-import type { ChatResponse } from "@ruach/shared-types";
+import { FORWARD_TO_STAFF_ACTION, type ChatResponse } from "@ruach/shared-types";
+import { ForwardForm, submitForwardToStaff } from "../../../../components/widget/ForwardToStaff";
 import { hexToRgba } from "../../../../lib/color";
 
 interface ActionLinkDisplay {
@@ -88,6 +89,12 @@ function initials(name: string) {
 
 const VISIBLE_LINK_COUNT = 4;
 
+type ForwardState =
+  | { status: "idle" }
+  | { status: "open"; messageId: string; error?: string }
+  | { status: "sending"; messageId: string }
+  | { status: "sent"; email: string };
+
 export function ChatWidget(props: ChatWidgetProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
@@ -95,6 +102,7 @@ export function ChatWidget(props: ChatWidgetProps) {
   const [linksExpanded, setLinksExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [forward, setForward] = useState<ForwardState>({ status: "idle" });
   const scrollRef = useRef<HTMLDivElement>(null);
   const latestMessageRef = useRef<HTMLDivElement>(null);
 
@@ -168,6 +176,30 @@ export function ChatWidget(props: ChatWidgetProps) {
       ]);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function forwardToStaff(messageId: string, values: { name: string; email: string; note: string }) {
+    if (!sessionId) return;
+    setForward({ status: "sending", messageId });
+    try {
+      const error = await submitForwardToStaff({ publicWidgetId: props.publicWidgetId, sessionId, host: props.host, ...values });
+      if (error) {
+        setForward({ status: "open", messageId, error });
+        return;
+      }
+      setForward({ status: "sent", email: values.email });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "ASSISTANT",
+          text: `Thanks, ${values.name}! I've forwarded our conversation to our staff, and someone will reply to you at ${values.email}.`,
+          sentAt: new Date(),
+        },
+      ]);
+    } catch {
+      setForward({ status: "open", messageId, error: "Something went wrong sending that. Please check your connection and try again." });
     }
   }
 
@@ -324,7 +356,35 @@ export function ChatWidget(props: ChatWidgetProps) {
 
                 {message.response && message.response.suggestedActions.length > 0 && (
                   <div className="mt-3 flex flex-col gap-2">
-                    {message.response.suggestedActions.map((action, index) => (
+                    {message.response.suggestedActions.map((action, index) => {
+                      if (action.type === FORWARD_TO_STAFF_ACTION) {
+                        // Once one conversation is forwarded, every earlier offer is moot.
+                        if (forward.status === "sent") return null;
+                        const isThisMessage = forward.status !== "idle" && forward.messageId === message.id;
+                        if (isThisMessage) {
+                          return (
+                            <ForwardForm
+                              key={`${action.label}-${index}`}
+                              primaryColor={props.primaryColor}
+                              isSending={forward.status === "sending"}
+                              error={forward.status === "open" ? forward.error : undefined}
+                              onSubmit={(values) => forwardToStaff(message.id, values)}
+                              onCancel={() => setForward({ status: "idle" })}
+                            />
+                          );
+                        }
+                        return (
+                          <button
+                            key={`${action.label}-${index}`}
+                            onClick={() => setForward({ status: "open", messageId: message.id })}
+                            className="inline-flex w-fit items-center gap-1.5 rounded px-3.5 py-2 text-xs font-medium text-white"
+                            style={{ backgroundColor: props.primaryColor }}
+                          >
+                            {action.label}
+                          </button>
+                        );
+                      }
+                      return (
                       <a
                         key={`${action.label}-${index}`}
                         href={action.url ?? undefined}
@@ -335,7 +395,8 @@ export function ChatWidget(props: ChatWidgetProps) {
                       >
                         {action.label} <ArrowUpRight size={13} />
                       </a>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

@@ -257,6 +257,16 @@ export async function setPublicContactInfo(
   });
 }
 
+export async function setQuestionForwardingEmails(
+  organizationId: string,
+  emails: string[],
+) {
+  return rawDb.organization.update({
+    where: { id: organizationId },
+    data: { questionForwardingEmails: emails },
+  });
+}
+
 export async function enablePrayerWall(
   organizationId: string,
   params: {

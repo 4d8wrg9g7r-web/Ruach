@@ -1,6 +1,7 @@
 import { organizationalLinkService, resourceService } from "@ruach/database";
 import {
   ChatResponseSchema,
+  FORWARD_TO_STAFF_ACTION,
   resourceTypeGroup,
   type ChatResponse,
   type ResourceRecommendation,
@@ -37,7 +38,15 @@ export interface ChatPipelineInput {
    * being set just means that reply has less to offer, never an error. */
   contactEmail: string | null;
   publicWebsiteUrl: string | null;
+  /** True when this campus (or the org-wide default) has questionForwardingEmails
+   * set -- only then does a NO_RESULTS reply offer to forward to staff. */
+  canForwardToStaff: boolean;
 }
+
+/** Appended to a NO_RESULTS reply when there are staff inboxes to forward to --
+ * the widget's FORWARD_TO_STAFF action button is what actually carries it out. */
+const FORWARD_OFFER =
+  " If you'd like, I can forward this conversation to a member of our staff so that they can answer your question.";
 
 function formatDurationLabel(seconds: number | null): string | null {
   if (!seconds) return null;
@@ -533,16 +542,32 @@ export class ChatPipeline {
     }
 
     if (ranked.length === 0) {
+      // Only offer forwarding when staff have set somewhere to send it --
+      // otherwise point the visitor at whatever contact info the org configured.
+      const canForward = input.canForwardToStaff;
       return ChatResponseSchema.parse({
         ...base,
         responseType: "NO_RESULTS",
         acknowledgment: null,
         answer:
           input.noResultMessage +
-          noResultContactSuffix(input.contactEmail, input.publicWebsiteUrl),
+          (canForward
+            ? FORWARD_OFFER
+            : noResultContactSuffix(
+                input.contactEmail,
+                input.publicWebsiteUrl,
+              )),
         resources: [],
         followUpQuestion: conversational.followUpQuestion,
-        suggestedActions: [],
+        suggestedActions: canForward
+          ? [
+              {
+                type: FORWARD_TO_STAFF_ACTION,
+                label: "Forward to staff",
+                url: null,
+              },
+            ]
+          : [],
         safetyCategory: null,
       });
     }

@@ -10,6 +10,7 @@ import {
   filterLibraryItems,
   normalizeKey,
   scriptureBook,
+  FORWARD_TO_STAFF_ACTION,
   type ChatResponse,
   type FacetOption,
   type LibraryFilterKey,
@@ -18,6 +19,7 @@ import {
   type LibraryItem,
   type ResourceTypeValue,
 } from "@ruach/shared-types";
+import { ForwardToStaffOffer } from "../../../../components/widget/ForwardToStaff";
 import { hexToRgba } from "../../../../lib/color";
 
 interface SermonLibraryProps {
@@ -318,7 +320,16 @@ export function SermonLibrary(props: SermonLibraryProps) {
                       {turn.response.suggestedActions.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                           {turn.response.suggestedActions.map((action, index) =>
-                            action.url ? (
+                            action.type === FORWARD_TO_STAFF_ACTION ? (
+                              <ForwardToStaffOffer
+                                key={`${action.label}-${index}`}
+                                label={action.label}
+                                publicWidgetId={props.publicWidgetId}
+                                sessionId={sessionId}
+                                host={props.host}
+                                primaryColor={props.primaryColor}
+                              />
+                            ) : action.url ? (
                               <a
                                 key={`${action.label}-${index}`}
                                 href={action.url}
