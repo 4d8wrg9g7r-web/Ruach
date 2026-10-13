@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, BookOpen, ChevronDown, MessageCircle, Search, Send, SlidersHorizontal, X } from "lucide-react";
 import {
   EMPTY_LIBRARY_FILTERS,
-  RESOURCE_TYPE_LABELS,
+  LIBRARY_FORMAT_LABELS,
   buildLibraryFacets,
+  libraryFormat,
   filterLibraryItems,
   normalizeKey,
   scriptureBook,
@@ -13,6 +14,7 @@ import {
   type FacetOption,
   type LibraryFilterKey,
   type LibraryFilters,
+  type LibraryFormat,
   type LibraryItem,
   type ResourceTypeValue,
 } from "@ruach/shared-types";
@@ -173,7 +175,7 @@ export function SermonLibrary(props: SermonLibraryProps) {
     if (filters.book) chips.push({ key: "book", label: labelFor(facets.books, filters.book) });
     if (filters.verse) chips.push({ key: "verse", label: labelFor(facets.verses, filters.verse) });
     if (filters.messageType) chips.push({ key: "messageType", label: labelFor(facets.messageTypes, filters.messageType) });
-    if (filters.type) chips.push({ key: "type", label: RESOURCE_TYPE_LABELS[filters.type] });
+    if (filters.type) chips.push({ key: "type", label: LIBRARY_FORMAT_LABELS[filters.type] });
     if (filters.series) chips.push({ key: "series", label: `Series: ${labelFor(facets.series, filters.series)}` });
     return chips;
   }, [filters, facets]);
@@ -439,7 +441,7 @@ export function SermonLibrary(props: SermonLibraryProps) {
               allLabel="All Formats"
               value={filters.type}
               options={facets.types}
-              onChange={(type) => update({ type: type as ResourceTypeValue | null })}
+              onChange={(type) => update({ type: type as LibraryFormat | null })}
               primaryColor={props.primaryColor}
             />
           )}
@@ -504,7 +506,7 @@ export function SermonLibrary(props: SermonLibraryProps) {
                   className="self-start rounded-full px-[0.7em] py-[0.3em] text-[0.68rem] font-extrabold uppercase tracking-[0.05em] text-white"
                   style={{ backgroundColor: props.primaryColor }}
                 >
-                  {RESOURCE_TYPE_LABELS[item.resourceType]}
+                  {LIBRARY_FORMAT_LABELS[libraryFormat(item)]}
                 </span>
                 {(item.publishedAt || item.durationSeconds || item.speakerName) && (
                   <p className="text-[0.8rem] font-semibold uppercase tracking-[0.03em] text-ink-secondary">

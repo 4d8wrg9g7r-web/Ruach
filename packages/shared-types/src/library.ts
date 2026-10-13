@@ -31,7 +31,35 @@ export const RESOURCE_TYPE_LABELS: Record<ResourceTypeValue, string> = {
   OTHER: "Other",
 };
 
-const RESOURCE_TYPES = Object.keys(RESOURCE_TYPE_LABELS) as ResourceTypeValue[];
+/**
+ * The embed's Format: the resource type, except that YouTube Shorts are told apart
+ * from full videos. Shorts import as plain VIDEO resources, so a church that posts
+ * both (Victory has ~270 Shorts among 1,224 videos) would otherwise get one-minute
+ * clips mixed into its "Video" format with full services.
+ */
+export type LibraryFormat = ResourceTypeValue | "SHORT";
+
+export const LIBRARY_FORMAT_LABELS: Record<LibraryFormat, string> = { ...RESOURCE_TYPE_LABELS, SHORT: "Short" };
+
+const LIBRARY_FORMATS = Object.keys(LIBRARY_FORMAT_LABELS) as LibraryFormat[];
+
+/** YouTube caps Shorts at three minutes. */
+const MAX_SHORT_SECONDS = 180;
+
+/**
+ * A YouTube video counts as a Short when its URL says so, it's tagged #shorts, or it
+ * runs three minutes or less. The YouTube API doesn't flag Shorts and imports store
+ * the watch?v= URL, so length does most of the work. A livestream cut off early stays
+ * a Video.
+ */
+export function libraryFormat(item: Pick<LibraryItem, "resourceType" | "durationSeconds" | "publicUrl" | "title">): LibraryFormat {
+  if (item.resourceType !== "VIDEO" || !/(^|\.)(youtube\.com|youtu\.be)\//i.test(item.publicUrl.replace(/^https?:\/\//i, ""))) {
+    return item.resourceType;
+  }
+  if (/\/shorts\//i.test(item.publicUrl) || /#shorts?\b/i.test(item.title)) return "SHORT";
+  if (/live\s*stream/i.test(item.title)) return "VIDEO";
+  return item.durationSeconds !== null && item.durationSeconds > 0 && item.durationSeconds <= MAX_SHORT_SECONDS ? "SHORT" : "VIDEO";
+}
 
 export interface LibraryItem {
   id: string;
@@ -59,8 +87,8 @@ export interface LibraryFilters {
   book: string | null;
   verse: string | null;
   messageType: string | null;
-  /** The resource type ("format": Sermon, Video, Podcast...). */
-  type: ResourceTypeValue | null;
+  /** The format (Sermon, Video, Short, Podcast...) -- see libraryFormat(). */
+  type: LibraryFormat | null;
   series: string | null;
 }
 
@@ -190,7 +218,7 @@ function matchesFilter(item: LibraryItem, key: FilterKey, filters: LibraryFilter
     case "messageType":
       return !filters.messageType || item.messageTypes.some((t) => normalizeKey(t) === filters.messageType);
     case "type":
-      return !filters.type || item.resourceType === filters.type;
+      return !filters.type || libraryFormat(item) === filters.type;
     case "series":
       return !filters.series || (item.seriesTitle !== null && normalizeKey(item.seriesTitle) === filters.series);
   }
@@ -270,7 +298,7 @@ export function buildLibraryFacets(items: LibraryItem[], filters: LibraryFilters
     if (matchesAll(item, filters, "messageType")) {
       new Set(item.messageTypes.map((t) => t.trim())).forEach((t) => messageTypes.add(t));
     }
-    if (matchesAll(item, filters, "type")) types.add(RESOURCE_TYPE_LABELS[item.resourceType]);
+    if (matchesAll(item, filters, "type")) types.add(LIBRARY_FORMAT_LABELS[libraryFormat(item)]);
     if (item.seriesTitle && matchesAll(item, filters, "series")) series.add(item.seriesTitle);
   }
 
@@ -280,11 +308,11 @@ export function buildLibraryFacets(items: LibraryItem[], filters: LibraryFilters
     books: books.byBookOrder(),
     verses: verses.byLabel(),
     messageTypes: messageTypes.byCount(),
-    // Type options carry the enum value (not the label) so the filter can match
-    // resourceType directly.
+    // Format options carry the format key (not the label) so the filter can match
+    // libraryFormat() directly.
     types: types.byCount().map((option) => ({
       ...option,
-      value: RESOURCE_TYPES.find((t) => normalizeKey(RESOURCE_TYPE_LABELS[t]) === option.value) ?? option.value,
+      value: LIBRARY_FORMATS.find((f) => normalizeKey(LIBRARY_FORMAT_LABELS[f]) === option.value) ?? option.value,
     })),
     series: series.byCount(),
   };

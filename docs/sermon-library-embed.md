@@ -23,7 +23,7 @@ resize to fit its content.
   its library lists org-wide resources plus that campus's own, never another campus's.
 - Filters: speaker, subject (`primaryTopic` + `topics`), scripture book then key verse
   (`scriptures`), message type (`Resource.messageTypes`, staff-defined tags set on the
-  resource page), format (`resourceType`), series, and keyword search. Staff turn each
+  resource page), format (`resourceType`, with YouTube videos of three minutes or less, or with a `/shorts/` URL or `#shorts` tag, shown as "Short" -- see `libraryFormat()`), series, and keyword search. Staff turn each
   dropdown on or off under "Filters" on the widget page
   (`WidgetConfiguration.libraryFilters`, all on by default, Speaker included); search is
   always shown. Any filter with fewer than two options is hidden, and the widget page
