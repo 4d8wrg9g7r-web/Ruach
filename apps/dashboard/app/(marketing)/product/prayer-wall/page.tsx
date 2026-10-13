@@ -81,7 +81,7 @@ export default function PrayerWallMarketingPage() {
       <section className="mx-auto max-w-3xl px-5 pb-10 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>Prayer Wall</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">
             Create a simple place for your church to pray together.
           </h1>
           <p className="mt-5 text-base leading-relaxed text-ink-secondary">
@@ -97,11 +97,11 @@ export default function PrayerWallMarketingPage() {
           <div className="grid gap-6 sm:grid-cols-2">
             {SECTIONS.map((section, i) => (
               <FadeIn key={section.title} delay={Math.min(i * 0.04, 0.2)}>
-                <div className="h-full rounded-lg border border-border bg-surface p-5">
+                <div className="h-full rounded-lg border border-black/[.06] bg-surface card-lift p-5">
                   <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
                     {section.icon}
                   </span>
-                  <h3 className="mb-1.5 text-sm font-semibold text-ink">
+                  <h3 className="mb-1.5 text-sm font-bold text-ink">
                     {section.title}
                   </h3>
                   <p className="text-sm leading-relaxed text-ink-secondary">
@@ -125,7 +125,7 @@ export default function PrayerWallMarketingPage() {
               <span className="mx-1 text-border-strong">&middot;</span>
               <UserX size={13} /> Your name is never shown publicly
             </div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight text-ink">
+            <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-ink">
               Ready to give your church a place to pray together?
             </h2>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

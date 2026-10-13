@@ -50,7 +50,7 @@ export function ColorPickerField({ label, name, defaultValue, onChange, disabled
           placeholder="#b87b38"
           maxLength={7}
           disabled={disabled}
-          className="w-full rounded-sm border border-border-strong bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50"
+          className="w-full rounded-full border-[1.5px] border-black/[.12] bg-surface px-[1.1em] py-2 text-sm text-ink outline-none transition-colors duration-180 focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50"
         />
       </div>
     </label>

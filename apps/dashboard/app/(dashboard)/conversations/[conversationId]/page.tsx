@@ -37,7 +37,7 @@ export default async function ConversationDetailPage({
         <ArrowLeft size={15} strokeWidth={1.75} /> Conversations
       </Link>
 
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">{conversation.widget.name}</h1>
+      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">{conversation.widget.name}</h1>
       <p className="mb-8 text-sm text-ink-secondary">
         Started {formatTimestamp(conversation.createdAt)} &middot; {conversation.messages.length}{" "}
         {conversation.messages.length === 1 ? "message" : "messages"}

@@ -1,0 +1,70 @@
+# Sermon library embed
+
+A filterable message archive a church places on its own sermon page, for site builders
+whose sermon engines can't filter well. Every widget has one; its install code is on
+the widget's detail page (`/widgets/[widgetId]` → "Sermon library embed").
+
+```html
+<div id="ruach-sermon-library"></div>
+<script src="https://<app>/sermon-library.js" data-widget-id="<publicWidgetId>" defer></script>
+```
+
+Optional script attributes: `data-target="<selector>"` to mount elsewhere, and
+`data-chat="off"` to hide the chat box. If the site builder doesn't allow scripts, a plain
+`<iframe src="https://<app>/widget/library/<publicWidgetId>">` works too, but it won't
+resize to fit its content.
+
+## What it shows
+
+- Resources with status `ACTIVE` whose type is enabled for that widget
+  (`WidgetConfiguration.libraryResourceTypes`, set under "What the library shows" on the
+  widget page; defaults to SERMON, VIDEO, AUDIO, PODCAST, DEVOTIONAL). Chat is unaffected.
+- **Multi-campus:** the same rule as chat. A widget belongs to one campus (Website), so
+  its library lists org-wide resources plus that campus's own, never another campus's.
+- Filters: speaker, subject (`primaryTopic` + `topics`), scripture book then key verse
+  (`scriptures`), message type (`Resource.messageTypes`, staff-defined tags set on the
+  resource page), format (`resourceType`, with YouTube videos of three minutes or less, or with a `/shorts/` URL or `#shorts` tag, shown as "Short" -- see `libraryFormat()`), series, and keyword search. Staff turn each
+  dropdown on or off under "Filters" on the widget page
+  (`WidgetConfiguration.libraryFilters`, all on by default, Speaker included); search is
+  always shown. Any filter with fewer than two options is hidden, and the widget page
+  says so next to a filter that's on but hidden. Option
+  counts are faceted: each dropdown counts against every *other* active filter.
+- Chat: posts to the existing `/api/widget/[publicWidgetId]/chat`, so it uses the same
+  `ChatPipeline`, conversation log, rate limits and usage meter as the assistant widget.
+
+## Speakers
+
+YouTube, Vimeo and RSS imports don't carry a speaker, so `SpeakerService` (`@ruach/ai`)
+reads it from the title, description and start of the transcript (e.g. "… | Mitch
+Horton", "Pastor Mitch talks about…"). It only fills an empty `speakerName`, drops titles
+like Pastor, and reuses an existing speaker's spelling so one person isn't listed twice.
+
+- New resources: runs at the end of categorization.
+- Older resources: `/api/cron/speakers` (every 15 minutes, `CRON_SECRET`) works through
+  up to 150 unchecked resources per run, newest first, and invalidates the library cache
+  for orgs that changed. `Resource.speakerCheckedAt` marks a resource as checked even when
+  no speaker was found, so nothing is asked twice.
+- Staff can correct or clear the speaker on the resource page; clearing it keeps it clear.
+
+## Branding
+
+- Styled like a modern church site's own message library: pill-shaped search and
+  dropdowns, 20px-radius cards with a 16:9 thumbnail, a type badge, uppercase meta line
+  and an outline "Watch" button. On phones the dropdowns sit behind a Filters toggle.
+
+- Uses the widget's brand color, suggested prompts and input placeholder. No logo.
+- Font: plans with `advancedWidgetCustomization` (Growth and up) pick one of
+  `LIBRARY_FONTS` (shared-types), loaded from Google Fonts. Others get Ruach's font.
+- "Powered by Ruach" shows unless the plan has `removeBranding` and the widget turns it off.
+- Both plan gates are re-checked at render (`getLibraryWidget`), so a downgrade reverts
+  them within the 10-minute cache window while the saved values are kept.
+
+## Database cost
+
+`apps/dashboard/lib/sermon-library.ts` caches both the widget lookup and the campus
+catalog in Next's data cache for 10 minutes, so a page view normally costs zero queries.
+The catalog is one `findMany` selecting only card/filter columns (no transcripts), capped
+at 2,000 items, and all filtering runs in the visitor's browser. Approving, archiving,
+re-scoping a resource and saving widget settings invalidate the cache by tag; changes made
+elsewhere (e.g. the hourly sync's approvals go through `approveAndIndexResources`, which
+also invalidates) otherwise show up within the TTL.

@@ -45,7 +45,7 @@ export default async function LoginPage({
           Ruach
         </span>
       </Link>
-      <h1 className="mb-6 text-2xl font-semibold text-ink">Sign in to Ruach</h1>
+      <h1 className="mb-6 text-2xl font-extrabold text-ink">Sign in to Ruach</h1>
       {params.error && (
         <p className="mb-4 rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
           Invalid email or password.

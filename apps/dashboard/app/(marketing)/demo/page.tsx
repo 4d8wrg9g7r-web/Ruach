@@ -20,7 +20,7 @@ export default function DemoPage() {
       <section className="mx-auto max-w-3xl px-5 pb-10 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>Get started</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">Let&rsquo;s find the right fit for your church.</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">Let&rsquo;s find the right fit for your church.</h1>
           <p className="mt-5 text-base leading-relaxed text-ink-secondary">
             Ready to get started, you can sign up in a few minutes. Want to see it on your own content first, request
             a demo below.
@@ -35,7 +35,7 @@ export default function DemoPage() {
               <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
                 <Rocket size={18} />
               </span>
-              <h2 className="mb-1.5 text-sm font-semibold text-ink">Start Ruach</h2>
+              <h2 className="mb-1.5 text-sm font-bold text-ink">Start Ruach</h2>
               <p className="mb-5 flex-1 text-sm leading-relaxed text-ink-secondary">
                 Choose a plan and create your account -- most churches are up and running the same day.
               </p>
@@ -49,7 +49,7 @@ export default function DemoPage() {
               <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
                 <CalendarClock size={18} />
               </span>
-              <h2 className="mb-1.5 text-sm font-semibold text-ink">Request a Demo</h2>
+              <h2 className="mb-1.5 text-sm font-bold text-ink">Request a Demo</h2>
               <p className="mb-5 flex-1 text-sm leading-relaxed text-ink-secondary">
                 Tell us about your church and we&rsquo;ll walk you through how Ruach fits before you commit to
                 anything.
@@ -65,7 +65,7 @@ export default function DemoPage() {
       <section id="demo-form" className="scroll-mt-20 border-t border-border bg-surface-muted/60 py-16">
         <div className="mx-auto max-w-2xl px-5">
           <FadeIn>
-            <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight text-ink">Request a Demo</h2>
+            <h2 className="mb-6 text-center text-2xl font-extrabold tracking-tight text-ink">Request a Demo</h2>
             <Card>
               <ContactForm />
             </Card>

@@ -101,14 +101,14 @@ export default async function TestimoniesModerationPage() {
       <Link href="/prayer-wall" className="mb-4 inline-flex items-center gap-1.5 text-sm text-ink-secondary hover:text-ink">
         <ArrowLeft size={15} strokeWidth={1.75} /> Prayer Wall
       </Link>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">{organization.testimoniesPageName}</h1>
+      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">{organization.testimoniesPageName}</h1>
       <p className="mb-8 text-sm text-ink-secondary">
         Curate featured highlights and moderate visitor-submitted testimonies for {organization.name}
         {!organization.testimoniesEnabled && " (currently disabled -- enable it in Settings)"}.
       </p>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-1 text-sm font-semibold text-ink">Add a featured testimony</h2>
+        <h2 className="mb-1 text-sm font-bold text-ink">Add a featured testimony</h2>
         <p className="mb-4 text-sm text-ink-secondary">
           Staff-curated highlights, optionally with an embedded YouTube video. Shown above visitor submissions on the
           public page.
@@ -135,7 +135,7 @@ export default async function TestimoniesModerationPage() {
       </Card>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Featured ({featured.length})</h2>
+        <h2 className="mb-4 text-sm font-bold text-ink">Featured ({featured.length})</h2>
         {featured.length === 0 ? (
           <p className="py-4 text-center text-sm text-ink-muted">No featured testimonies yet.</p>
         ) : (
@@ -194,7 +194,7 @@ export default async function TestimoniesModerationPage() {
 
       <Card padding="none">
         <div className="p-4 pb-0">
-          <h2 className="text-sm font-semibold text-ink">Visitor submissions ({submitted.length})</h2>
+          <h2 className="text-sm font-bold text-ink">Visitor submissions ({submitted.length})</h2>
         </div>
         {submitted.length === 0 ? (
           <EmptyState

@@ -43,7 +43,7 @@ test("golden path: org through database-backed recommendation", async ({ page, c
   await page.getByRole("button", { name: "Create widget" }).click();
   await page.waitForURL(/\/widgets\/.+/);
 
-  const snippet = await page.locator("pre").textContent();
+  const snippet = await page.locator("pre", { hasText: "widget-loader.js" }).textContent();
   const publicWidgetId = snippet?.match(/data-widget-id="([^"]+)"/)?.[1];
   expect(publicWidgetId).toBeTruthy();
 

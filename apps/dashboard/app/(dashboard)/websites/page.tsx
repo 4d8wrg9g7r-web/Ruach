@@ -57,10 +57,10 @@ export default async function WebsitesPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight text-ink">Websites</h1>
+      <h1 className="mb-6 text-2xl font-extrabold tracking-tight text-ink">Websites</h1>
 
       <Card className="mb-8">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
+        <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
           <PlusCircle size={15} className="text-accent" /> Add a website
         </h2>
         <AddWebsiteForm action={createWebsiteAction} />

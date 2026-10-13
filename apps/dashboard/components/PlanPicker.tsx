@@ -89,7 +89,7 @@ export function PlanPicker({ orgName, plans, action, currentPlanKey, currentInte
               }`}
             >
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-ink">{plan.name}</h2>
+                <h2 className="text-sm font-bold text-ink">{plan.name}</h2>
                 {isExactCurrent && <Badge variant="info">Current plan</Badge>}
               </div>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-ink">
@@ -130,7 +130,7 @@ export function PlanPicker({ orgName, plans, action, currentPlanKey, currentInte
         })}
 
         <div className="shadow-panel flex flex-col rounded-lg border border-border bg-surface p-5">
-          <h2 className="text-sm font-semibold text-ink">Enterprise</h2>
+          <h2 className="text-sm font-bold text-ink">Enterprise</h2>
           <p className="mt-2 text-2xl font-semibold tracking-tight text-ink">Custom</p>
           <p className="mt-3 flex-1 text-xs text-ink-muted">
             For church networks, denominations, universities, and organizations with custom infrastructure or

@@ -23,3 +23,9 @@ Persists both the visitor's message and the assistant's response to `Conversatio
 Conversation-retention expiry jobs (`WidgetConfiguration.conversationRetentionDays`
 exists as a field but nothing enforces it yet), a "clear conversation" endpoint, and
 feedback submission (`helpful`/`not helpful`).
+
+## Sermon library
+
+`GET /widget/library/[publicWidgetId]?host=<hostname>` is a public page (not JSON) that
+renders the filterable sermon archive. Same tenant boundary and `host` check as above. See
+`docs/sermon-library-embed.md`.

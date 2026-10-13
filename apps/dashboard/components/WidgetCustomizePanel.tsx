@@ -72,9 +72,9 @@ export function WidgetCustomizePanel({ widget, updateAction, entitlements, child
     <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_440px]">
       <div className="flex min-w-0 flex-col gap-6">
         <Card>
-          <h2 className="mb-4 text-sm font-semibold text-ink">Customize</h2>
+          <h2 className="mb-4 text-sm font-bold text-ink">Customize</h2>
           <form action={handlePublish} className="flex flex-col gap-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Content</h3>
+            <h3 className="text-[0.75rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">Content</h3>
             <label className="text-sm text-ink-secondary">
               Assistant name
               <Input name="assistantName" defaultValue={widget.assistantName} className="mt-1 block" />
@@ -109,7 +109,7 @@ export function WidgetCustomizePanel({ widget, updateAction, entitlements, child
               <Input name="privacyNotice" defaultValue={widget.privacyNotice} className="mt-1 block" />
             </label>
 
-            <h3 className="mt-2 border-t border-border pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Display style</h3>
+            <h3 className="mt-2 border-t border-border pt-4 text-[0.75rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">Display style</h3>
             <WidgetStyleField name="displayStyle" defaultValue={widget.displayStyle} onChange={setPreviewStyle} />
             {styleInfo.key === "INLINE" && (
               <p className="-mt-1 rounded-md bg-surface-warm px-3 py-2 text-xs text-ink-secondary">
@@ -129,7 +129,7 @@ export function WidgetCustomizePanel({ widget, updateAction, entitlements, child
               </label>
             )}
 
-            <h3 className="mt-2 border-t border-border pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Appearance</h3>
+            <h3 className="mt-2 border-t border-border pt-4 text-[0.75rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">Appearance</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <ColorPickerField
@@ -160,7 +160,7 @@ export function WidgetCustomizePanel({ widget, updateAction, entitlements, child
               )}
             </div>
 
-            <h3 className="mt-2 border-t border-border pt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">Behavior</h3>
+            <h3 className="mt-2 border-t border-border pt-4 text-[0.75rem] font-semibold uppercase tracking-[0.03em] text-ink-muted">Behavior</h3>
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-sm text-ink-secondary">
                 <input type="checkbox" name="allowInlinePlayback" defaultChecked={widget.allowInlinePlayback} />
@@ -191,7 +191,7 @@ export function WidgetCustomizePanel({ widget, updateAction, entitlements, child
 
       <div className="min-w-0">
         <div className="mb-3">
-          <h2 className="text-sm font-semibold text-ink">Widget Preview</h2>
+          <h2 className="text-sm font-bold text-ink">Widget Preview</h2>
           <p className="text-xs text-ink-muted">This is how your widget looks to visitors. Click it to see it open and close.</p>
         </div>
         <WidgetShellPreview

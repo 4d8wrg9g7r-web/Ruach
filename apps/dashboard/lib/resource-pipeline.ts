@@ -3,6 +3,7 @@ import { auditService, billingService, bulkJobService, organizationService, reso
 import { CategorizationService, getAIProvider } from "@ruach/ai";
 import { extractCandidateLinks, extractReadableText, safeFetch } from "@ruach/providers";
 import { LocalRetrievalProvider } from "@ruach/retrieval";
+import { invalidateLibraryCatalog } from "./sermon-library";
 
 /** Used when a caller doesn't pass an explicit concurrency -- see billingService.bulkConcurrency for the plan-dependent version callers should prefer. */
 const DEFAULT_BULK_CONCURRENCY = 5;
@@ -81,6 +82,7 @@ export async function approveAndIndexResources(
     onItemDone,
     deadline,
   );
+  invalidateLibraryCatalog(organizationId);
 }
 
 /**
@@ -293,6 +295,7 @@ async function finalizeBulkJob(
   try {
     revalidatePath("/resources");
     revalidatePath("/dashboard");
+    invalidateLibraryCatalog(organizationId);
   } catch (err) {
     console.error(`Bulk job ${job.id} completed but revalidatePath failed:`, err);
   }

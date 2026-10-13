@@ -182,7 +182,7 @@ export default async function BillingPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">Billing</h1>
+      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">Billing</h1>
       <p className="mb-8 text-sm text-ink-secondary">Your plan and usage for {organization.name}.</p>
 
       {needsAttention && (
@@ -208,7 +208,7 @@ export default async function BillingPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-ink">{usage.plan.name}</h2>
+              <h2 className="text-sm font-bold text-ink">{usage.plan.name}</h2>
               {!isFree && organization.billingInterval && (
                 <Badge variant="neutral">{organization.billingInterval === "YEARLY" ? "Yearly" : "Monthly"}</Badge>
               )}
@@ -253,7 +253,7 @@ export default async function BillingPage() {
       </Card>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-4 text-sm font-semibold text-ink">{changePlanHeading}</h2>
+        <h2 className="mb-4 text-sm font-bold text-ink">{changePlanHeading}</h2>
         <PlanPicker
           orgName={organization.name}
           plans={await getFormattedPlans()}
@@ -264,7 +264,7 @@ export default async function BillingPage() {
       </Card>
 
       <Card padding="md">
-        <h2 className="mb-4 text-sm font-semibold text-ink">What&rsquo;s included</h2>
+        <h2 className="mb-4 text-sm font-bold text-ink">What&rsquo;s included</h2>
         <ul className="flex flex-col gap-2.5">
           {formatPlanFeatures(usage.plan).map((feature) => (
             <li key={feature} className="flex items-center gap-2 text-sm text-ink-secondary">

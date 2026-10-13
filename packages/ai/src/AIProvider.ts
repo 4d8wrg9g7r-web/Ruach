@@ -92,6 +92,20 @@ export interface RelevanceClassification {
   isSolicitation: boolean;
 }
 
+export interface SpeakerDetectionInput {
+  title: string;
+  description: string | null;
+  /** The start of the transcript or page text, when there is one. */
+  excerpt: string | null;
+  /** Speakers already on the org's other resources, so one person keeps one spelling. */
+  knownSpeakers: string[];
+}
+
+export interface SpeakerDetectionOutput {
+  /** The person who preached/taught/hosted this, or null when the source doesn't say. */
+  speakerName: string | null;
+}
+
 /**
  * The AI seam. MockAIProvider (deterministic, no network calls) is the default so the
  * repository runs without OPENAI_API_KEY (brief §57). OpenAIProvider will implement the
@@ -115,4 +129,6 @@ export interface AIProvider {
   matchLink(message: string, links: LinkCandidate[]): Promise<LinkMatchOutput>;
   /** Catches a business pitch/sales solicitation directed at the church before it burns a retrieval cycle on something no resource could ever answer -- see ChatPipeline's solicitation step. */
   classifyRelevance(message: string): Promise<RelevanceClassification>;
+  /** Names the speaker for the sermon library's Speaker filter -- see SpeakerService. */
+  detectSpeaker(input: SpeakerDetectionInput): Promise<SpeakerDetectionOutput>;
 }

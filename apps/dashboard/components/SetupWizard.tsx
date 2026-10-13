@@ -99,7 +99,7 @@ export function SetupWizard(props: SetupWizardProps) {
 
       <main className="mx-auto max-w-xl px-6 py-10">
         <div className="mb-8">
-          <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">
             Let&rsquo;s get {props.organizationName} set up
           </h1>
           <p className="text-sm text-ink-secondary">Four quick steps -- you can skip ahead any time.</p>
@@ -143,7 +143,7 @@ export function SetupWizard(props: SetupWizardProps) {
             >
               <div className="flex items-center gap-2">
                 <Globe size={16} className="text-accent" />
-                <h2 className="text-sm font-semibold text-ink">Add your website</h2>
+                <h2 className="text-sm font-bold text-ink">Add your website</h2>
               </div>
               <p className="text-sm text-ink-secondary">
                 A website is where a widget lives -- most churches only need one, even with several pages.
@@ -180,7 +180,7 @@ export function SetupWizard(props: SetupWizardProps) {
               <input type="hidden" name="websiteId" value={website?.id ?? ""} />
               <div className="flex items-center gap-2">
                 <MessageSquare size={16} className="text-accent" />
-                <h2 className="text-sm font-semibold text-ink">Create a widget</h2>
+                <h2 className="text-sm font-bold text-ink">Create a widget</h2>
               </div>
               <p className="text-sm text-ink-secondary">
                 The widget is the chat assistant itself, embedded on <strong>{website?.name}</strong>.
@@ -215,7 +215,7 @@ export function SetupWizard(props: SetupWizardProps) {
             >
               <div className="flex items-center gap-2">
                 <Link2 size={16} className="text-accent" />
-                <h2 className="text-sm font-semibold text-ink">Import your first resource</h2>
+                <h2 className="text-sm font-bold text-ink">Import your first resource</h2>
               </div>
               <p className="text-sm text-ink-secondary">
                 Paste a link to a sermon, podcast episode, or article. You can import in bulk (a whole YouTube
@@ -245,7 +245,7 @@ export function SetupWizard(props: SetupWizardProps) {
             <div className="flex flex-col gap-5">
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-accent" />
-                <h2 className="text-sm font-semibold text-ink">Customize &amp; install</h2>
+                <h2 className="text-sm font-bold text-ink">Customize &amp; install</h2>
               </div>
               <form
                 onSubmit={(e) => {

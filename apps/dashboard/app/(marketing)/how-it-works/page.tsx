@@ -98,7 +98,7 @@ export default function HowItWorksPage() {
       <section className="mx-auto max-w-3xl px-5 pb-12 pt-16 text-center">
         <FadeIn>
           <EyebrowLabel>How it works</EyebrowLabel>
-          <h1 className="text-4xl font-semibold tracking-tight text-ink">From published once to found again.</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-ink">From published once to found again.</h1>
           <p className="mt-5 text-base leading-relaxed text-ink-secondary">
             Ruach connects to the content your church has already created, organizes it so it can be found through
             natural questions, and gives your website a conversational way to guide people to it.
@@ -111,11 +111,11 @@ export default function HowItWorksPage() {
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {LIFECYCLE.map((item, i) => (
               <FadeIn key={item.title} delay={i * 0.05}>
-                <div className="h-full rounded-lg border border-border bg-surface p-6">
+                <div className="h-full rounded-lg border border-black/[.06] bg-surface card-lift p-6">
                   <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-surface-warm text-accent-dark">
                     {item.icon}
                   </span>
-                  <h3 className="mb-1.5 text-sm font-semibold text-ink">{item.title}</h3>
+                  <h3 className="mb-1.5 text-sm font-bold text-ink">{item.title}</h3>
                   <p className="text-sm leading-relaxed text-ink-secondary">{item.description}</p>
                 </div>
               </FadeIn>
@@ -128,7 +128,7 @@ export default function HowItWorksPage() {
         <div className="mx-auto max-w-5xl px-5">
           <div className="grid gap-8 md:grid-cols-2">
             <FadeIn>
-              <div className="rounded-lg border border-border bg-surface p-6">
+              <div className="rounded-lg border border-black/[.06] bg-surface card-lift p-6">
                 <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-ink-muted">What visitors experience</h2>
                 <ol className="flex flex-col gap-3">
                   {VISITOR_JOURNEY.map((step, i) => (
@@ -143,7 +143,7 @@ export default function HowItWorksPage() {
               </div>
             </FadeIn>
             <FadeIn delay={0.1}>
-              <div className="rounded-lg border border-border bg-surface p-6">
+              <div className="rounded-lg border border-black/[.06] bg-surface card-lift p-6">
                 <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-ink-muted">What church staff manage</h2>
                 <ol className="flex flex-col gap-3">
                   {STAFF_JOURNEY.map((step, i) => (
@@ -164,7 +164,7 @@ export default function HowItWorksPage() {
       <section className="border-t border-border bg-sidebar py-16">
         <div className="mx-auto max-w-2xl px-5 text-center">
           <FadeIn>
-            <h2 className="text-2xl font-semibold tracking-tight text-white">See it on your own church&rsquo;s content.</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight text-white">See it on your own church&rsquo;s content.</h2>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link href="/signup" className={buttonClasses("primary", "md")}>
                 Start with Ruach

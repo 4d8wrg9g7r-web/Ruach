@@ -247,7 +247,7 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight text-ink">
+      <h1 className="mb-1 text-2xl font-extrabold tracking-tight text-ink">
         Settings
       </h1>
       <p className="mb-8 text-sm text-ink-secondary">
@@ -255,7 +255,7 @@ export default async function SettingsPage() {
       </p>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Organization</h2>
+        <h2 className="mb-4 text-sm font-bold text-ink">Organization</h2>
         <dl className="grid grid-cols-[140px_1fr] gap-y-3 text-sm">
           <dt className="text-ink-muted">Name</dt>
           <dd className="text-ink">{organization.name}</dd>
@@ -267,7 +267,7 @@ export default async function SettingsPage() {
       </Card>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-1 text-sm font-semibold text-ink">
+        <h2 className="mb-1 text-sm font-bold text-ink">
           Public contact info
         </h2>
         <p className="mb-4 text-sm text-ink-secondary">
@@ -285,7 +285,7 @@ export default async function SettingsPage() {
       </Card>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-1 text-sm font-semibold text-ink">
+        <h2 className="mb-1 text-sm font-bold text-ink">
           Forwarded questions
         </h2>
         <p className="mb-4 text-sm text-ink-secondary">
@@ -302,7 +302,7 @@ export default async function SettingsPage() {
       </Card>
 
       <Card padding="md" className="mb-6">
-        <h2 className="mb-1 text-sm font-semibold text-ink">Prayer wall</h2>
+        <h2 className="mb-1 text-sm font-bold text-ink">Prayer wall</h2>
         <p className="mb-4 text-sm text-ink-secondary">
           A public page where visitors can submit prayer requests and, if they
           choose, post them publicly for others to pray for. New submissions can
@@ -356,7 +356,7 @@ export default async function SettingsPage() {
       </Card>
 
       <Card padding="md">
-        <h2 className="mb-4 text-sm font-semibold text-ink">Your account</h2>
+        <h2 className="mb-4 text-sm font-bold text-ink">Your account</h2>
         <AccountForm
           defaultName={user?.name ?? ""}
           defaultEmail={user?.email ?? ""}

@@ -13,7 +13,7 @@ export default function GettingStartedPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-ink">
+        <h1 className="mb-1 flex items-center gap-2 text-2xl font-extrabold tracking-tight text-ink">
           <Compass size={22} className="text-accent" /> Getting Started
         </h1>
         <p className="max-w-2xl text-sm text-ink-secondary">
@@ -44,7 +44,7 @@ export default function GettingStartedPage() {
             <div className="grid gap-0 lg:grid-cols-[1fr_1.3fr]">
               <div className="p-6">
                 <Badge variant="neutral">Step {i + 1}</Badge>
-                <h2 className="mb-1.5 mt-3 text-lg font-semibold text-ink">{guide.title}</h2>
+                <h2 className="mb-1.5 mt-3 text-lg font-extrabold text-ink">{guide.title}</h2>
                 <p className="mb-4 text-sm text-ink-secondary">{guide.summary}</p>
                 <ol className="mb-5 flex flex-col gap-2.5">
                   {guide.steps.map((step, stepIndex) => (

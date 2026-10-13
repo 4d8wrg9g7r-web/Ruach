@@ -15,7 +15,7 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-4 text-center">
       <AlertTriangle size={32} strokeWidth={1.5} className="text-ink-muted" />
-      <h1 className="text-lg font-semibold text-ink">Something went wrong</h1>
+      <h1 className="text-lg font-extrabold text-ink">Something went wrong</h1>
       <p className="max-w-sm text-sm text-ink-secondary">An unexpected error occurred. Your data is safe -- try again.</p>
       <button type="button" onClick={() => reset()} className={buttonClasses("secondary", "sm")}>
         Try again
