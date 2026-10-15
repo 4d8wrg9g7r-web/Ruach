@@ -1,0 +1,9 @@
+/.next/
+/out/
+/node_modules
+/next-env.d.ts
+*.tsbuildinfo
+
+# The repo-root .gitignore ignores any directory named "build/". The configurator
+# routes live at app/build, so explicitly re-include that source directory.
+!/app/build/
